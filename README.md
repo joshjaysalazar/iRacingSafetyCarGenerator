@@ -37,7 +37,7 @@ This script is designed to trigger safety car events in iRacing at random interv
 
    You can adjust these settings to your preferences.
 
-4. To run the script, double-click on `main.py`.
+4. To run the script, double-click on `main.py`. The script should be run while cars are gridding for the race to ensure it doesn't start counting down time too early!
 
 5. Make sure to click on the iRacing window to give it focus.
 
