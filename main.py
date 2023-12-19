@@ -1,4 +1,5 @@
 import configparser
+import os
 import random
 import time
 
@@ -39,12 +40,15 @@ print("Generated safety car event times.")
 
 # Connect to iRacing
 ir = irsdk.IRSDK()
-try:
-    ir.startup()
+
+# Attempt to connect and tell user if successful
+if ir.startup():
     print("Connected to iRacing.")
     print("Be sure to click on the iRacing window to give it focus!")
-except Exception as e:
-    print(f"Error connecting to iRacing: {e}")
+else:
+    print(f"Error connecting to iRacing.")
+    os.system("pause")
+    exit()
 
 # Wait for green flag
 print("Waiting for green flag...")
@@ -83,3 +87,6 @@ print("All safety car events triggered. Exiting...")
 
 # Disconnect from iRacing
 ir.shutdown()
+
+# Pause before exiting
+os.system("pause")
