@@ -42,6 +42,7 @@ ir = irsdk.IRSDK()
 try:
     ir.startup()
     print("Connected to iRacing.")
+    print("Be sure to click on the iRacing window to give it focus!")
 except Exception as e:
     print(f"Error connecting to iRacing: {e}")
 
