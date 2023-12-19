@@ -3,6 +3,7 @@ import random
 import time
 
 import irsdk
+import pyautogui
 
 
 # Read settings file
@@ -13,6 +14,7 @@ max_sc = config.getint('settings', 'max_safety_cars')
 start_minute = config.getfloat('settings', 'start_minute')
 end_minute = config.getfloat('settings', 'end_minute')
 min_time_between = config.getfloat('settings', 'min_time_between')
+print("Loaded settings.")
 
 # Randomly determine number of safety car events
 number_sc = random.randint(min_sc, max_sc)
@@ -20,7 +22,7 @@ number_sc = random.randint(min_sc, max_sc)
 # Randomly determine safety car event times in minutes
 sc_times = []
 if number_sc > 0:
-    for i in range(number_sc - 1):
+    for i in range(number_sc):
         # If first safety car event, choose a random time between start and end
         if i == 0:
             start = start_minute
@@ -32,7 +34,8 @@ if number_sc > 0:
                 break
             start = sc_times[i - 1] + min_time_between
             end = end_minute
-        sc_times.append(random.randint(start, end))
+        sc_times.append(random.uniform(start, end))
+print("Generated safety car event times.")
 
 # Connect to iRacing
 ir = irsdk.IRSDK()
@@ -43,11 +46,39 @@ except Exception as e:
     print(f"Error connecting to iRacing: {e}")
 
 # Wait for green flag
+print("Waiting for green flag...")
 while True:
-    ir.freeze_var_buffer_latest()
-    if ir["SessionFlags"] & ir.Flags.green:  # Check if the green flag is on
-        print("Race has started. Green flag is on.")
+    if ir["SessionFlags"] & irsdk.Flags.green:
+        start_time = ir["SessionTime"]
+        print("Race has started. Green flag is out.")
+        print("Waiting for safety car events...")
         break
+
+    # Wait 1 second before checking again
     time.sleep(1)
 
 # Loop through safety car events
+while True:
+    # If there are no more safety car events, break
+    if len(sc_times) == 0:
+        break
+    # If the current time is past the next safety car event, trigger it
+    if ir["SessionTime"] > start_time + (sc_times[0] * 60):
+        print(f"Safety car event triggered at {ir['SessionTime']}")
+        ir.chat_command(1)
+        time.sleep(0.05)
+        pyautogui.write("!yellow", interval = 0.01)
+        time.sleep(0.05)
+        pyautogui.press("enter")
+
+        # Remove the safety car event from the list
+        sc_times.pop(0)
+    
+    # Wait 1 second before checking again
+    time.sleep(1)
+
+# All safety car events have been triggered
+print("All safety car events triggered. Exiting...")
+
+# Disconnect from iRacing
+ir.shutdown()
