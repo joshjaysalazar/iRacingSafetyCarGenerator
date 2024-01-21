@@ -78,21 +78,22 @@ while True:
         pyautogui.write("!yellow", interval = 0.01)
         time.sleep(0.05)
         pyautogui.press("enter")
-        
+
         # Remove the safety car event from the list
         sc_times.pop(0)
 
         # Wait for the time until green flag
-        print(f"Waiting {time_until_green} seconds for green flag...")
+        print(f"Waiting {time_until_green} minutes for green flag...")
         time.sleep(time_until_green * 60)
 
-        # Send green flag chat command
-        ir.chat_command(1)
-        time.sleep(0.05)
-        pyautogui.write("!pacelaps 1", interval = 0.01)
-        time.sleep(0.05)
-        pyautogui.press("enter")
-    
+        # Send green flag chat command if still pacing
+        if ir["PaceMode"] == 2 or ir["PaceMode"] == 3:
+            ir.chat_command(1)
+            time.sleep(0.05)
+            pyautogui.write("!pacelaps 1", interval = 0.01)
+            time.sleep(0.05)
+            pyautogui.press("enter")
+        
     # Wait 1 second before checking again
     time.sleep(1)
 
