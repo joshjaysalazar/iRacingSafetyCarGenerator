@@ -12,6 +12,8 @@ config = configparser.ConfigParser()
 config.read('settings.ini')
 min_sc = config.getint('settings', 'min_safety_cars')
 max_sc = config.getint('settings', 'max_safety_cars')
+min_pace_laps = config.getint('settings', 'min_pace_laps')
+max_pace_laps = config.getint('settings', 'max_pace_laps')
 start_minute = config.getfloat('settings', 'start_minute')
 end_minute = config.getfloat('settings', 'end_minute')
 min_time_between = config.getfloat('settings', 'min_time_between')
@@ -70,9 +72,20 @@ while True:
     # If the current time is past the next safety car event, trigger it
     if ir["SessionTime"] > start_time + (sc_times[0] * 60):
         print(f"Safety car event triggered at {ir['SessionTime']}")
+
+        # Send yellow flag chat command
         ir.chat_command(1)
         time.sleep(0.05)
         pyautogui.write("!yellow", interval = 0.01)
+        time.sleep(0.05)
+        pyautogui.press("enter")
+        time.sleep(0.05)
+
+        # Send pace lap chat command
+        num_pace_laps = random.randint(min_pace_laps, max_pace_laps)
+        ir.chat_command(1)
+        time.sleep(0.05)
+        pyautogui.write(f"!pacelaps {num_pace_laps}", interval = 0.01)
         time.sleep(0.05)
         pyautogui.press("enter")
 
