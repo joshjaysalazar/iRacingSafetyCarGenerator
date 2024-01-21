@@ -1,10 +1,10 @@
 # iRacing Safety Car Generator
 
-This script is designed to trigger safety car events in iRacing at random intervals during a race. It reads settings from a configuration file and connects to the iRacing simulation to trigger safety car events as specified.
+This script is designed to trigger safety car events in iRacing at random intervals during a race. It reads settings from a configuration file and connects to iRacing to trigger safety car events as generated.
 
 ## Usage
 
-1. Make sure you have Python installed on your system.
+1. Make sure you have Python 3.x installed on your system.
 
 2. Install the required libraries by running the following command:
 
@@ -37,9 +37,9 @@ This script is designed to trigger safety car events in iRacing at random interv
 
    You can adjust these settings to your preferences.
 
-4. To run the script, simply double-click on `main.py` with a default installation of Python on Windows.
+4. To run the script, double-click on `main.py`. The script should be run while cars are gridding for the race to ensure it doesn't start counting down time too early!
 
-5. Follow the on-screen instructions and make sure to click on the iRacing window to give it focus.
+5. Make sure to click on the iRacing window to give it focus.
 
 ## License
 
