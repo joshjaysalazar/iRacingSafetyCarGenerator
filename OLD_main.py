@@ -7,16 +7,16 @@ import irsdk
 import pyautogui
 
 
-# Read settings file
-config = configparser.ConfigParser()
-config.read('settings.ini')
-min_sc = config.getint('settings', 'min_safety_cars')
-max_sc = config.getint('settings', 'max_safety_cars')
-start_minute = config.getfloat('settings', 'start_minute')
-end_minute = config.getfloat('settings', 'end_minute')
-min_time_between = config.getfloat('settings', 'min_time_between')
-laps = config.getint('settings', 'laps')
-print("Loaded settings.")
+# # Read settings file
+# config = configparser.ConfigParser()
+# config.read('settings.ini')
+# min_sc = config.getint('settings', 'min_safety_cars')
+# max_sc = config.getint('settings', 'max_safety_cars')
+# start_minute = config.getfloat('settings', 'start_minute')
+# end_minute = config.getfloat('settings', 'end_minute')
+# min_time_between = config.getfloat('settings', 'min_time_between')
+# laps = config.getint('settings', 'laps')
+# print("Loaded settings.")
 
 # Randomly determine number of safety car events
 number_sc = random.randint(min_sc, max_sc)
