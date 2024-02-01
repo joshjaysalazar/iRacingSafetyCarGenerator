@@ -24,15 +24,18 @@ This script is designed to trigger safety car events in iRacing at random interv
 
    # Start minute for possible safety car appearance
    # This is the earliest time a safety car can appear in the race, in minutes
-   start_minute = 5
+   start_minute = 5.0
 
    # End minute for possible safety car appearance
    # This is the latest time a safety car can appear in the race, in minutes
-   end_minute = 40
+   end_minute = 30.0
 
    # Minimum amount of time between safety car appearances
    # This is the minimum amount of time between safety car appearances, in minutes
-   min_time_between = 10
+   min_time_between = 10.0
+
+   # Number of laps behind safety car (including SC out lap, must be > 2)
+   laps = 2
    ```
 
    You can adjust these settings to your preferences.
