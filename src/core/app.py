@@ -41,6 +41,9 @@ class App(tk.Tk):
         self.laps_under_sc_entry = tk.Entry(self)
         self.laps_under_sc_entry.insert(0, self.settings["laps_under_sc"])
 
+        # Create a save settings button
+        self.save_button = tk.Button(self, text="Save Settings", command=self._save_settings)
+
         # Create a button to generate safety car events
         self.generate_button = tk.Button(self, text="Generate Safety Car Events", command=self.generate)
 
@@ -60,6 +63,7 @@ class App(tk.Tk):
         self.min_time_between_entry.pack()
         self.laps_under_sc_label.pack()
         self.laps_under_sc_entry.pack()
+        self.save_button.pack()
         self.generate_button.pack()
         self.sc_text.pack()
 
@@ -80,6 +84,24 @@ class App(tk.Tk):
 
         # Return the settings
         return settings
+
+    def _save_settings(self):
+        # Create a new config parser
+        config = configparser.ConfigParser()
+
+        # Add the settings to the config object
+        config["settings"] = {
+            "min_safety_cars": self.min_sc_entry.get(),
+            "max_safety_cars": self.max_sc_entry.get(),
+            "start_minute": self.start_minute_entry.get(),
+            "end_minute": self.end_minute_entry.get(),
+            "min_time_between": self.min_time_between_entry.get(),
+            "laps_under_sc": self.laps_under_sc_entry.get()
+        }
+
+        # Write the settings to the file
+        with open("settings.ini", "w") as file:
+            config.write(file)
 
     def generate(self):
         pass
