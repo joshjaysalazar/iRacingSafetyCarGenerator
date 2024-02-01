@@ -15,7 +15,7 @@ max_sc = config.getint('settings', 'max_safety_cars')
 start_minute = config.getfloat('settings', 'start_minute')
 end_minute = config.getfloat('settings', 'end_minute')
 min_time_between = config.getfloat('settings', 'min_time_between')
-time_until_green = config.getfloat('settings', 'time_until_green')
+laps = config.getint('settings', 'laps')
 print("Loaded settings.")
 
 # Randomly determine number of safety car events
@@ -82,17 +82,19 @@ while True:
         # Remove the safety car event from the list
         sc_times.pop(0)
 
-        # Wait for the time until green flag
-        print(f"Waiting {time_until_green} minutes for green flag...")
-        time.sleep(time_until_green * 60)
+        # Get the max value from all cars' lap started count
+        lap_at_yellow = max(ir["CarIdxLap"])
 
-        # Send green flag chat command if still pacing
-        if ir["PaceMode"] == 2 or ir["PaceMode"] == 3:
-            ir.chat_command(1)
-            time.sleep(0.05)
-            pyautogui.write("!pacelaps 1", interval = 0.01)
-            time.sleep(0.05)
-            pyautogui.press("enter")
+        # Wait for 2 laps to be completed
+        while True:
+            if max(ir["CarIdxLap"]) >= lap_at_yellow + 2:
+                # Send the pacelaps chat command
+                ir.chat_command(1)
+                time.sleep(0.05)
+                pyautogui.write(f"!pacelaps {laps - 1}", interval = 0.01)
+                time.sleep(0.05)
+                pyautogui.press("enter")
+                break
         
     # Wait 1 second before checking again
     time.sleep(1)
