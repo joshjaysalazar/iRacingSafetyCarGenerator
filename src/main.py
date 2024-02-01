@@ -1,8 +1,8 @@
-from core.app import App
+from core import app
 
 
 def main():
-    app = App()
+    app = app.App()
     app.mainloop()
 
 if __name__ == "__main__":
