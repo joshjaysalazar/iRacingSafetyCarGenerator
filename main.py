@@ -95,6 +95,9 @@ while True:
                 time.sleep(0.05)
                 pyautogui.press("enter")
                 break
+
+            # Wait 1 second before checking again
+            time.sleep(1)
         
     # Wait 1 second before checking again
     time.sleep(1)
