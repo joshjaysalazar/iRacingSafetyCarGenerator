@@ -9,11 +9,8 @@ class App(tk.Tk):
         # Load settings from config file
         self.settings = self.read_config()
 
+        # Set window properties
         self.title("iRacing Safety Car Generator")
-        self.geometry("300x200")
-
-        self.label = tk.Label(self, text="Test")
-        self.label.pack(pady=50)
 
     def read_config(self, file="settings.ini"):
         # Initialize configparser
