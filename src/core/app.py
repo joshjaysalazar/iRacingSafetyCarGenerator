@@ -7,7 +7,8 @@ class App(tk.Tk):
         super().__init__()
 
         # Load settings from config file
-        self.settings = self._read_config()
+        self.settings = configparser.ConfigParser()
+        self.settings = self.settings.read("settings.ini")
 
         # Set window properties
         self.title("iRacing Safety Car Generator")
@@ -67,41 +68,17 @@ class App(tk.Tk):
         self.generate_button.pack()
         self.sc_text.pack()
 
-    def _read_config(self, file="settings.ini"):
-        # Initialize configparser
-        config = configparser.ConfigParser()
-        config.read(file)
-
-        # Create a dictionary to store the settings
-        settings = {
-            "min_safety_cars": config.getint("settings", "min_safety_cars"),
-            "max_safety_cars": config.getint("settings", "max_safety_cars"),
-            "start_minute": config.getfloat("settings", "start_minute"),
-            "end_minute": config.getfloat("settings", "end_minute"),
-            "min_time_between": config.getfloat("settings", "min_time_between"),
-            "laps_under_sc": config.getint("settings", "laps_under_sc")
-        }
-
-        # Return the settings
-        return settings
-
     def _save_settings(self):
-        # Create a new config parser
-        config = configparser.ConfigParser()
+        # Save the settings to the config file
+        self.settings["min_safety_cars"] = self.min_sc_entry.get()
+        self.settings["max_safety_cars"] = self.max_sc_entry.get()
+        self.settings["start_minute"] = self.start_minute_entry.get()
+        self.settings["end_minute"] = self.end_minute_entry.get()
+        self.settings["min_time_between"] = self.min_time_between_entry.get()
+        self.settings["laps_under_sc"] = self.laps_under_sc_entry.get()
 
-        # Add the settings to the config object
-        config["settings"] = {
-            "min_safety_cars": self.min_sc_entry.get(),
-            "max_safety_cars": self.max_sc_entry.get(),
-            "start_minute": self.start_minute_entry.get(),
-            "end_minute": self.end_minute_entry.get(),
-            "min_time_between": self.min_time_between_entry.get(),
-            "laps_under_sc": self.laps_under_sc_entry.get()
-        }
-
-        # Write the settings to the file
-        with open("settings.ini", "w") as file:
-            config.write(file)
+        with open("settings.ini", "w") as configfile:
+            self.settings.write(configfile)
 
     def generate(self):
         pass
