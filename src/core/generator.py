@@ -1,6 +1,6 @@
 class Generator:
-    def __init__(self, settings):
-        self.settings = settings
+    def __init__(self, master=None):
+        self.master = master
 
     def setup(self):
         pass
