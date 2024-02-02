@@ -19,7 +19,7 @@ import pyautogui
 # print("Loaded settings.")
 
 # Randomly determine number of safety car events
-number_sc = random.randint(min_sc, max_sc)
+number_sc = random.randint(min_sc, max_sc) 
 
 # Randomly determine safety car event times in minutes
 sc_times = []
