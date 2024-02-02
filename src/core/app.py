@@ -91,7 +91,11 @@ class App(tk.Tk):
             0,
             self.settings["settings"]["min_time_between"]
         )
-        self.min_time_between_label.grid(row=4, column=0, sticky="e", pady=(5, 0))
+        self.min_time_between_label.grid(
+            row=4,
+            column=0,
+            sticky="e", pady=(5, 0)
+        )
         self.min_time_between_entry.grid(
             row=4,
             column=1,
