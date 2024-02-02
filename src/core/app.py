@@ -1,5 +1,6 @@
 import configparser
 import tkinter as tk
+from tkinter import scrolledtext
 
 from core import generator
 
@@ -144,7 +145,12 @@ class App(tk.Tk):
         self.generate_button.grid(row=7, column=0, columnspan=2, pady=(5, 0))
 
         # Create a disabled text box to display the generated safety car events
-        self.sc_text = tk.Text(self, height=10, width=50, state="disabled")
+        self.sc_text = scrolledtext.ScrolledText(
+            self,
+            height=10,
+            width=50,
+            state="disabled"
+        )
         self.sc_text.grid(row=8, column=0, columnspan=2, padx=10, pady=10)
 
     def _save_settings(self):
@@ -171,3 +177,4 @@ class App(tk.Tk):
         self.sc_text.configure(state="normal")
         self.sc_text.insert("end", f"{message}\n")
         self.sc_text.configure(state="disabled")
+        self.sc_text.see("end")
