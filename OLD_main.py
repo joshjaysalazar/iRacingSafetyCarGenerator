@@ -18,38 +18,38 @@ import pyautogui
 # laps = config.getint('settings', 'laps')
 # print("Loaded settings.")
 
-# Randomly determine number of safety car events
-number_sc = random.randint(min_sc, max_sc) 
+# # Randomly determine number of safety car events
+# number_sc = random.randint(min_sc, max_sc) 
 
-# Randomly determine safety car event times in minutes
-sc_times = []
-if number_sc > 0:
-    for i in range(number_sc):
-        # If first safety car event, choose a random time between start and end
-        if i == 0:
-            start = start_minute
-            end = end_minute
-        # If not, choose a random time between the previous SC event and the end
-        else:
-            # If there's not enough time left for another SC event, break
-            if sc_times[i - 1] + min_time_between > end_minute:
-                break
-            start = sc_times[i - 1] + min_time_between
-            end = end_minute
-        sc_times.append(random.uniform(start, end))
-print("Generated safety car event times.")
+# # Randomly determine safety car event times in minutes
+# sc_times = []
+# if number_sc > 0:
+#     for i in range(number_sc):
+#         # If first safety car event, choose a random time between start and end
+#         if i == 0:
+#             start = start_minute
+#             end = end_minute
+#         # If not, choose a random time between the previous SC event and the end
+#         else:
+#             # If there's not enough time left for another SC event, break
+#             if sc_times[i - 1] + min_time_between > end_minute:
+#                 break
+#             start = sc_times[i - 1] + min_time_between
+#             end = end_minute
+#         sc_times.append(random.uniform(start, end))
+# print("Generated safety car event times.")
 
-# Connect to iRacing
-ir = irsdk.IRSDK()
+# # Connect to iRacing
+# ir = irsdk.IRSDK()
 
-# Attempt to connect and tell user if successful
-if ir.startup():
-    print("Connected to iRacing.")
-    print("Be sure to click on the iRacing window to give it focus!")
-else:
-    print(f"Error connecting to iRacing.")
-    os.system("pause")
-    exit()
+# # Attempt to connect and tell user if successful
+# if ir.startup():
+#     print("Connected to iRacing.")
+#     print("Be sure to click on the iRacing window to give it focus!")
+# else:
+#     print(f"Error connecting to iRacing.")
+#     os.system("pause")
+#     exit()
 
 # Wait for green flag
 print("Waiting for green flag...")

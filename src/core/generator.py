@@ -9,11 +9,21 @@ class Generator:
 
     def run(self):
         # Proxy variables for settings
-        min_safety_cars = self.master.settings["settings"]["min_safety_cars"]
-        max_safety_cars = self.master.settings["settings"]["max_safety_cars"]
-        start_minute = self.master.settings["settings"]["start_minute"]
-        end_minute = self.master.settings["settings"]["end_minute"]
-        min_time_between = self.master.settings["settings"]["min_time_between"]
+        min_safety_cars = int(
+            self.master.settings["settings"]["min_safety_cars"]
+        )
+        max_safety_cars = int(
+            self.master.settings["settings"]["max_safety_cars"]
+        )
+        start_minute = float(
+            self.master.settings["settings"]["start_minute"]
+        )
+        end_minute = float(
+            self.master.settings["settings"]["end_minute"]
+        )
+        min_time_between = float(
+            self.master.settings["settings"]["min_time_between"]
+        )
 
         # Randomly determine number of safety car events
         self.number_sc = random.randint(min_safety_cars, max_safety_cars) 
@@ -36,26 +46,17 @@ class Generator:
                 self.sc_times.append(random.uniform(start, end))
 
         # Add message to text box
-        self.master.sc_text.insert(
-            "end",
-            f"Generated safety car event times.\n"
-        )
+        self.master.add_message("Generated safety car event times.")
 
         # Connect to iRacing
         ir = irsdk.IRSDK()
 
         # Attempt to connect and tell user if successful
         if ir.startup():
-            self.master.sc_text.insert(
-                "end",
-                f"Connected to iRacing.\n"
-            )
-            self.master.sc_text.insert(
-                "end",
-                f"Be sure to click on the iRacing window to give it focus!\n"
+            self.master.add_message("Connected to iRacing.")
+            self.master.add_message(
+                "Be sure to click on the iRacing window to give it focus!"
             )
         else:
-            self.master.sc_text.insert(
-                "end",
-                f"Error connecting to iRacing.\n"
-            )
+            self.master.add_message("Error connecting to iRacing.")
+            return

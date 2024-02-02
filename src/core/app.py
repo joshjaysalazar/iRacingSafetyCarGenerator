@@ -163,3 +163,8 @@ class App(tk.Tk):
 
         with open("settings.ini", "w") as configfile:
             self.settings.write(configfile)
+
+    def add_message(self, message):
+        self.sc_text.configure(state="normal")
+        self.sc_text.insert("end", f"{message}\n")
+        self.sc_text.configure(state="disabled")
