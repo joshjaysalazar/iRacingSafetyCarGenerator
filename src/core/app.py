@@ -57,7 +57,10 @@ class App(tk.Tk):
             pady=(5, 0)
         )
 
-        self.start_minute_label = tk.Label(self, text="Start Minute")
+        self.start_minute_label = tk.Label(
+            self,
+            text="Earliest Possible Minute"
+        )
         self.start_minute_entry = tk.Entry(self)
         self.start_minute_entry.insert(
             0,
@@ -72,7 +75,7 @@ class App(tk.Tk):
             pady=(5, 0)
         )
 
-        self.end_minute_label = tk.Label(self, text="End Minute")
+        self.end_minute_label = tk.Label(self, text="Latest Possible Minute")
         self.end_minute_entry = tk.Entry(self)
         self.end_minute_entry.insert(
             0,
