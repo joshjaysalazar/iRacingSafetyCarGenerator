@@ -58,10 +58,13 @@ class Generator:
                 while True:
                     if max(self.ir["CarIdxLap"]) >= lap_at_yellow + 2:
                         # Send the pacelaps chat command
+                        laps = int(
+                            self.master.settings["settings"]["laps_under_sc"]
+                        )
                         self.ir.chat_command(1)
                         time.sleep(0.05)
                         pyautogui.write(
-                            f"!pacelaps {self.laps - 1}", interval=0.01
+                            f"!pacelaps {laps - 1}", interval=0.01
                         )
                         time.sleep(0.05)
                         pyautogui.press("enter")
