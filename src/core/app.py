@@ -37,8 +37,8 @@ class App(tk.Tk):
             0,
             self.settings["settings"]["max_safety_cars"]
         )
-        self.max_sc_label.grid(row=1, column=0)
-        self.max_sc_entry.grid(row=1, column=1)
+        self.max_sc_label.grid(row=1, column=0, pady=(5, 0))
+        self.max_sc_entry.grid(row=1, column=1, pady=(5, 0))
 
         self.start_minute_label = tk.Label(self, text="Start Minute")
         self.start_minute_entry = tk.Entry(self)
@@ -46,8 +46,8 @@ class App(tk.Tk):
             0,
             self.settings["settings"]["start_minute"]
         )
-        self.start_minute_label.grid(row=2, column=0)
-        self.start_minute_entry.grid(row=2, column=1)
+        self.start_minute_label.grid(row=2, column=0, pady=(5, 0))
+        self.start_minute_entry.grid(row=2, column=1, pady=(5, 0))
 
         self.end_minute_label = tk.Label(self, text="End Minute")
         self.end_minute_entry = tk.Entry(self)
@@ -55,8 +55,8 @@ class App(tk.Tk):
             0,
             self.settings["settings"]["end_minute"]
         )
-        self.end_minute_label.grid(row=3, column=0)
-        self.end_minute_entry.grid(row=3, column=1)
+        self.end_minute_label.grid(row=3, column=0, pady=(5, 0))
+        self.end_minute_entry.grid(row=3, column=1, pady=(5, 0))
 
         self.min_time_between_label = tk.Label(
             self,
@@ -67,8 +67,8 @@ class App(tk.Tk):
             0,
             self.settings["settings"]["min_time_between"]
         )
-        self.min_time_between_label.grid(row=4, column=0)
-        self.min_time_between_entry.grid(row=4, column=1)
+        self.min_time_between_label.grid(row=4, column=0, pady=(5, 0))
+        self.min_time_between_entry.grid(row=4, column=1, pady=(5, 0))
 
         self.laps_under_sc_label = tk.Label(self, text="Laps Under Safety Car")
         self.laps_under_sc_entry = tk.Entry(self)
@@ -76,8 +76,8 @@ class App(tk.Tk):
             0,
             self.settings["settings"]["laps_under_sc"]
         )
-        self.laps_under_sc_label.grid(row=5, column=0)
-        self.laps_under_sc_entry.grid(row=5, column=1)
+        self.laps_under_sc_label.grid(row=5, column=0, pady=(5, 0))
+        self.laps_under_sc_entry.grid(row=5, column=1, pady=(5, 0))
 
         # Create a save settings button
         self.save_button = tk.Button(
@@ -85,7 +85,7 @@ class App(tk.Tk):
             text="Save Settings",
             command=self._save_settings
         )
-        self.save_button.grid(row=6, column=0, columnspan=2)
+        self.save_button.grid(row=6, column=0, columnspan=2, pady=(5, 0))
 
         # Create a button to generate safety car events
         self.generate_button = tk.Button(
@@ -93,11 +93,11 @@ class App(tk.Tk):
             text="Generate Safety Car Events",
             command=self.generate
         )
-        self.generate_button.grid(row=7, column=0, columnspan=2)
+        self.generate_button.grid(row=7, column=0, columnspan=2, pady=(5, 0))
 
         # Create a disabled text box to display the generated safety car events
         self.sc_text = tk.Text(self, height=10, width=50, state="disabled")
-        self.sc_text.grid(row=8, column=0, columnspan=2)
+        self.sc_text.grid(row=8, column=0, columnspan=2, pady=(5, 0))
 
     def _save_settings(self):
         # Get settings from the entry widgets
