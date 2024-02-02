@@ -1,11 +1,81 @@
 import random
+import threading
+import time
 
 import irsdk
+import pyautogui
 
 
 class Generator:
     def __init__(self, master=None):
         self.master = master
+
+    def _loop(self):
+        # Wait for green flag
+        self.master.add_message("Waiting for green flag...")
+        while True:
+            if self.ir["SessionFlags"] & irsdk.Flags.green:
+                self.start_time = self.ir["SessionTime"]
+                self.master.add_message(
+                    "Race has started. Green flag is out."
+                )
+                self.master.add_message(
+                    "Waiting for safety car events..."
+                )
+                break
+
+            # Wait 1 second before checking again
+            time.sleep(1)
+
+        # Loop through safety car events
+        while True:
+            # If there are no more safety car events, break
+            if len(self.sc_times) == 0:
+                break
+
+            # If the current time is past the next safety car event, trigger it
+            if self.ir["SessionTime"] > self.start_time + (
+                self.sc_times[0] * 60
+            ):
+                self.master.add_message(
+                    f"Safety car event triggered at {self.ir['SessionTime']}"
+                )
+
+                # Send yellow flag chat command
+                self.ir.chat_command(1)
+                time.sleep(0.05)
+                pyautogui.write("!yellow", interval=0.01)
+                time.sleep(0.05)
+                pyautogui.press("enter")
+
+                # Remove the safety car event from the list
+                self.sc_times.pop(0)
+
+                # Get the max value from all cars' lap started count
+                lap_at_yellow = max(self.ir["CarIdxLap"])
+
+                # Wait for 2 laps to be completed
+                while True:
+                    if max(self.ir["CarIdxLap"]) >= lap_at_yellow + 2:
+                        # Send the pacelaps chat command
+                        self.ir.chat_command(1)
+                        time.sleep(0.05)
+                        pyautogui.write(
+                            f"!pacelaps {self.laps - 1}", interval=0.01
+                        )
+                        time.sleep(0.05)
+                        pyautogui.press("enter")
+                        break
+
+                    # Wait 1 second before checking again
+                    time.sleep(1)
+
+            # Wait 1 second before checking again
+            time.sleep(1)
+
+        # All safety car events have been triggered
+        self.master.add_message("All safety car events triggered. Exiting...")
+        self.ir.shutdown()
 
     def run(self):
         # Proxy variables for settings
@@ -49,10 +119,10 @@ class Generator:
         self.master.add_message("Generated safety car event times.")
 
         # Connect to iRacing
-        ir = irsdk.IRSDK()
+        self.ir = irsdk.IRSDK()
 
         # Attempt to connect and tell user if successful
-        if ir.startup():
+        if self.ir.startup():
             self.master.add_message("Connected to iRacing.")
             self.master.add_message(
                 "Be sure to click on the iRacing window to give it focus!"
@@ -60,3 +130,7 @@ class Generator:
         else:
             self.master.add_message("Error connecting to iRacing.")
             return
+        
+        # Run the loop in a separate thread
+        self.thread = threading.Thread(target=self._loop)
+        self.thread.start()
