@@ -54,7 +54,7 @@ class Generator:
                 # Get the max value from all cars' lap started count
                 lap_at_yellow = max(self.ir["CarIdxLap"])
 
-                # Wait for 2 laps to be completed
+                # Wait for specified number of laps to be completed
                 while True:
                     if max(self.ir["CarIdxLap"]) >= lap_at_yellow + 2:
                         # Send the pacelaps chat command
