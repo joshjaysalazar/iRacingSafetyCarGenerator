@@ -1,6 +1,8 @@
 import configparser
 import tkinter as tk
 
+from core import generator
+
 
 class App(tk.Tk):
     def __init__(self):
@@ -15,6 +17,9 @@ class App(tk.Tk):
 
         # Create widgets
         self._create_widgets()
+
+        # Create generator object
+        self.generator = generator.Generator(self)
 
     def _create_widgets(self):
         # Create a two column grid
