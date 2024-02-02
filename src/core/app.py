@@ -15,11 +15,11 @@ class App(tk.Tk):
         # Set window properties
         self.title("iRacing Safety Car Generator")
 
-        # Create widgets
-        self._create_widgets()
-
         # Create generator object
         self.generator = generator.Generator(self)
+
+        # Create widgets
+        self._create_widgets()
 
     def _create_widgets(self):
         # Create a two column grid
