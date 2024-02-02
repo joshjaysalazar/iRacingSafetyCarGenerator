@@ -7,7 +7,7 @@ class Generator:
     def __init__(self, master=None):
         self.master = master
 
-    def setup(self):
+    def run(self):
         # Proxy variables for settings
         min_safety_cars = self.master.settings["settings"]["min_safety_cars"]
         max_safety_cars = self.master.settings["settings"]["max_safety_cars"]
@@ -59,6 +59,3 @@ class Generator:
                 "end",
                 f"Error connecting to iRacing.\n"
             )
-
-    def run(self):
-        pass
