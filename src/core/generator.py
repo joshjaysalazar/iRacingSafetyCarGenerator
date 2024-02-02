@@ -7,10 +7,21 @@ import pyautogui
 
 
 class Generator:
+    """Generates safety car events in iRacing."""
     def __init__(self, master=None):
+        """Initialize the generator object.
+
+        Args:
+            master: The parent window object
+        """
         self.master = master
 
     def _loop(self):
+        """Main loop for the safety car generator.
+        
+        Args:
+            None
+        """
         # Wait for green flag
         self.master.add_message("Waiting for green flag...")
         while True:
@@ -81,6 +92,11 @@ class Generator:
         self.ir.shutdown()
 
     def run(self):
+        """Run the safety car generator.
+
+        Args:
+            None
+        """
         # Proxy variables for settings
         min_safety_cars = int(
             self.master.settings["settings"]["min_safety_cars"]

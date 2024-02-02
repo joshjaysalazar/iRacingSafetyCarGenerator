@@ -6,7 +6,13 @@ from core import generator
 
 
 class App(tk.Tk):
+    """Main application window for the safety car generator."""
     def __init__(self):
+        """Initialize the main application window.
+        
+        Args:
+            None
+        """
         super().__init__()
 
         # Load settings from config file
@@ -23,6 +29,11 @@ class App(tk.Tk):
         self._create_widgets()
 
     def _create_widgets(self):
+        """Create widgets for the main application window.
+
+        Args:
+            None
+        """
         # Create a two column grid
         self.grid_columnconfigure(0, weight=1)
         self.grid_columnconfigure(1, weight=1)
@@ -154,6 +165,11 @@ class App(tk.Tk):
         self.sc_text.grid(row=8, column=0, columnspan=2, padx=10, pady=10)
 
     def _save_settings(self):
+        """Save the settings to the config file.
+
+        Args:
+            None
+        """
         # Get settings from the entry widgets
         min_sc_entry = self.min_sc_entry.get()
         max_sc_entry = self.max_sc_entry.get()
@@ -174,6 +190,11 @@ class App(tk.Tk):
             self.settings.write(configfile)
 
     def add_message(self, message):
+        """Add a message to the scrolled text box.
+
+        Args:
+            message (str): The message to add to the scrolled text box.
+        """
         self.sc_text.configure(state="normal")
         self.sc_text.insert("end", f"{message}\n")
         self.sc_text.configure(state="disabled")

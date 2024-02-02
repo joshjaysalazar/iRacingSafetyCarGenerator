@@ -2,6 +2,7 @@ from core.app import App
 
 
 def main():
+    """Main function for the safety car generator."""
     app = App()
     app.mainloop()
 
