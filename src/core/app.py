@@ -136,7 +136,7 @@ class App(tk.Tk):
         self.generate_button = tk.Button(
             self,
             text="Generate Safety Car Events",
-            command=self.generate
+            command=self.generator.run
         )
         self.generate_button.grid(row=7, column=0, columnspan=2, pady=(5, 0))
 
@@ -163,6 +163,3 @@ class App(tk.Tk):
 
         with open("settings.ini", "w") as configfile:
             self.settings.write(configfile)
-
-    def generate(self):
-        pass
