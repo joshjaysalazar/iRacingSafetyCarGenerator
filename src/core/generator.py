@@ -120,6 +120,10 @@ class Generator:
         Args:
             None
         """
+        # If immediate waveby is disabled, return
+        if self.master.settings["settings"]["immediate_waveby"] == "0":
+            return
+        
         # Get all class IDs (except safety car)
         class_ids = []
         for driver in self.ir["DriverInfo"]["Drivers"]:
