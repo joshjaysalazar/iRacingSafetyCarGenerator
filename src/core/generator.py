@@ -67,7 +67,19 @@ class Generator:
 
                 # Wait for specified number of laps to be completed
                 while True:
-                    if max(self.ir["CarIdxLap"]) >= lap_at_yellow + 2:
+                    # Zip the CarIdxLap and CarIdxOnPitRoad arrays together
+                    laps_started = zip(
+                        self.ir["CarIdxLap"],
+                        self.ir["CarIdxOnPitRoad"]
+                    )
+
+                    # If pit road value is True, remove it, keeping only laps
+                    laps_started = [
+                        x[0] for x in laps_started if x[1] == False
+                    ]
+                    
+                    # If the max value is 2 laps greater than the lap at yellow
+                    if max(laps_started) >= lap_at_yellow + 2:
                         # Send the pacelaps chat command
                         laps = int(
                             self.master.settings["settings"]["laps_under_sc"]
