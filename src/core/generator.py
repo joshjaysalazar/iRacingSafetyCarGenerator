@@ -75,7 +75,7 @@ class Generator:
 
                     # If pit road value is True, remove it, keeping only laps
                     laps_started = [
-                        x[0] for x in laps_started if x[1] == False
+                        car[0] for car in laps_started if car[1] == False
                     ]
                     
                     # If the max value is 2 laps greater than the lap at yellow
