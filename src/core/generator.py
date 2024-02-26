@@ -88,7 +88,6 @@ class Generator:
             time.sleep(1)
 
         # All safety car events have been triggered
-        self.master.add_message("All safety car events triggered.")
         self.ir.shutdown()
 
     def run(self):
