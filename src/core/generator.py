@@ -94,11 +94,14 @@ class Generator:
                             )
                             time.sleep(0.05)
                             pyautogui.press("enter")
+                            self.master.add_message(
+                                f"Pacelaps command sent for {laps - 1} laps."
+                            )
 
                         # If it wasn't, let the user know
                         else:
                             self.master.add_message(
-                                "Pacelaps chat command not sent; value too low."
+                                "Pacelaps command not sent; value too low."
                             )
                         
                         break
