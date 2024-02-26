@@ -16,6 +16,23 @@ class Generator:
         """
         self.master = master
 
+    def _get_driver_number(self, id):
+        """Get the driver number from the iRacing SDK.
+
+        Args:
+            id: The iRacing driver ID
+
+        Returns:
+            The driver number, or None if not found
+        """
+        # Get the driver number from the iRacing SDK
+        for driver in self.ir["DriverInfo"]["Drivers"]:
+            if driver["CarIdx"] == id:
+                return driver["CarNumber"]
+                
+        # If the driver number wasn't found, return None
+        return None
+
     def _loop(self):
         """Main loop for the safety car generator.
         
@@ -77,7 +94,7 @@ class Generator:
                     self.ir.chat_command(1)
                     time.sleep(0.05)
                     pyautogui.write(
-                        f"!pacelaps {laps - 1}", interval=0.01
+                        f"!p {laps - 1}", interval=0.01
                     )
                     time.sleep(0.05)
                     pyautogui.press("enter")
@@ -97,6 +114,78 @@ class Generator:
             # Wait 1 second before checking again
             time.sleep(1)
 
+    def _send_wave_arounds(self):
+        """Send the wave around chat commands to iRacing.
+
+        Args:
+            None
+        """
+        # Get all class IDs (except safety car)
+        class_ids = []
+        for driver in self.ir["DriverInfo"]["Drivers"]:
+            # Skip the safety car
+            if driver["CarIsPaceCar"] == 1:
+                continue
+
+            # If the class ID isn't already in the list, add it
+            else:
+                if driver["CarClassID"] not in class_ids:
+                    class_ids.append(driver["CarClassID"])
+
+        # Create an empty list of cars to wave around
+        cars_to_wave = []
+
+        # Zip together the number of laps started, position on track, and class
+        drivers = zip(
+            self.ir["CarIdxLap"],
+            self.ir["CarIdxLapDistPct"],
+            self.ir["CarIdxClass"]
+        )
+
+        # Get the highest started lap for each class
+        highest_lap = {}
+        for class_id in class_ids:
+            # Get the highest lap and track position for the current class
+            max_lap = 0
+            for driver in drivers:
+                if driver[2] == class_id:
+                    if driver[0] > max_lap:
+                        max_lap = (driver[0], driver[1])
+
+            # Add the highest lap to the dictionary
+            highest_lap[class_id] = max_lap
+
+        # For each driver, check if they're eligible for a wave around
+        for i, driver in enumerate(drivers):
+            # Get the class ID for the current driver
+            driver_class = driver[2]
+
+            # If driver has started 2 or fewer laps than class leader, wave them
+            lap_target = highest_lap[driver_class][0] - 2
+            if driver[0] <= lap_target:
+                driver_number = self._get_driver_number(i)
+                cars_to_wave.append(driver_number)
+
+            # If they've started 1 fewer laps and are behind on track, wave them
+            lap_target = highest_lap[driver_class][0] - 1
+            track_pos_target = highest_lap[driver_class][1]
+            if driver[0] == lap_target and driver[1] < track_pos_target:
+                driver_number = self._get_driver_number(i)
+                cars_to_wave.append(driver_number)
+
+        # Send the wave chat command for each car
+        if len(cars_to_wave) > 0:
+            for car in cars_to_wave:
+                self.ir.chat_command(1)
+                time.sleep(0.05)
+                pyautogui.write(f"!w {car}", interval=0.01)
+                time.sleep(0.05)
+                pyautogui.press("enter")
+                self.master.add_message(
+                    f"Wave around command sent for car {car}."
+                )
+                time.sleep(0.05)
+
     def _start_safety_car(self):
         """Send a yellow flag to iRacing.
 
@@ -111,12 +200,15 @@ class Generator:
         # Send yellow flag chat command
         self.ir.chat_command(1)
         time.sleep(0.05)
-        pyautogui.write("!yellow", interval=0.01)
+        pyautogui.write("!y", interval=0.01)
         time.sleep(0.05)
         pyautogui.press("enter")
 
         # Remove the safety car event from the list
         self.sc_times.pop(0)
+
+        # Send the wave commands
+        self._send_wave_arounds()
 
         # Send pacelaps command when the time is right
         self._send_pacelaps()
