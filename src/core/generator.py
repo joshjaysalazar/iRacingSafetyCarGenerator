@@ -22,8 +22,115 @@ class Generator:
         Args:
             None
         """
-        # Wait for green flag
+        # Wait for the green flag
+        self._wait_for_green_flag()
+
+        # Loop through safety car events
+        while True:
+            # If there are no more safety car events, break
+            if len(self.sc_times) == 0:
+                break
+
+            # If the current time is past the next safety car event, trigger it
+            next_event = self.start_time + (self.sc_times[0] * 60)
+            if self.ir["SessionTime"] > next_event:
+                # Start the safety car event
+                self._start_safety_car()
+
+            # Wait 1 second before checking again
+            time.sleep(1)
+
+        # Shutdown the iRacing SDK after all safety car events are complete
+        self.ir.shutdown()
+
+    def _send_pacelaps(self):
+        """Send a pacelaps chat command to iRacing.
+        
+        Args:
+            None
+        """
+        # Get the max value from all cars' lap started count
+        lap_at_yellow = max(self.ir["CarIdxLap"])
+
+        # Wait for specified number of laps to be completed
+        while True:
+            # Zip the CarIdxLap and CarIdxOnPitRoad arrays together
+            laps_started = zip(
+                self.ir["CarIdxLap"],
+                self.ir["CarIdxOnPitRoad"]
+            )
+
+            # If pit road value is True, remove it, keeping only laps
+            laps_started = [
+                car[0] for car in laps_started if car[1] == False
+            ]
+            
+            # If the max value is 2 laps greater than the lap at yellow
+            if max(laps_started) >= lap_at_yellow + 2:
+                # Send the pacelaps chat command
+                laps = int(
+                    self.master.settings["settings"]["laps_under_sc"]
+                )
+                
+                # Only send if laps is greater than 1
+                if laps > 1:
+                    self.ir.chat_command(1)
+                    time.sleep(0.05)
+                    pyautogui.write(
+                        f"!pacelaps {laps - 1}", interval=0.01
+                    )
+                    time.sleep(0.05)
+                    pyautogui.press("enter")
+                    self.master.add_message(
+                        f"Pacelaps command sent for {laps - 1} laps."
+                    )
+
+                # If it wasn't, let the user know
+                else:
+                    self.master.add_message(
+                        "Pacelaps command not sent; value too low."
+                    )
+                
+                # Break the loop
+                break
+
+            # Wait 1 second before checking again
+            time.sleep(1)
+
+    def _start_safety_car(self):
+        """Send a yellow flag to iRacing.
+
+        Args:
+            None
+        """
+        # Add message to text box
+        self.master.add_message(
+            f"Safety car event triggered at {self.ir['SessionTime']}"
+        )
+
+        # Send yellow flag chat command
+        self.ir.chat_command(1)
+        time.sleep(0.05)
+        pyautogui.write("!yellow", interval=0.01)
+        time.sleep(0.05)
+        pyautogui.press("enter")
+
+        # Remove the safety car event from the list
+        self.sc_times.pop(0)
+
+        # Send pacelaps command when the time is right
+        self._send_pacelaps()
+
+    def _wait_for_green_flag(self):
+        """Wait for the green flag to be displayed.
+
+        Args:
+            None
+        """
+        # Add message to text box
         self.master.add_message("Waiting for green flag...")
+
+        # Loop until the green flag is displayed
         while True:
             if self.ir["SessionFlags"] & irsdk.Flags.green:
                 self.start_time = self.ir["SessionTime"]
@@ -37,83 +144,6 @@ class Generator:
 
             # Wait 1 second before checking again
             time.sleep(1)
-
-        # Loop through safety car events
-        while True:
-            # If there are no more safety car events, break
-            if len(self.sc_times) == 0:
-                break
-
-            # If the current time is past the next safety car event, trigger it
-            if self.ir["SessionTime"] > self.start_time + (
-                self.sc_times[0] * 60
-            ):
-                self.master.add_message(
-                    f"Safety car event triggered at {self.ir['SessionTime']}"
-                )
-
-                # Send yellow flag chat command
-                self.ir.chat_command(1)
-                time.sleep(0.05)
-                pyautogui.write("!yellow", interval=0.01)
-                time.sleep(0.05)
-                pyautogui.press("enter")
-
-                # Remove the safety car event from the list
-                self.sc_times.pop(0)
-
-                # Get the max value from all cars' lap started count
-                lap_at_yellow = max(self.ir["CarIdxLap"])
-
-                # Wait for specified number of laps to be completed
-                while True:
-                    # Zip the CarIdxLap and CarIdxOnPitRoad arrays together
-                    laps_started = zip(
-                        self.ir["CarIdxLap"],
-                        self.ir["CarIdxOnPitRoad"]
-                    )
-
-                    # If pit road value is True, remove it, keeping only laps
-                    laps_started = [
-                        car[0] for car in laps_started if car[1] == False
-                    ]
-                    
-                    # If the max value is 2 laps greater than the lap at yellow
-                    if max(laps_started) >= lap_at_yellow + 2:
-                        # Send the pacelaps chat command
-                        laps = int(
-                            self.master.settings["settings"]["laps_under_sc"]
-                        )
-                        
-                        # Only send if laps is greater than 1
-                        if laps > 1:
-                            self.ir.chat_command(1)
-                            time.sleep(0.05)
-                            pyautogui.write(
-                                f"!pacelaps {laps - 1}", interval=0.01
-                            )
-                            time.sleep(0.05)
-                            pyautogui.press("enter")
-                            self.master.add_message(
-                                f"Pacelaps command sent for {laps - 1} laps."
-                            )
-
-                        # If it wasn't, let the user know
-                        else:
-                            self.master.add_message(
-                                "Pacelaps command not sent; value too low."
-                            )
-                        
-                        break
-
-                    # Wait 1 second before checking again
-                    time.sleep(1)
-
-            # Wait 1 second before checking again
-            time.sleep(1)
-
-        # All safety car events have been triggered
-        self.ir.shutdown()
 
     def run(self):
         """Run the safety car generator.
