@@ -92,7 +92,7 @@ class Generator:
                 # Only send if laps is greater than 1
                 if laps > 1:
                     self.ir.chat_command(1)
-                    time.sleep(0.05)
+                    time.sleep(0.1)
                     pyautogui.write(
                         f"!p {laps - 1}", interval=0.01
                     )
@@ -186,7 +186,7 @@ class Generator:
         if len(cars_to_wave) > 0:
             for car in cars_to_wave:
                 self.ir.chat_command(1)
-                time.sleep(0.05)
+                time.sleep(0.1)
                 pyautogui.write(f"!w {car}", interval=0.01)
                 time.sleep(0.05)
                 pyautogui.press("enter")
@@ -212,7 +212,7 @@ class Generator:
 
         # Send yellow flag chat command
         self.ir.chat_command(1)
-        time.sleep(0.05)
+        time.sleep(0.1)
         pyautogui.write("!y", interval=0.01)
         time.sleep(0.05)
         pyautogui.press("enter")
