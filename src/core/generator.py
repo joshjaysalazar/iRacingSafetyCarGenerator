@@ -132,45 +132,54 @@ class Generator:
                 if driver["CarClassID"] not in class_ids:
                     class_ids.append(driver["CarClassID"])
 
-        # Create an empty list of cars to wave around
-        cars_to_wave = []
-
         # Zip together the number of laps started, position on track, and class
         drivers = zip(
             self.ir["CarIdxLap"],
             self.ir["CarIdxLapDistPct"],
             self.ir["CarIdxClass"]
         )
+        drivers = tuple(drivers)
 
         # Get the highest started lap for each class
         highest_lap = {}
         for class_id in class_ids:
             # Get the highest lap and track position for the current class
-            max_lap = 0
+            max_lap = (0, 0)
             for driver in drivers:
                 if driver[2] == class_id:
-                    if driver[0] > max_lap:
+                    if driver[0] > max_lap[0]:
                         max_lap = (driver[0], driver[1])
 
             # Add the highest lap to the dictionary
             highest_lap[class_id] = max_lap
+
+        # Create an empty list of cars to wave around
+        cars_to_wave = []
 
         # For each driver, check if they're eligible for a wave around
         for i, driver in enumerate(drivers):
             # Get the class ID for the current driver
             driver_class = driver[2]
 
+            # If the class ID isn't in the class IDs list, skip the driver
+            if driver_class not in class_ids:
+                continue
+
+            driver_number = None
+
             # If driver has started 2 or fewer laps than class leader, wave them
             lap_target = highest_lap[driver_class][0] - 2
             if driver[0] <= lap_target:
                 driver_number = self._get_driver_number(i)
-                cars_to_wave.append(driver_number)
 
             # If they've started 1 fewer laps and are behind on track, wave them
             lap_target = highest_lap[driver_class][0] - 1
             track_pos_target = highest_lap[driver_class][1]
             if driver[0] == lap_target and driver[1] < track_pos_target:
                 driver_number = self._get_driver_number(i)
+
+            # If the driver number is not None, add it to the list
+            if driver_number is not None:
                 cars_to_wave.append(driver_number)
 
         # Send the wave chat command for each car
