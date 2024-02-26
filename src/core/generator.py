@@ -84,13 +84,23 @@ class Generator:
                         laps = int(
                             self.master.settings["settings"]["laps_under_sc"]
                         )
-                        self.ir.chat_command(1)
-                        time.sleep(0.05)
-                        pyautogui.write(
-                            f"!pacelaps {laps - 1}", interval=0.01
-                        )
-                        time.sleep(0.05)
-                        pyautogui.press("enter")
+                        
+                        # Only send if laps is greater than 1
+                        if laps > 1:
+                            self.ir.chat_command(1)
+                            time.sleep(0.05)
+                            pyautogui.write(
+                                f"!pacelaps {laps - 1}", interval=0.01
+                            )
+                            time.sleep(0.05)
+                            pyautogui.press("enter")
+
+                        # If it wasn't, let the user know
+                        else:
+                            self.master.add_message(
+                                "Pacelaps chat command not sent; value too low."
+                            )
+                        
                         break
 
                     # Wait 1 second before checking again
