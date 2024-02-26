@@ -139,13 +139,39 @@ class App(tk.Tk):
             pady=(5, 0)
         )
 
+        self.immediate_waveby_label = tk.Label(
+            self,
+            text="Immediate Wave Arounds"
+        )
+        self.immediate_waveby_var = tk.IntVar()
+        self.immediate_waveby_var.set(
+            self.settings["settings"]["immediate_waveby"]
+        )
+        self.immediate_waveby_checkbox = tk.Checkbutton(
+            self,
+            variable=self.immediate_waveby_var
+        )
+        self.immediate_waveby_label.grid(
+            row=6,
+            column=0,
+            sticky="e",
+            pady=(5, 0)
+        )
+        self.immediate_waveby_checkbox.grid(
+            row=6,
+            column=1,
+            sticky="w",
+            padx=(5, 0),
+            pady=(5, 0)
+        )
+
         # Create a save settings button
         self.save_button = tk.Button(
             self,
             text="Save Settings",
             command=self._save_settings
         )
-        self.save_button.grid(row=6, column=0, columnspan=2, pady=(20, 0))
+        self.save_button.grid(row=7, column=0, columnspan=2, pady=(20, 0))
 
         # Create a button to generate safety car events
         self.generate_button = tk.Button(
@@ -153,7 +179,7 @@ class App(tk.Tk):
             text="Generate Safety Car Events",
             command=self.generator.run
         )
-        self.generate_button.grid(row=7, column=0, columnspan=2, pady=(5, 0))
+        self.generate_button.grid(row=8, column=0, columnspan=2, pady=(5, 0))
 
         # Create a disabled text box to display the generated safety car events
         self.sc_text = scrolledtext.ScrolledText(
@@ -162,7 +188,7 @@ class App(tk.Tk):
             width=50,
             state="disabled"
         )
-        self.sc_text.grid(row=8, column=0, columnspan=2, padx=10, pady=10)
+        self.sc_text.grid(row=9, column=0, columnspan=2, padx=10, pady=10)
 
     def _save_settings(self):
         """Save the settings to the config file.
@@ -177,6 +203,7 @@ class App(tk.Tk):
         end_minute_entry = self.end_minute_entry.get()
         min_time_between_entry = self.min_time_between_entry.get()
         laps_under_sc_entry = self.laps_under_sc_entry.get()
+        immediate_waveby_entry = str(self.immediate_waveby_var.get())
 
         # Save the settings to the config file
         self.settings["settings"]["min_safety_cars"] = min_sc_entry
@@ -185,6 +212,7 @@ class App(tk.Tk):
         self.settings["settings"]["end_minute"] = end_minute_entry
         self.settings["settings"]["min_time_between"] = min_time_between_entry
         self.settings["settings"]["laps_under_sc"] = laps_under_sc_entry
+        self.settings["settings"]["immediate_waveby"] = immediate_waveby_entry
 
         with open("settings.ini", "w") as configfile:
             self.settings.write(configfile)
