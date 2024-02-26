@@ -185,6 +185,10 @@ class Generator:
                     f"Wave around command sent for car {car}."
                 )
                 time.sleep(0.05)
+        
+        # If no cars were waved around, let the user know
+        else:
+            self.master.add_message("No cars were eligible for a wave around.")
 
     def _start_safety_car(self):
         """Send a yellow flag to iRacing.
