@@ -67,18 +67,43 @@ class Generator:
 
                 # Wait for specified number of laps to be completed
                 while True:
-                    if max(self.ir["CarIdxLap"]) >= lap_at_yellow + 2:
+                    # Zip the CarIdxLap and CarIdxOnPitRoad arrays together
+                    laps_started = zip(
+                        self.ir["CarIdxLap"],
+                        self.ir["CarIdxOnPitRoad"]
+                    )
+
+                    # If pit road value is True, remove it, keeping only laps
+                    laps_started = [
+                        car[0] for car in laps_started if car[1] == False
+                    ]
+                    
+                    # If the max value is 2 laps greater than the lap at yellow
+                    if max(laps_started) >= lap_at_yellow + 2:
                         # Send the pacelaps chat command
                         laps = int(
                             self.master.settings["settings"]["laps_under_sc"]
                         )
-                        self.ir.chat_command(1)
-                        time.sleep(0.05)
-                        pyautogui.write(
-                            f"!pacelaps {laps - 1}", interval=0.01
-                        )
-                        time.sleep(0.05)
-                        pyautogui.press("enter")
+                        
+                        # Only send if laps is greater than 1
+                        if laps > 1:
+                            self.ir.chat_command(1)
+                            time.sleep(0.05)
+                            pyautogui.write(
+                                f"!pacelaps {laps - 1}", interval=0.01
+                            )
+                            time.sleep(0.05)
+                            pyautogui.press("enter")
+                            self.master.add_message(
+                                f"Pacelaps command sent for {laps - 1} laps."
+                            )
+
+                        # If it wasn't, let the user know
+                        else:
+                            self.master.add_message(
+                                "Pacelaps command not sent; value too low."
+                            )
+                        
                         break
 
                     # Wait 1 second before checking again
@@ -88,7 +113,6 @@ class Generator:
             time.sleep(1)
 
         # All safety car events have been triggered
-        self.master.add_message("All safety car events triggered.")
         self.ir.shutdown()
 
     def run(self):
