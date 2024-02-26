@@ -141,7 +141,7 @@ class App(tk.Tk):
 
         self.immediate_waveby_label = tk.Label(
             self,
-            text="Immediate Waveby"
+            text="Immediate Wave Arounds"
         )
         self.immediate_waveby_var = tk.IntVar()
         self.immediate_waveby_var.set(
