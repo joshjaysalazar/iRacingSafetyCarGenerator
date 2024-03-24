@@ -569,13 +569,11 @@ class App(tk.Tk):
         with open("settings.ini", "w") as configfile:
             self.settings.write(configfile)
 
-    def add_message(self, message):
-        """Add a message to the scrolled text box.
+    def set_message(self, message):
+        """Set the status label to a message.
 
         Args:
-            message (str): The message to add to the scrolled text box.
+            message (str): The message to set the status label to.
         """
-        self.sc_text.configure(state="normal")
-        self.sc_text.insert("end", f"{message}\n")
-        self.sc_text.configure(state="disabled")
-        self.sc_text.see("end")
+        self.lbl_status["text"] = message
+        self.update_idletasks()
