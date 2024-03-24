@@ -438,7 +438,7 @@ class App(tk.Tk):
         self.btn_run = ttk.Button(
             self.frm_controls,
             text="Run",
-            command=self.generator.run
+            command=self._save_and_run
         )
         self.btn_run.grid(
             row=controls_row,
@@ -515,6 +515,15 @@ class App(tk.Tk):
         self.var_immediate_wave_around.set(
             self.settings["settings"].getboolean("imm_wave_around")
         )
+
+    def _save_and_run(self):
+        """Save the settings to the config file and run the generator.
+
+        Args:
+            None
+        """
+        self._save_settings()
+        self.generator.run()
 
     def _save_settings(self):
         """Save the settings to the config file.
