@@ -469,23 +469,41 @@ class App(tk.Tk):
         Args:
             None
         """
-        # Get settings from the entry widgets
-        min_sc_entry = self.min_sc_entry.get()
-        max_sc_entry = self.ent_max_sc.get()
-        start_minute_entry = self.ent_start_minute.get()
-        end_minute_entry = self.ent_end_minute.get()
-        min_time_between_entry = self.ent_min_time_between.get()
-        laps_under_sc_entry = self.ent_laps_under_sc.get()
-        immediate_waveby_entry = str(self.immediate_waveby_var.get())
+        # Get all the settings from the widgets
+        random = self.var_random.get()
+        random_max_occ = self.spn_random_max_occ.get()
+        random_prob = self.ent_random_prob.get()
+        random_message = self.ent_random_message.get()
+        stopped = self.var_stopped.get()
+        stopped_min = self.spn_stopped_min.get()
+        stopped_message = self.ent_stopped_message.get()
+        off = self.var_off.get()
+        off_min = self.spn_off_min.get()
+        off_message = self.ent_off_message.get()
+        max_sc = self.ent_max_sc.get()
+        start_minute = self.ent_start_minute.get()
+        end_minute = self.ent_end_minute.get()
+        min_time_between = self.ent_min_time_between.get()
+        laps_under_sc = self.ent_laps_under_sc.get()
+        imm_wave_around = self.var_immediate_wave_around.get()
 
         # Save the settings to the config file
-        self.settings["settings"]["min_safety_cars"] = min_sc_entry
-        self.settings["settings"]["max_safety_cars"] = max_sc_entry
-        self.settings["settings"]["start_minute"] = start_minute_entry
-        self.settings["settings"]["end_minute"] = end_minute_entry
-        self.settings["settings"]["min_time_between"] = min_time_between_entry
-        self.settings["settings"]["laps_under_sc"] = laps_under_sc_entry
-        self.settings["settings"]["immediate_waveby"] = immediate_waveby_entry
+        self.settings["settings"]["random"] = str(random)
+        self.settings["settings"]["random_max_occ"] = str(random_max_occ)
+        self.settings["settings"]["random_prob"] = str(random_prob)
+        self.settings["settings"]["random_message"] = str(random_message)
+        self.settings["settings"]["stopped"] = str(stopped)
+        self.settings["settings"]["stopped_min"] = str(stopped_min)
+        self.settings["settings"]["stopped_message"] = str(stopped_message)
+        self.settings["settings"]["off"] = str(off)
+        self.settings["settings"]["off_min"] = str(off_min)
+        self.settings["settings"]["off_message"] = str(off_message)
+        self.settings["settings"]["max_sc"] = str(max_sc)
+        self.settings["settings"]["start_minute"] = str(start_minute)
+        self.settings["settings"]["end_minute"] = str(end_minute)
+        self.settings["settings"]["min_time_between"] = str(min_time_between)
+        self.settings["settings"]["laps_under_sc"] = str(laps_under_sc)
+        self.settings["settings"]["imm_wave_around"] = str(imm_wave_around)
 
         with open("settings.ini", "w") as configfile:
             self.settings.write(configfile)
