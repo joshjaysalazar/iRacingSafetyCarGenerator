@@ -461,7 +461,60 @@ class App(tk.Tk):
             sticky="ew",
             padx=5,
             pady=5
-        )        
+        )
+
+        # Fill in the widgets with the settings from the config file
+        self.var_random.set(self.settings["settings"].getboolean("random"))
+        self.spn_random_max_occ.delete(0, "end")
+        self.spn_random_max_occ.insert(
+            0,
+            self.settings["settings"]["random_max_occ"]
+        )
+        self.ent_random_prob.delete(0, "end")
+        self.ent_random_prob.insert(0, self.settings["settings"]["random_prob"])
+        self.ent_random_message.delete(0, "end")
+        self.ent_random_message.insert(
+            0,
+            self.settings["settings"]["random_message"]
+        )
+        self.var_stopped.set(self.settings["settings"].getboolean("stopped"))
+        self.spn_stopped_min.delete(0, "end")
+        self.spn_stopped_min.insert(
+            0,
+            self.settings["settings"]["stopped_min"]
+        )
+        self.ent_stopped_message.delete(0, "end")
+        self.ent_stopped_message.insert(
+            0,
+            self.settings["settings"]["stopped_message"]
+        )
+        self.var_off.set(self.settings["settings"].getboolean("off"))
+        self.spn_off_min.delete(0, "end")
+        self.spn_off_min.insert(0, self.settings["settings"]["off_min"])
+        self.ent_off_message.delete(0, "end")
+        self.ent_off_message.insert(0, self.settings["settings"]["off_message"])
+        self.ent_max_sc.delete(0, "end")
+        self.ent_max_sc.insert(0, self.settings["settings"]["max_sc"])
+        self.ent_start_minute.delete(0, "end")
+        self.ent_start_minute.insert(
+            0,
+            self.settings["settings"]["start_minute"]
+        )
+        self.ent_end_minute.delete(0, "end")
+        self.ent_end_minute.insert(0, self.settings["settings"]["end_minute"])
+        self.ent_min_time_between.delete(0, "end")
+        self.ent_min_time_between.insert(
+            0,
+            self.settings["settings"]["min_time_between"]
+        )
+        self.ent_laps_under_sc.delete(0, "end")
+        self.ent_laps_under_sc.insert(
+            0,
+            self.settings["settings"]["laps_under_sc"]
+        )
+        self.var_immediate_wave_around.set(
+            self.settings["settings"].getboolean("imm_wave_around")
+        )
 
     def _save_settings(self):
         """Save the settings to the config file.
