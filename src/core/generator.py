@@ -23,7 +23,27 @@ class Generator:
         self.total_random_sc_events = 0
 
     def _check_random(self):
-        pass
+        """Check to see if a random safety car event should be triggered.
+        
+        Args:
+            None
+        """
+        # Get relevant settings from the settings file
+        chance = float(self.master.settings["settings"]["random_prob"])
+        max_occ = int(self.master.settings["settings"]["random_max_occ"])
+        message = self.master.settings["settings"]["random_message"]
+
+        # If the random chance is 0, return
+        if chance == 0:
+            return
+
+        # Generate a random number between 1 and 100
+        random_number = random.randint(1, 100)
+
+        # If the random number is less than or equal to the chance, trigger
+        if random_number <= chance:
+            self._start_safety_car()
+            self.total_random_sc_events += 1
 
     def _check_stopped(self):
         pass
@@ -55,8 +75,10 @@ class Generator:
             None
         """
         # Get relevant settings from the settings file
-        max_events = int(self.master.settings["settings"]["max_sc_events"])
-        min_time = float(self.master.settings["settings"]["min_sc_time"]) * 60
+        max_events = int(self.master.settings["settings"]["max_safety_cars"])
+        min_time = float(
+            self.master.settings["settings"]["min_time_between"]
+        ) * 60
 
         # Wait for the green flag
         self._wait_for_green_flag()
@@ -86,6 +108,11 @@ class Generator:
         Args:
             None
         """
+        # Get relevant settings from the settings file
+        laps_under_sc = int(
+            self.master.settings["settings"]["laps_under_sc"]
+        )
+
         # Get the max value from all cars' lap started count
         lap_at_yellow = max(self.ir["CarIdxLap"])
 
@@ -104,22 +131,17 @@ class Generator:
             
             # If the max value is 2 laps greater than the lap at yellow
             if max(laps_started) >= lap_at_yellow + 2:
-                # Send the pacelaps chat command
-                laps = int(
-                    self.master.settings["settings"]["laps_under_sc"]
-                )
-                
                 # Only send if laps is greater than 1
-                if laps > 1:
+                if laps_under_sc > 1:
                     self.ir.chat_command(1)
                     time.sleep(0.1)
                     pyautogui.write(
-                        f"!p {laps - 1}", interval=0.01
+                        f"!p {laps_under_sc - 1}", interval=0.01
                     )
                     time.sleep(0.05)
                     pyautogui.press("enter")
                     self.master.set_message(
-                        f"Pacelaps command sent for {laps - 1} laps."
+                        f"Pacelaps command sent for {laps_under_sc - 1} laps."
                     )
 
                 # If it wasn't, let the user know
@@ -140,8 +162,11 @@ class Generator:
         Args:
             None
         """
+        # Get relevant settings from the settings file
+        wave_around = self.master.settings["settings"]["imm_wave_around"]
+
         # If immediate waveby is disabled, return
-        if self.master.settings["settings"]["immediate_waveby"] == "0":
+        if wave_around == "0":
             return
         
         # Get all class IDs (except safety car)
