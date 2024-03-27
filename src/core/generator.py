@@ -31,19 +31,29 @@ class Generator:
         # Get relevant settings from the settings file
         chance = float(self.master.settings["settings"]["random_prob"])
         max_occ = int(self.master.settings["settings"]["random_max_occ"])
+        start_minute = float(self.master.settings["settings"]["start_minute"])
+        end_minute = float(self.master.settings["settings"]["end_minute"])
         message = self.master.settings["settings"]["random_message"]
 
         # If the random chance is 0, return
         if chance == 0:
             return
+        
+        # If the max occurrences is reached, return
+        if self.total_random_sc_events >= max_occ:
+            return
 
-        # Generate a random number between 1 and 100
-        random_number = random.randint(1, 100)
+        # Generate a random number between 0 and 1
+        rng = random.random()
+
+        # Calculate the chance of triggering a safety car event this check
+        len_of_window = (end_minute - start_minute) * 60
+        chance = 1 - ((1 - chance) ** (1 / len_of_window))
 
         # If the random number is less than or equal to the chance, trigger
-        if random_number <= chance:
-            self._start_safety_car()
+        if rng <= chance:
             self.total_random_sc_events += 1
+            self._start_safety_car() 
 
     def _check_stopped(self):
         pass
@@ -248,7 +258,7 @@ class Generator:
         else:
             self.master.set_message("No cars were eligible for a wave around.")
 
-    def _start_safety_car(self):
+    def _start_safety_car(self, message=""):
         """Send a yellow flag to iRacing.
 
         Args:
@@ -262,7 +272,7 @@ class Generator:
         # Send yellow flag chat command
         self.ir.chat_command(1)
         time.sleep(0.1)
-        pyautogui.write("!y", interval=0.01)
+        pyautogui.write(f"!y {message}", interval=0.01)
         time.sleep(0.05)
         pyautogui.press("enter")
 
