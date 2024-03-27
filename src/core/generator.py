@@ -262,11 +262,6 @@ class Generator:
         Args:
             message: The message to send with the yellow flag command
         """
-        # Add message to text box
-        self.master.set_message(
-            f"Connected to iRacing\nSafety car deployed"
-        )
-
         # Send yellow flag chat command
         self.ir.chat_command(1)
         time.sleep(0.1)
@@ -296,7 +291,7 @@ class Generator:
             if self.ir["SessionFlags"] & irsdk.Flags.green:
                 self.start_time = time.time()
                 self.master.set_message(
-                    "Connected to iRacing\nGreen flag"
+                    "Connected to iRacing\nGenerating safety cars..."
                 )
                 break
 
