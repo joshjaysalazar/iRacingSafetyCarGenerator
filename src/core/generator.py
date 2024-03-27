@@ -29,11 +29,16 @@ class Generator:
             None
         """
         # Get relevant settings from the settings file
+        enabled = self.master.settings["settings"]["random"]
         chance = float(self.master.settings["settings"]["random_prob"])
         max_occ = int(self.master.settings["settings"]["random_max_occ"])
         start_minute = float(self.master.settings["settings"]["start_minute"])
         end_minute = float(self.master.settings["settings"]["end_minute"])
         message = self.master.settings["settings"]["random_message"]
+
+        # If random events are disabled, return
+        if enabled == "0":
+            return
 
         # If the random chance is 0, return
         if chance == 0:
@@ -53,7 +58,7 @@ class Generator:
         # If the random number is less than or equal to the chance, trigger
         if rng <= chance:
             self.total_random_sc_events += 1
-            self._start_safety_car() 
+            self._start_safety_car(message) 
 
     def _check_stopped(self):
         pass
