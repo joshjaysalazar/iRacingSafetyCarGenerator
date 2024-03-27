@@ -16,6 +16,20 @@ class Generator:
         """
         self.master = master
 
+        # Variables to track safety car events
+        self.total_sc_events = 0
+        self.last_sc_time = None
+        self.total_random_sc_events = 0
+
+    def _check_random(self):
+        pass
+
+    def _check_stopped(self):
+        pass
+
+    def _check_off_track(self):
+        pass
+
     def _get_driver_number(self, id):
         """Get the driver number from the iRacing SDK.
 
@@ -39,20 +53,25 @@ class Generator:
         Args:
             None
         """
+        # Get relevant settings from the settings file
+        max_events = int(self.master.settings["settings"]["max_sc_events"])
+        min_time = float(self.master.settings["settings"]["min_sc_time"]) * 60
+
         # Wait for the green flag
         self._wait_for_green_flag()
 
-        # Loop through safety car events
-        while True:
-            # If there are no more safety car events, break
-            if len(self.sc_times) == 0:
-                break
+        # Loop until the max number of safety car events is reached
+        while self.total_sc_events < max_events:
+            # If it hasn't been long enough since the last event, wait
+            if self.last_sc_time is not None:
+                if self.ir["SessionTime"] - self.last_sc_time < min_time:
+                    time.sleep(1)
+                    continue
 
-            # If the current time is past the next safety car event, trigger it
-            next_event = self.start_time + (self.sc_times[0] * 60)
-            if self.ir["SessionTime"] > next_event:
-                # Start the safety car event
-                self._start_safety_car()
+            # If all checks are passed, run safety car checks
+            self._check_random()
+            self._check_stopped()
+            self._check_off_track()
 
             # Wait 1 second before checking again
             time.sleep(1)
