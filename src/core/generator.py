@@ -164,15 +164,6 @@ class Generator:
                     )
                     time.sleep(0.05)
                     pyautogui.press("enter")
-                    self.master.set_message(
-                        f"Pacelaps command sent for {laps_under_sc - 1} laps."
-                    )
-
-                # If it wasn't, let the user know
-                else:
-                    self.master.set_message(
-                        "Pacelaps command not sent; value too low."
-                    )
                 
                 # Break the loop
                 break
@@ -263,14 +254,7 @@ class Generator:
                 pyautogui.write(f"!w {car}", interval=0.01)
                 time.sleep(0.05)
                 pyautogui.press("enter")
-                self.master.set_message(
-                    f"Wave around command sent for car {car}."
-                )
                 time.sleep(0.05)
-        
-        # If no cars were waved around, let the user know
-        else:
-            self.master.set_message("No cars were eligible for a wave around.")
 
     def _start_safety_car(self, message=""):
         """Send a yellow flag to iRacing.
@@ -280,7 +264,7 @@ class Generator:
         """
         # Add message to text box
         self.master.set_message(
-            f"Safety car event triggered."
+            f"Connected to iRacing\nSafety car deployed"
         )
 
         # Send yellow flag chat command
@@ -304,7 +288,7 @@ class Generator:
         """
         # Add message to text box
         self.master.set_message(
-            "Connected to iRacing.\nWaiting for green flag..."
+            "Connected to iRacing\nWaiting for green flag..."
         )
 
         # Loop until the green flag is displayed
@@ -312,10 +296,7 @@ class Generator:
             if self.ir["SessionFlags"] & irsdk.Flags.green:
                 self.start_time = time.time()
                 self.master.set_message(
-                    "Race has started. Green flag is out."
-                )
-                self.master.set_message(
-                    "Waiting for safety car events..."
+                    "Connected to iRacing\nGreen flag"
                 )
                 break
 
@@ -333,9 +314,9 @@ class Generator:
 
         # Attempt to connect and tell user if successful
         if self.ir.startup():
-            self.master.set_message("Connected to iRacing.")
+            self.master.set_message("Connected to iRacing\n")
         else:
-            self.master.set_message("Error connecting to iRacing.")
+            self.master.set_message("Error connecting to iRacing\n")
             return
         
         # Run the loop in a separate thread
