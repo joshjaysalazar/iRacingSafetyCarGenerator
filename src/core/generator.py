@@ -237,7 +237,9 @@ class Generator:
             None
         """
         # Add message to text box
-        self.master.set_message("Waiting for green flag...")
+        self.master.set_message(
+            "Connected to iRacing.\nWaiting for green flag..."
+        )
 
         # Loop until the green flag is displayed
         while True:
@@ -266,9 +268,6 @@ class Generator:
         # Attempt to connect and tell user if successful
         if self.ir.startup():
             self.master.set_message("Connected to iRacing.")
-            self.master.set_message(
-                "Be sure to click on the iRacing window to give it focus!"
-            )
         else:
             self.master.set_message("Error connecting to iRacing.")
             return

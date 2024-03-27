@@ -451,7 +451,7 @@ class App(tk.Tk):
         # Create status label
         self.lbl_status = ttk.Label(
             self.frm_controls,
-            text="Ready to run...",
+            text="Ready.\n",
             anchor=tk.CENTER
         )
         self.lbl_status.grid(
