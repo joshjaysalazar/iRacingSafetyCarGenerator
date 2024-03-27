@@ -17,6 +17,7 @@ class Generator:
         self.master = master
 
         # Variables to track safety car events
+        self.start_time = None
         self.total_sc_events = 0
         self.last_sc_time = None
         self.total_random_sc_events = 0
@@ -64,7 +65,7 @@ class Generator:
         while self.total_sc_events < max_events:
             # If it hasn't been long enough since the last event, wait
             if self.last_sc_time is not None:
-                if self.ir["SessionTime"] - self.last_sc_time < min_time:
+                if time.time() - self.last_sc_time < min_time:
                     time.sleep(1)
                     continue
 
@@ -263,7 +264,7 @@ class Generator:
         # Loop until the green flag is displayed
         while True:
             if self.ir["SessionFlags"] & irsdk.Flags.green:
-                self.start_time = self.ir["SessionTime"]
+                self.start_time = time.time()
                 self.master.set_message(
                     "Race has started. Green flag is out."
                 )
