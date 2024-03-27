@@ -262,11 +262,11 @@ class Generator:
         """Send a yellow flag to iRacing.
 
         Args:
-            None
+            message: The message to send with the yellow flag command
         """
         # Add message to text box
         self.master.set_message(
-            f"Safety car event triggered at {self.ir['SessionTime']}"
+            f"Safety car event triggered."
         )
 
         # Send yellow flag chat command
