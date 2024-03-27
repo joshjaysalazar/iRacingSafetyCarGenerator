@@ -85,19 +85,28 @@ class Generator:
             None
         """
         # Get relevant settings from the settings file
+        start_minute = float(self.master.settings["settings"]["start_minute"])
+        end_minute = float(self.master.settings["settings"]["end_minute"])
         max_events = int(self.master.settings["settings"]["max_safety_cars"])
-        min_time = float(
-            self.master.settings["settings"]["min_time_between"]
-        ) * 60
+        min_time = float(self.master.settings["settings"]["min_time_between"])
 
         # Wait for the green flag
         self._wait_for_green_flag()
 
         # Loop until the max number of safety car events is reached
         while self.total_sc_events < max_events:
+            # If it hasn't reached the start minute, wait
+            if time.time() - self.start_time < start_minute * 60:
+                time.sleep(1)
+                continue
+
+            # If it has reached the end minute, break the loop
+            if time.time() - self.start_time > end_minute * 60:
+                break
+
             # If it hasn't been long enough since the last event, wait
             if self.last_sc_time is not None:
-                if time.time() - self.last_sc_time < min_time:
+                if time.time() - self.last_sc_time < min_time * 60:
                     time.sleep(1)
                     continue
 
