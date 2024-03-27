@@ -276,9 +276,6 @@ class Generator:
         time.sleep(0.05)
         pyautogui.press("enter")
 
-        # Remove the safety car event from the list
-        self.sc_times.pop(0)
-
         # Send the wave commands
         self._send_wave_arounds()
 
