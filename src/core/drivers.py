@@ -1,8 +1,15 @@
 from copy import deepcopy
+import threading
 import time
 
 
 class Drivers:
+    """The Drivers class is responsible for tracking the state of the drivers.
+    
+    The Drivers class is responsible for tracking the state of the drivers in
+    the current session. It uses the iRacing API to gather the latest data
+    about the drivers and stores it in a dictionary.
+    """
     def __init__(self, master=None):
         """Initialize the Drivers class.
         
@@ -12,6 +19,9 @@ class Drivers:
         """
         self.master = master
 
+        # Track whether the class is running
+        self.running = False
+
         # Dictionaries to track the state of the drivers
         self.current_drivers = []
         self.previous_drivers = []
@@ -20,7 +30,17 @@ class Drivers:
         self._update()
 
     def _loop(self):
-        pass
+        """The main loop for the Drivers class.
+        
+        Args:
+            None
+        """
+        while self.running:
+            # Update the current drivers
+            self._update()
+
+            # Wait 1 second before the next loop
+            time.sleep(1)
 
     def _update(self):
         """Update the current drivers with the latest data from the iRacing API.
@@ -53,5 +73,17 @@ class Drivers:
             )
 
     def run(self):
-        pass
+        """Start the Drivers class.
         
+        This method starts the Drivers class by setting the running flag to
+        True and running the main loop in a separate thread.
+        
+        Args:
+            None
+        """
+        # Set the running flag to True
+        self.running = True
+
+        # Run the loop in a separate thread
+        self.thread = threading.Thread(target=self._loop)
+        self.thread.start()
