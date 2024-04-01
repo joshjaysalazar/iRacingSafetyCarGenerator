@@ -312,14 +312,13 @@ class Generator:
         # Attempt to connect and tell user if successful
         if self.ir.startup():
             self.master.set_message("Connected to iRacing\n")
-
-            # Create the Drivers object if successful and start it
-            self.drivers = drivers.Drivers()
-            self.drivers.run()
-
         else:
             self.master.set_message("Error connecting to iRacing\n")
             return
+    
+        # Create the Drivers object and start it
+        self.drivers = drivers.Drivers()
+        self.drivers.run()
         
         # Run the loop in a separate thread
         self.thread = threading.Thread(target=self._loop)
