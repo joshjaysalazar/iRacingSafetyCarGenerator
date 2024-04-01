@@ -4,6 +4,12 @@ import time
 
 class Drivers:
     def __init__(self, master=None):
+        """Initialize the Drivers class.
+        
+        Args:
+            master (object): The master object that is responsible for the
+                connection to the iRacing API.
+        """
         self.master = master
 
         # Dictionaries to track the state of the drivers
@@ -17,6 +23,14 @@ class Drivers:
         pass
 
     def _update(self):
+        """Update the current drivers with the latest data from the iRacing API.
+        
+        This method is called at the beginning of each loop to update the
+        current drivers with the latest data from the iRacing API.
+        
+        Args:
+            None
+        """
         # Copy the current drivers to the previous drivers
         self.previous_drivers = deepcopy(self.current_drivers)
 
@@ -25,16 +39,16 @@ class Drivers:
 
         # Gather the updated driver data
         in_pits = self.master.ir["CarIdxOnPitRoad"]
-        track_surface = self.master.ir["CarIdxTrackSurfaceMaterial"]
         lap_distance = self.master.ir["CarIdxLapDistPct"]
+        track_surface = self.master.ir["CarIdxTrackSurfaceMaterial"]
 
         # Organize the updated driver data and update the current drivers
         for i in range(len(in_pits)):
             self.current_drivers.append(
                 {
                 "in_pits": in_pits[i],
-                "track_surface": track_surface[i],
-                "lap_distance": lap_distance[i]
+                "lap_distance": lap_distance[i],
+                "track_surface": track_surface[i]
                 }
             )
 
