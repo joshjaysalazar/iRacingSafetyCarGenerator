@@ -5,6 +5,8 @@ import time
 import irsdk
 import pyautogui
 
+from core import drivers
+
 
 class Generator:
     """Generates safety car events in iRacing."""
@@ -310,6 +312,11 @@ class Generator:
         # Attempt to connect and tell user if successful
         if self.ir.startup():
             self.master.set_message("Connected to iRacing\n")
+
+            # Create the Drivers object if successful and start it
+            self.drivers = drivers.Drivers()
+            self.drivers.run()
+
         else:
             self.master.set_message("Error connecting to iRacing\n")
             return
