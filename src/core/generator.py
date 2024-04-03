@@ -104,7 +104,7 @@ class Generator:
         while self.total_sc_events < max_events:
             # Update the drivers object
             self.drivers.update()
-            
+
             # If it hasn't reached the start minute, wait
             if time.time() - self.start_time < start_minute * 60:
                 time.sleep(1)
@@ -320,7 +320,7 @@ class Generator:
             return
     
         # Create the Drivers object
-        self.drivers = drivers.Drivers()
+        self.drivers = drivers.Drivers(self)
         
         # Run the loop in a separate thread
         self.thread = threading.Thread(target=self._loop)
