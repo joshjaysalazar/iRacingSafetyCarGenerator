@@ -117,7 +117,8 @@ class Generator:
                     time.sleep(1)
                     continue
 
-            # If all checks are passed, run safety car checks
+            # If all checks are passed, update drivers, then check for events
+            self.drivers.update()
             self._check_random()
             self._check_stopped()
             self._check_off_track()
