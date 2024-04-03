@@ -316,9 +316,8 @@ class Generator:
             self.master.set_message("Error connecting to iRacing\n")
             return
     
-        # Create the Drivers object and start it
+        # Create the Drivers object
         self.drivers = drivers.Drivers()
-        self.drivers.run()
         
         # Run the loop in a separate thread
         self.thread = threading.Thread(target=self._loop)

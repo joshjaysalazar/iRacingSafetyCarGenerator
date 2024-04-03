@@ -19,30 +19,14 @@ class Drivers:
         """
         self.master = master
 
-        # Track whether the class is running
-        self.running = False
-
         # Dictionaries to track the state of the drivers
         self.current_drivers = []
         self.previous_drivers = []
 
         # Do the initial update
-        self._update()
+        self.update()
 
-    def _loop(self):
-        """The main loop for the Drivers class.
-        
-        Args:
-            None
-        """
-        while self.running:
-            # Update the current drivers
-            self._update()
-
-            # Wait 1 second before the next loop
-            time.sleep(1)
-
-    def _update(self):
+    def update(self):
         """Update the current drivers with the latest data from the iRacing API.
         
         This method is called at the beginning of each loop to update the
@@ -71,19 +55,3 @@ class Drivers:
                 "track_surface": track_surface[i]
                 }
             )
-
-    def run(self):
-        """Start the Drivers class.
-        
-        This method starts the Drivers class by setting the running flag to
-        True and running the main loop in a separate thread.
-        
-        Args:
-            None
-        """
-        # Set the running flag to True
-        self.running = True
-
-        # Run the loop in a separate thread
-        self.thread = threading.Thread(target=self._loop)
-        self.thread.start()
