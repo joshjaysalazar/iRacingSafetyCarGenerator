@@ -88,13 +88,15 @@ class Generator:
 
         # For each stopped car, check if they're in pits, remove if so
         for car in stopped_cars:
-            if self.drivers.current_drivers[car]["in_pits"] == 1:
+            if self.drivers.current_drivers[car]["in_pits"] == True:
                 stopped_cars.remove(car)
 
         # For each, check if lap distance is less than 0, remove if so
         for car in stopped_cars:
             if self.drivers.current_drivers[car]["lap_distance"] < 0:
                 stopped_cars.remove(car)
+
+        print(stopped_cars)
 
         # Trigger the safety car event if threshold is met
         if len(stopped_cars) >= threshold:
