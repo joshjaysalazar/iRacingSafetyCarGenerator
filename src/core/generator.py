@@ -102,6 +102,9 @@ class Generator:
 
         # Loop until the max number of safety car events is reached
         while self.total_sc_events < max_events:
+            # Update the drivers object
+            self.drivers.update()
+            
             # If it hasn't reached the start minute, wait
             if time.time() - self.start_time < start_minute * 60:
                 time.sleep(1)
@@ -117,8 +120,7 @@ class Generator:
                     time.sleep(1)
                     continue
 
-            # If all checks are passed, update drivers, then check for events
-            self.drivers.update()
+            # If all checks are passed, check for events
             self._check_random()
             self._check_stopped()
             self._check_off_track()
