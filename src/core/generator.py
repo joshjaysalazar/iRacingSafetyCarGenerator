@@ -104,7 +104,7 @@ class Generator:
         for car in cars_to_remove:
             stopped_cars.remove(car)
 
-        # For each, check if lap distance is less than 0, remove if so
+        # For each, check if lap distance < 0, remove if so
         cars_to_remove = []
         for car in stopped_cars:
             if self.drivers.current_drivers[car]["lap_distance"] < 0:
@@ -117,7 +117,37 @@ class Generator:
             self._start_safety_car(message)
 
     def _check_off_track(self):
-        pass
+        """Check to see if an off track safety car event should be triggered.
+        
+        Args:
+            None
+        """
+        # Get relevant settings from the settings file
+        enabled = self.master.settings["settings"]["off"]
+        threshold = float(self.master.settings["settings"]["off_min"])
+        message = self.master.settings["settings"]["off_message"]
+
+        # If off track events are disabled, return
+        if enabled == "0":
+            return
+
+        # Get the indices of the off track cars
+        off_track_cars = []
+        for i in range(len(self.drivers.current_drivers)):
+            if self.drivers.current_drivers[i]["track_loc"] == 0:
+                off_track_cars.append(i)
+
+        # For each off track car, check if lap distance < 0, remove if so
+        cars_to_remove = []
+        for car in off_track_cars:
+            if self.drivers.current_drivers[car]["lap_distance"] < 0:
+                cars_to_remove.append(car)
+        for car in cars_to_remove:
+            off_track_cars.remove(car)
+
+        # Trigger the safety car event if threshold is met
+        if len(off_track_cars) >= threshold:
+            self._start_safety_car(message)
 
     def _get_driver_number(self, id):
         """Get the driver number from the iRacing SDK.
