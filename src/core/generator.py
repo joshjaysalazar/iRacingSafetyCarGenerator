@@ -89,7 +89,17 @@ class Generator:
         # For each stopped car, check if they're in pits, remove if so
         cars_to_remove = []
         for car in stopped_cars:
-            if self.drivers.current_drivers[car]["in_pits"] == True:
+            if self.drivers.current_drivers[car]["track_loc"] == 1:
+                cars_to_remove.append(car)
+            if self.drivers.current_drivers[car]["track_loc"] == 2:
+                cars_to_remove.append(car)
+        for car in cars_to_remove:
+            stopped_cars.remove(car)
+
+        # For each, check if not in world, remove if so
+        cars_to_remove = []
+        for car in stopped_cars:
+            if self.drivers.current_drivers[car]["track_loc"] == -1:
                 cars_to_remove.append(car)
         for car in cars_to_remove:
             stopped_cars.remove(car)
