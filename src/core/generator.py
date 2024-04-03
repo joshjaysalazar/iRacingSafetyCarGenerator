@@ -1,3 +1,4 @@
+from copy import deepcopy
 import random
 import threading
 import time
@@ -63,7 +64,41 @@ class Generator:
             self._start_safety_car(message) 
 
     def _check_stopped(self):
-        pass
+        """Check to see if a stopped car safety car event should be triggered.
+        
+        Args:
+            None
+        """
+        # Get relevant settings from the settings file
+        enabled = self.master.settings["settings"]["stopped"]
+        threshold = float(self.master.settings["settings"]["stopped_min"])
+        message = self.master.settings["settings"]["stopped_message"]
+
+        # If stopped car events are disabled, return
+        if enabled == "0":
+            return
+
+        # Get the indices of the stopped cars
+        stopped_cars = []
+        for i in range(len(self.drivers.current_drivers)):
+            current_dist = self.drivers.current_drivers[i]["lap_distance"]
+            previous_dist = self.drivers.previous_drivers[i]["lap_distance"]
+            if current_dist == previous_dist:
+                stopped_cars.append(i)
+
+        # For each stopped car, check if they're in pits, remove if so
+        for car in stopped_cars:
+            if self.drivers.current_drivers[car]["in_pits"] == 1:
+                stopped_cars.remove(car)
+
+        # For each, check if lap distance is less than 0, remove if so
+        for car in stopped_cars:
+            if self.drivers.current_drivers[car]["lap_distance"] < 0:
+                stopped_cars.remove(car)
+
+        # Trigger the safety car event if threshold is met
+        if len(stopped_cars) >= threshold:
+            self._start_safety_car(message)
 
     def _check_off_track(self):
         pass
@@ -267,6 +302,12 @@ class Generator:
         Args:
             message: The message to send with the yellow flag command
         """
+        # Increment the total safety car events
+        self.total_sc_events += 1
+
+        # Set the last safety car time
+        self.last_sc_time = time.time()
+
         # Send yellow flag chat command
         self.ir.chat_command(1)
         time.sleep(0.1)
