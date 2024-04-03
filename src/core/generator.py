@@ -112,10 +112,6 @@ class Generator:
         for car in cars_to_remove:
             stopped_cars.remove(car)
 
-        print(stopped_cars)
-        for car in stopped_cars:
-            print(self.drivers.current_drivers[car])
-
         # Trigger the safety car event if threshold is met
         if len(stopped_cars) >= threshold:
             self._start_safety_car(message)
