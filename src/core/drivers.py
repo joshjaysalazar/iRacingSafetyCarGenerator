@@ -44,7 +44,6 @@ class Drivers:
         # Gather the updated driver data
         lap_distance = self.master.ir["CarIdxLapDistPct"]
         track_loc = self.master.ir["CarIdxTrackSurface"]
-        track_surface = self.master.ir["CarIdxTrackSurfaceMaterial"]
 
         # Organize the updated driver data and update the current drivers
         for i in range(len(lap_distance)):
@@ -52,6 +51,5 @@ class Drivers:
                 {
                 "lap_distance": lap_distance[i],
                 "track_loc": track_loc[i],
-                "track_surface": track_surface[i]
                 }
             )
