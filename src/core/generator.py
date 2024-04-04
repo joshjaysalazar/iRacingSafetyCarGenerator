@@ -182,9 +182,9 @@ class Generator:
         max_events = int(self.master.settings["settings"]["max_safety_cars"])
         min_time = float(self.master.settings["settings"]["min_time_between"])
 
-        # Adjust start minute if < 10s to avoid triggering on standing start
-        if start_minute < 0.17:
-            start_minute = 0.17
+        # Adjust start minute if < 3s to avoid triggering on standing start
+        if start_minute < 0.05:
+            start_minute = 0.05
 
         # Wait for the green flag
         self._wait_for_green_flag()
