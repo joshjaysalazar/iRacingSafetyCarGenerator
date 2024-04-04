@@ -83,7 +83,7 @@ class Generator:
         for i in range(len(self.drivers.current_drivers)):
             current_dist = self.drivers.current_drivers[i]["lap_distance"]
             previous_dist = self.drivers.previous_drivers[i]["lap_distance"]
-            if current_dist == previous_dist:
+            if current_dist <= previous_dist:
                 stopped_cars.append(i)
 
         # For each stopped car, check if they're in pits, remove if so
