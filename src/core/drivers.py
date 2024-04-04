@@ -42,13 +42,15 @@ class Drivers:
         self.current_drivers = []
 
         # Gather the updated driver data
+        laps_completed = self.master.ir["CarIdxLapCompleted"]
         lap_distance = self.master.ir["CarIdxLapDistPct"]
         track_loc = self.master.ir["CarIdxTrackSurface"]
 
         # Organize the updated driver data and update the current drivers
-        for i in range(len(lap_distance)):
+        for i in range(len(laps_completed)):
             self.current_drivers.append(
                 {
+                "laps_completed": laps_completed[i],
                 "lap_distance": lap_distance[i],
                 "track_loc": track_loc[i],
                 }

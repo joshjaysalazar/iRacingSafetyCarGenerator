@@ -81,9 +81,13 @@ class Generator:
         # Get the indices of the stopped cars
         stopped_cars = []
         for i in range(len(self.drivers.current_drivers)):
+            current_comp = self.drivers.current_drivers[i]["laps_completed"]
             current_dist = self.drivers.current_drivers[i]["lap_distance"]
+            previous_comp = self.drivers.previous_drivers[i]["laps_completed"]
             previous_dist = self.drivers.previous_drivers[i]["lap_distance"]
-            if current_dist <= previous_dist:
+            current_total = current_comp + current_dist
+            previous_total = previous_comp + previous_dist
+            if current_total <= previous_total:
                 stopped_cars.append(i)
 
         # For each stopped car, check if they're in pits, remove if so
