@@ -284,19 +284,19 @@ class App(tk.Tk):
         general_row = 0
 
         # Create maximum safety cars spinbox
-        self.lbl_max_sc = ttk.Label(
+        self.lbl_max_safety_cars = ttk.Label(
             self.frm_general,
             text="Maximum safety cars"
         )
-        self.lbl_max_sc.grid(
+        self.lbl_max_safety_cars.grid(
             row=general_row,
             column=0,
             sticky="w",
             padx=5,
             pady=5
         )
-        self.ent_max_sc = ttk.Entry(self.frm_general, width=5)
-        self.ent_max_sc.grid(
+        self.ent_max_safety_cars = ttk.Entry(self.frm_general, width=5)
+        self.ent_max_safety_cars.grid(
             row=general_row,
             column=1,
             sticky="e",
@@ -492,8 +492,11 @@ class App(tk.Tk):
         self.spn_off_min.insert(0, self.settings["settings"]["off_min"])
         self.ent_off_message.delete(0, "end")
         self.ent_off_message.insert(0, self.settings["settings"]["off_message"])
-        self.ent_max_sc.delete(0, "end")
-        self.ent_max_sc.insert(0, self.settings["settings"]["max_sc"])
+        self.ent_max_safety_cars.delete(0, "end")
+        self.ent_max_safety_cars.insert(
+            0,
+            self.settings["settings"]["max_safety_cars"]
+        )
         self.ent_start_minute.delete(0, "end")
         self.ent_start_minute.insert(
             0,
@@ -541,7 +544,7 @@ class App(tk.Tk):
         off = self.var_off.get()
         off_min = self.spn_off_min.get()
         off_message = self.ent_off_message.get()
-        max_sc = self.ent_max_sc.get()
+        max_safety_cars = self.ent_max_safety_cars.get()
         start_minute = self.ent_start_minute.get()
         end_minute = self.ent_end_minute.get()
         min_time_between = self.ent_min_time_between.get()
@@ -559,7 +562,7 @@ class App(tk.Tk):
         self.settings["settings"]["off"] = str(off)
         self.settings["settings"]["off_min"] = str(off_min)
         self.settings["settings"]["off_message"] = str(off_message)
-        self.settings["settings"]["max_sc"] = str(max_sc)
+        self.settings["settings"]["max_safety_cars"] = str(max_safety_cars)
         self.settings["settings"]["start_minute"] = str(start_minute)
         self.settings["settings"]["end_minute"] = str(end_minute)
         self.settings["settings"]["min_time_between"] = str(min_time_between)
