@@ -375,6 +375,9 @@ class Generator:
         # Send pacelaps command when the time is right
         self._send_pacelaps()
 
+        # Wait for the green flag to be displayed
+        self._wait_for_green_flag()
+
     def _wait_for_green_flag(self):
         """Wait for the green flag to be displayed.
 
@@ -388,11 +391,18 @@ class Generator:
 
         # Loop until the green flag is displayed
         while True:
+            # Check if the green flag is displayed
             if self.ir["SessionFlags"] & irsdk.Flags.green:
-                self.start_time = time.time()
+                # Set the start time if it hasn't been set yet
+                if self.start_time is None:
+                    self.start_time = time.time()
+
+                # Set the UI message
                 self.master.set_message(
                     "Connected to iRacing\nGenerating safety cars..."
                 )
+
+                # Break the loop
                 break
 
             # Wait 1 second before checking again
