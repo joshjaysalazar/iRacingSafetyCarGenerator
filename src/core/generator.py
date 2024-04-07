@@ -356,6 +356,11 @@ class Generator:
         Args:
             message: The message to send with the yellow flag command
         """
+        # Set the UI message
+        self.master.set_message(
+            "Connected to iRacing\nSafety car deployed."
+        )
+
         # Increment the total safety car events
         self.total_sc_events += 1
 
