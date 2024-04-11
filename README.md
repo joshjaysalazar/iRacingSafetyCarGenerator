@@ -1,6 +1,6 @@
 # iRacing Safety Car Generator
 
-This program is designed to trigger safety car events in iRacing at random intervals during a race, with adjustable settings. It's in the early stages of development, so there may be bugs and issues.
+This program is designed to trigger safety car events in iRacing with more control than the built-in automatic yellows in iRacing, with adjustable settings. It's in the early stages of development, so there may be bugs and issues.
 
 ![Screenshot of the main window](screenshot.png)
 
@@ -8,7 +8,7 @@ This program is designed to trigger safety car events in iRacing at random inter
 
 1. Set your settings in the applicaiton window, then click the `Save Settings` button.
 
-2. Click the `Generate Safety Car Events` button while drivers are gridding for the race to begin the program.
+2. Click the `Run` button while drivers are gridding for the race to begin the program.
 
 3. Make sure to click back to the iRacing window so the program can send the necessary commands to trigger the safety car(s)!
 

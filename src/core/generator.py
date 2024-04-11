@@ -1,9 +1,12 @@
+from copy import deepcopy
 import random
 import threading
 import time
 
 import irsdk
 import pyautogui
+
+from core import drivers
 
 
 class Generator:
@@ -15,6 +18,140 @@ class Generator:
             master: The parent window object
         """
         self.master = master
+
+        # Variables to track safety car events
+        self.start_time = None
+        self.total_sc_events = 0
+        self.last_sc_time = None
+        self.total_random_sc_events = 0
+
+    def _check_random(self):
+        """Check to see if a random safety car event should be triggered.
+        
+        Args:
+            None
+        """
+        # Get relevant settings from the settings file
+        enabled = self.master.settings["settings"]["random"]
+        chance = float(self.master.settings["settings"]["random_prob"])
+        max_occ = int(self.master.settings["settings"]["random_max_occ"])
+        start_minute = float(self.master.settings["settings"]["start_minute"])
+        end_minute = float(self.master.settings["settings"]["end_minute"])
+        message = self.master.settings["settings"]["random_message"]
+
+        # If random events are disabled, return
+        if enabled == "0":
+            return
+
+        # If the random chance is 0, return
+        if chance == 0:
+            return
+        
+        # If the max occurrences is reached, return
+        if self.total_random_sc_events >= max_occ:
+            return
+
+        # Generate a random number between 0 and 1
+        rng = random.random()
+
+        # Calculate the chance of triggering a safety car event this check
+        len_of_window = (end_minute - start_minute) * 60
+        chance = 1 - ((1 - chance) ** (1 / len_of_window))
+
+        # If the random number is less than or equal to the chance, trigger
+        if rng <= chance:
+            self.total_random_sc_events += 1
+            self._start_safety_car(message) 
+
+    def _check_stopped(self):
+        """Check to see if a stopped car safety car event should be triggered.
+        
+        Args:
+            None
+        """
+        # Get relevant settings from the settings file
+        enabled = self.master.settings["settings"]["stopped"]
+        threshold = float(self.master.settings["settings"]["stopped_min"])
+        message = self.master.settings["settings"]["stopped_message"]
+
+        # If stopped car events are disabled, return
+        if enabled == "0":
+            return
+
+        # Get the indices of the stopped cars
+        stopped_cars = []
+        for i in range(len(self.drivers.current_drivers)):
+            current_comp = self.drivers.current_drivers[i]["laps_completed"]
+            current_dist = self.drivers.current_drivers[i]["lap_distance"]
+            previous_comp = self.drivers.previous_drivers[i]["laps_completed"]
+            previous_dist = self.drivers.previous_drivers[i]["lap_distance"]
+            current_total = current_comp + current_dist
+            previous_total = previous_comp + previous_dist
+            if current_total <= previous_total:
+                stopped_cars.append(i)
+
+        # For each stopped car, check if they're in pits, remove if so
+        cars_to_remove = []
+        for car in stopped_cars:
+            if self.drivers.current_drivers[car]["track_loc"] == 1:
+                cars_to_remove.append(car)
+            if self.drivers.current_drivers[car]["track_loc"] == 2:
+                cars_to_remove.append(car)
+        for car in cars_to_remove:
+            stopped_cars.remove(car)
+
+        # For each, check if not in world, remove if so
+        cars_to_remove = []
+        for car in stopped_cars:
+            if self.drivers.current_drivers[car]["track_loc"] == -1:
+                cars_to_remove.append(car)
+        for car in cars_to_remove:
+            stopped_cars.remove(car)
+
+        # For each, check if lap distance < 0, remove if so
+        cars_to_remove = []
+        for car in stopped_cars:
+            if self.drivers.current_drivers[car]["lap_distance"] < 0:
+                cars_to_remove.append(car)
+        for car in cars_to_remove:
+            stopped_cars.remove(car)
+
+        # Trigger the safety car event if threshold is met
+        if len(stopped_cars) >= threshold:
+            self._start_safety_car(message)
+
+    def _check_off_track(self):
+        """Check to see if an off track safety car event should be triggered.
+        
+        Args:
+            None
+        """
+        # Get relevant settings from the settings file
+        enabled = self.master.settings["settings"]["off"]
+        threshold = float(self.master.settings["settings"]["off_min"])
+        message = self.master.settings["settings"]["off_message"]
+
+        # If off track events are disabled, return
+        if enabled == "0":
+            return
+
+        # Get the indices of the off track cars
+        off_track_cars = []
+        for i in range(len(self.drivers.current_drivers)):
+            if self.drivers.current_drivers[i]["track_loc"] == 0:
+                off_track_cars.append(i)
+
+        # For each off track car, check if lap distance < 0, remove if so
+        cars_to_remove = []
+        for car in off_track_cars:
+            if self.drivers.current_drivers[car]["lap_distance"] < 0:
+                cars_to_remove.append(car)
+        for car in cars_to_remove:
+            off_track_cars.remove(car)
+
+        # Trigger the safety car event if threshold is met
+        if len(off_track_cars) >= threshold:
+            self._start_safety_car(message)
 
     def _get_driver_number(self, id):
         """Get the driver number from the iRacing SDK.
@@ -39,20 +176,43 @@ class Generator:
         Args:
             None
         """
+        # Get relevant settings from the settings file
+        start_minute = float(self.master.settings["settings"]["start_minute"])
+        end_minute = float(self.master.settings["settings"]["end_minute"])
+        max_events = int(self.master.settings["settings"]["max_safety_cars"])
+        min_time = float(self.master.settings["settings"]["min_time_between"])
+
+        # Adjust start minute if < 3s to avoid triggering on standing start
+        if start_minute < 0.05:
+            start_minute = 0.05
+
         # Wait for the green flag
         self._wait_for_green_flag()
 
-        # Loop through safety car events
-        while True:
-            # If there are no more safety car events, break
-            if len(self.sc_times) == 0:
+        # Loop until the max number of safety car events is reached
+        while self.total_sc_events < max_events:
+            # Update the drivers object
+            self.drivers.update()
+
+            # If it hasn't reached the start minute, wait
+            if time.time() - self.start_time < start_minute * 60:
+                time.sleep(1)
+                continue
+
+            # If it has reached the end minute, break the loop
+            if time.time() - self.start_time > end_minute * 60:
                 break
 
-            # If the current time is past the next safety car event, trigger it
-            next_event = self.start_time + (self.sc_times[0] * 60)
-            if self.ir["SessionTime"] > next_event:
-                # Start the safety car event
-                self._start_safety_car()
+            # If it hasn't been long enough since the last event, wait
+            if self.last_sc_time is not None:
+                if time.time() - self.last_sc_time < min_time * 60:
+                    time.sleep(1)
+                    continue
+
+            # If all checks are passed, check for events
+            self._check_random()
+            self._check_stopped()
+            self._check_off_track()
 
             # Wait 1 second before checking again
             time.sleep(1)
@@ -66,6 +226,11 @@ class Generator:
         Args:
             None
         """
+        # Get relevant settings from the settings file
+        laps_under_sc = int(
+            self.master.settings["settings"]["laps_under_sc"]
+        )
+
         # Get the max value from all cars' lap started count
         lap_at_yellow = max(self.ir["CarIdxLap"])
 
@@ -84,29 +249,15 @@ class Generator:
             
             # If the max value is 2 laps greater than the lap at yellow
             if max(laps_started) >= lap_at_yellow + 2:
-                # Send the pacelaps chat command
-                laps = int(
-                    self.master.settings["settings"]["laps_under_sc"]
-                )
-                
                 # Only send if laps is greater than 1
-                if laps > 1:
+                if laps_under_sc > 1:
                     self.ir.chat_command(1)
                     time.sleep(0.1)
                     pyautogui.write(
-                        f"!p {laps - 1}", interval=0.01
+                        f"!p {laps_under_sc - 1}", interval=0.01
                     )
                     time.sleep(0.05)
                     pyautogui.press("enter")
-                    self.master.add_message(
-                        f"Pacelaps command sent for {laps - 1} laps."
-                    )
-
-                # If it wasn't, let the user know
-                else:
-                    self.master.add_message(
-                        "Pacelaps command not sent; value too low."
-                    )
                 
                 # Break the loop
                 break
@@ -120,8 +271,11 @@ class Generator:
         Args:
             None
         """
+        # Get relevant settings from the settings file
+        wave_around = self.master.settings["settings"]["imm_wave_around"]
+
         # If immediate waveby is disabled, return
-        if self.master.settings["settings"]["immediate_waveby"] == "0":
+        if wave_around == "0":
             return
         
         # Get all class IDs (except safety car)
@@ -194,41 +348,40 @@ class Generator:
                 pyautogui.write(f"!w {car}", interval=0.01)
                 time.sleep(0.05)
                 pyautogui.press("enter")
-                self.master.add_message(
-                    f"Wave around command sent for car {car}."
-                )
                 time.sleep(0.05)
-        
-        # If no cars were waved around, let the user know
-        else:
-            self.master.add_message("No cars were eligible for a wave around.")
 
-    def _start_safety_car(self):
+    def _start_safety_car(self, message=""):
         """Send a yellow flag to iRacing.
 
         Args:
-            None
+            message: The message to send with the yellow flag command
         """
-        # Add message to text box
-        self.master.add_message(
-            f"Safety car event triggered at {self.ir['SessionTime']}"
+        # Set the UI message
+        self.master.set_message(
+            "Connected to iRacing\nSafety car deployed."
         )
+
+        # Increment the total safety car events
+        self.total_sc_events += 1
+
+        # Set the last safety car time
+        self.last_sc_time = time.time()
 
         # Send yellow flag chat command
         self.ir.chat_command(1)
         time.sleep(0.1)
-        pyautogui.write("!y", interval=0.01)
+        pyautogui.write(f"!y {message}", interval=0.01)
         time.sleep(0.05)
         pyautogui.press("enter")
-
-        # Remove the safety car event from the list
-        self.sc_times.pop(0)
 
         # Send the wave commands
         self._send_wave_arounds()
 
         # Send pacelaps command when the time is right
         self._send_pacelaps()
+
+        # Wait for the green flag to be displayed
+        self._wait_for_green_flag()
 
     def _wait_for_green_flag(self):
         """Wait for the green flag to be displayed.
@@ -237,18 +390,24 @@ class Generator:
             None
         """
         # Add message to text box
-        self.master.add_message("Waiting for green flag...")
+        self.master.set_message(
+            "Connected to iRacing\nWaiting for green flag..."
+        )
 
         # Loop until the green flag is displayed
         while True:
+            # Check if the green flag is displayed
             if self.ir["SessionFlags"] & irsdk.Flags.green:
-                self.start_time = self.ir["SessionTime"]
-                self.master.add_message(
-                    "Race has started. Green flag is out."
+                # Set the start time if it hasn't been set yet
+                if self.start_time is None:
+                    self.start_time = time.time()
+
+                # Set the UI message
+                self.master.set_message(
+                    "Connected to iRacing\nGenerating safety cars..."
                 )
-                self.master.add_message(
-                    "Waiting for safety car events..."
-                )
+
+                # Break the loop
                 break
 
             # Wait 1 second before checking again
@@ -260,58 +419,18 @@ class Generator:
         Args:
             None
         """
-        # Proxy variables for settings
-        min_safety_cars = int(
-            self.master.settings["settings"]["min_safety_cars"]
-        )
-        max_safety_cars = int(
-            self.master.settings["settings"]["max_safety_cars"]
-        )
-        start_minute = float(
-            self.master.settings["settings"]["start_minute"]
-        )
-        end_minute = float(
-            self.master.settings["settings"]["end_minute"]
-        )
-        min_time_between = float(
-            self.master.settings["settings"]["min_time_between"]
-        )
-
-        # Randomly determine number of safety car events
-        self.number_sc = random.randint(min_safety_cars, max_safety_cars) 
-
-        # Randomly determine safety car event times in minutes
-        self.sc_times = []
-        if self.number_sc > 0:
-            for i in range(self.number_sc):
-                # If 1st safety car event, pick random time between start & end
-                if i == 0:
-                    start = start_minute
-                    end = end_minute
-                # If not, pick random time between previous SC event and the end
-                else:
-                    # If there's not enough time for another SC event, break
-                    if self.sc_times[i - 1] + min_time_between > end_minute:
-                        break
-                    start = self.sc_times[i - 1] + min_time_between
-                    end = end_minute
-                self.sc_times.append(random.uniform(start, end))
-
-        # Add message to text box
-        self.master.add_message("Generated safety car event times.")
-
         # Connect to iRacing
         self.ir = irsdk.IRSDK()
 
         # Attempt to connect and tell user if successful
         if self.ir.startup():
-            self.master.add_message("Connected to iRacing.")
-            self.master.add_message(
-                "Be sure to click on the iRacing window to give it focus!"
-            )
+            self.master.set_message("Connected to iRacing\n")
         else:
-            self.master.add_message("Error connecting to iRacing.")
+            self.master.set_message("Error connecting to iRacing\n")
             return
+    
+        # Create the Drivers object
+        self.drivers = drivers.Drivers(self)
         
         # Run the loop in a separate thread
         self.thread = threading.Thread(target=self._loop)
