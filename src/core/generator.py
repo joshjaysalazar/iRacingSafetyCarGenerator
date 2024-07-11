@@ -116,6 +116,10 @@ class Generator:
         for car in cars_to_remove:
             stopped_cars.remove(car)
 
+        # If length of stopped cars is entire field, clear list (lag spike fix)
+        if len(stopped_cars) >= len(self.drivers.current_drivers) - 1:
+            stopped_cars = []
+
         # Trigger the safety car event if threshold is met
         if len(stopped_cars) >= threshold:
             self._start_safety_car(message)
