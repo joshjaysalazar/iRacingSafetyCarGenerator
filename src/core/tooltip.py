@@ -1,4 +1,4 @@
-""" tk_ToolTip_class101.py
+""" tooltip.py
 gives a Tkinter widget a tooltip as the mouse is above the widget
 tested with Python27 and Python34  by  vegaseat  09sep2014
 www.daniweb.com/programming/software-development/code/484591/a-tooltip-class-for-tkinter

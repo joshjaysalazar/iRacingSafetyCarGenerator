@@ -1,0 +1,16 @@
+{
+    "random": "Check this box to enable random safety car events.",
+    "random_max_occ": "The maximum number of times a safety car event could potentially occur (not guaranteed); applies to only random safety cars.",
+    "random_prob": "The probability of a single safety car deployment, irrespective of the maximum random occurrences. A value of 0.1 indicates a 10% chance of a safety car being deployed.",
+    "stopped": "Check this box to enable a safety car event when cars are stopped on the track.",
+    "stopped_min": "Minimum number of stopped cars on the track required to deploy a safety car.",
+    "message": "Message to be displayed to the drivers.",
+    "off": "Check this box to enable a safety car event when cars go off track.",
+    "off_min": "Minimum number of off-track cars required to deploy a safety car.",
+    "max_safety_cars": "Maximum number of safety car deployments allowed during the race.",
+    "start_minute": "Earliest time a safety car can be deployed after the race starts (in minutes).",
+    "end_minute": "Latest time a safety car can be deployed after the race starts (in minutes).",
+    "min_time_between": "Minimum time interval before another safety car can be deployed.",
+    "laps_under_sc": "Maximum number of laps a safety car remains deployed.",
+    "immediate_wave_around": "Sends a wave around command to all lapped cars immediately after a safety car is deployed."
+}
