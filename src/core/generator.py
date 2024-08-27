@@ -1,4 +1,3 @@
-from copy import deepcopy
 import random
 import threading
 import time
