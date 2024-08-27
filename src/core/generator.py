@@ -25,6 +25,16 @@ class Generator:
         self.last_sc_time = None
         self.total_random_sc_events = 0
 
+        self.shutdown_event = threading.Event()
+
+    def _is_shutting_down(self):
+        """ Returns True if shutdown_event event was triggered
+        
+        Args:
+            None
+        """
+        return self.shutdown_event.is_set()
+
     def _check_random(self):
         """Check to see if a random safety car event should be triggered.
         
@@ -218,6 +228,10 @@ class Generator:
             self._check_stopped()
             self._check_off_track()
 
+            # Break the loop if we are shutting down the thread
+            if self._is_shutting_down():
+                break
+
             # Wait 1 second before checking again
             time.sleep(1)
 
@@ -266,6 +280,10 @@ class Generator:
                 # Break the loop
                 break
 
+            # Break the loop if we are shutting down the thread
+            if self._is_shutting_down():
+                break
+            
             # Wait 1 second before checking again
             time.sleep(1)
 
@@ -412,6 +430,10 @@ class Generator:
                 )
 
                 # Break the loop
+                break
+
+            # Break the loop if we are shutting down the thread
+            if self._is_shutting_down():
                 break
 
             # Wait 1 second before checking again
