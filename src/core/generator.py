@@ -1,4 +1,3 @@
-from copy import deepcopy
 import random
 import threading
 import time
@@ -99,6 +98,10 @@ class Generator:
             previous_total = previous_comp + previous_dist
             if current_total <= previous_total:
                 stopped_cars.append(i)
+
+        # If length of stopped cars is entire field, clear list (lag spike fix)
+        if len(stopped_cars) >= len(self.drivers.current_drivers) - 1:
+            stopped_cars = []
 
         # For each stopped car, check if they're in pits, remove if so
         cars_to_remove = []
