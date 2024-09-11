@@ -3,7 +3,6 @@ import threading
 import time
 
 import irsdk
-import pyautogui
 from pywinauto.application import Application
 
 from core import drivers
@@ -273,11 +272,7 @@ class Generator:
                     self.ir_window.set_focus()
                     self.ir.chat_command(1)
                     time.sleep(0.5)
-                    pyautogui.write(
-                        f"!p {laps_under_sc - 1}", interval=0.01
-                    )
-                    time.sleep(0.05)
-                    pyautogui.press("enter")
+                    self.ir_window.type_keys(f"!p {laps_under_sc - 1}{{ENTER}}")
                 
                 # Break the loop
                 break
@@ -370,10 +365,7 @@ class Generator:
                 self.ir_window.set_focus()
                 self.ir.chat_command(1)
                 time.sleep(0.5)
-                pyautogui.write(f"!w {car}", interval=0.01)
-                time.sleep(0.05)
-                pyautogui.press("enter")
-                time.sleep(0.05)
+                self.ir_window.type_keys(f"!w {car}{{ENTER}}")
 
     def _start_safety_car(self, message=""):
         """Send a yellow flag to iRacing.
@@ -396,9 +388,7 @@ class Generator:
         self.ir_window.set_focus()
         self.ir.chat_command(1)
         time.sleep(0.5)
-        pyautogui.write(f"!y {message}", interval=0.01)
-        time.sleep(0.05)
-        pyautogui.press("enter")
+        self.ir_window.type_keys(f"!y {message}{{ENTER}}")
 
         # Send the wave commands
         self._send_wave_arounds()
