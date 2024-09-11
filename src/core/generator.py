@@ -4,6 +4,7 @@ import time
 
 import irsdk
 import pyautogui
+from pywinauto.application import Application
 
 from core import drivers
 
@@ -19,6 +20,7 @@ class Generator:
         self.master = master
 
         # Variables to track safety car events
+        self.ir_window = None
         self.start_time = None
         self.total_sc_events = 0
         self.last_sc_time = None
@@ -268,8 +270,9 @@ class Generator:
             if max(laps_started) >= lap_at_yellow + 2:
                 # Only send if laps is greater than 1
                 if laps_under_sc > 1:
+                    self.ir_window.set_focus()
                     self.ir.chat_command(1)
-                    time.sleep(0.1)
+                    time.sleep(0.5)
                     pyautogui.write(
                         f"!p {laps_under_sc - 1}", interval=0.01
                     )
@@ -364,8 +367,9 @@ class Generator:
         # Send the wave chat command for each car
         if len(cars_to_wave) > 0:
             for car in cars_to_wave:
+                self.ir_window.set_focus()
                 self.ir.chat_command(1)
-                time.sleep(0.1)
+                time.sleep(0.5)
                 pyautogui.write(f"!w {car}", interval=0.01)
                 time.sleep(0.05)
                 pyautogui.press("enter")
@@ -389,8 +393,9 @@ class Generator:
         self.last_sc_time = time.time()
 
         # Send yellow flag chat command
+        self.ir_window.set_focus()
         self.ir.chat_command(1)
-        time.sleep(0.1)
+        time.sleep(0.5)
         pyautogui.write(f"!y {message}", interval=0.01)
         time.sleep(0.05)
         pyautogui.press("enter")
@@ -449,6 +454,11 @@ class Generator:
 
         # Attempt to connect and tell user if successful
         if self.ir.startup():
+            # Get reference to simulator window if successful
+            self.ir_window = Application().connect(
+                title="iRacing.com Simulator"
+            ).top_window()
+            
             self.master.set_message("Connected to iRacing\n")
         else:
             self.master.set_message("Error connecting to iRacing\n")
