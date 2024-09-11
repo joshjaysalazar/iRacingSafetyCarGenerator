@@ -272,7 +272,10 @@ class Generator:
                     self.ir_window.set_focus()
                     self.ir.chat_command(1)
                     time.sleep(0.5)
-                    self.ir_window.type_keys(f"!p {laps_under_sc - 1}{{ENTER}}")
+                    self.ir_window.type_keys(
+                        f"!p {laps_under_sc - 1}{{ENTER}}",
+                        with_spaces=True
+                    )
                 
                 # Break the loop
                 break
@@ -365,7 +368,7 @@ class Generator:
                 self.ir_window.set_focus()
                 self.ir.chat_command(1)
                 time.sleep(0.5)
-                self.ir_window.type_keys(f"!w {car}{{ENTER}}")
+                self.ir_window.type_keys(f"!w {car}{{ENTER}}", with_spaces=True)
 
     def _start_safety_car(self, message=""):
         """Send a yellow flag to iRacing.
@@ -388,7 +391,7 @@ class Generator:
         self.ir_window.set_focus()
         self.ir.chat_command(1)
         time.sleep(0.5)
-        self.ir_window.type_keys(f"!y {message}{{ENTER}}")
+        self.ir_window.type_keys(f"!y {message}{{ENTER}}", with_spaces=True)
 
         # Send the wave commands
         self._send_wave_arounds()
