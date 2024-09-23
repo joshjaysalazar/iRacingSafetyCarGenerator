@@ -15,27 +15,30 @@ class App(tk.Tk):
             None
         """
         logging.info("Initializing main application window")
-
         super().__init__()
 
-        # Load settings from config file
-        logging.info("Loading settings from settings.ini")
-        self.settings = configparser.ConfigParser()
-        self.settings.read("settings.ini")
+        try:
+            # Load settings from config file
+            logging.info("Loading settings from settings.ini")
+            self.settings = configparser.ConfigParser()
+            self.settings.read("settings.ini")
 
-        # Set window properties
-        logging.debug("Setting window properties")
-        self.title("iRacing Safety Car Generator")
+            # Set window properties
+            logging.debug("Setting window properties")
+            self.title("iRacing Safety Car Generator")
 
-        # Create generator object
-        self.generator = generator.Generator(self)
-        self.shutdown_event = self.generator.shutdown_event
+            # Create generator object
+            self.generator = generator.Generator(self)
+            self.shutdown_event = self.generator.shutdown_event
 
-        # Set handler for closing main window event
-        self.protocol('WM_DELETE_WINDOW', self.handle_delete_window)
+            # Set handler for closing main window event
+            self.protocol('WM_DELETE_WINDOW', self.handle_delete_window)
 
-        # Create widgets
-        self._create_widgets()
+            # Create widgets
+            self._create_widgets()
+        except Exception as e:
+            logging.exception("An error occurred during initialization")
+            raise e
 
     def handle_delete_window(self):
         """ Event handler to trigger shutdown_event and destroy the main window
