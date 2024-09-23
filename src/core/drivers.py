@@ -43,7 +43,7 @@ class Drivers:
 
         except Exception as e:
             logging.exception(
-                "An error occurred copying current drivers to previous drivers."
+                "An error occurred copying current drivers to previous drivers"
             )
             raise e
 
@@ -54,7 +54,7 @@ class Drivers:
             track_loc = self.master.ir["CarIdxTrackSurface"]
         except Exception as e:
             logging.exception(
-                "An error occurred gathering updated driver data."
+                "An error occurred gathering updated driver data"
             )
             raise e
 
@@ -70,6 +70,6 @@ class Drivers:
                 )
         except Exception as e:
             logging.exception(
-                "An error occurred organizing updated driver data."
+                "An error occurred organizing updated driver data"
             )
             raise e
