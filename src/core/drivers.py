@@ -19,6 +19,7 @@ class Drivers:
         self.master = master
 
         # Dictionaries to track the state of the drivers
+        logging.debug("Creating drivers dictionaries")
         self.current_drivers = []
         self.previous_drivers = []
 
@@ -36,9 +37,11 @@ class Drivers:
         """
         try:
             # Copy the current drivers to the previous drivers
+            logging.debug("Copying current drivers to previous drivers")
             self.previous_drivers = deepcopy(self.current_drivers)
 
             # Clear the current drivers
+            logging.debug("Clearing current drivers")
             self.current_drivers = []
 
         except Exception as e:
@@ -49,6 +52,7 @@ class Drivers:
 
         try:
             # Gather the updated driver data
+            logging.debug("Gathering updated driver data")
             laps_completed = self.master.ir["CarIdxLapCompleted"]
             lap_distance = self.master.ir["CarIdxLapDistPct"]
             track_loc = self.master.ir["CarIdxTrackSurface"]
@@ -60,6 +64,7 @@ class Drivers:
 
         try:
             # Organize the updated driver data and update the current drivers
+            logging.debug("Organizing updated driver data")
             for i in range(len(laps_completed)):
                 self.current_drivers.append(
                     {
