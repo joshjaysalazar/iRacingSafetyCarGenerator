@@ -20,6 +20,7 @@ class Generator:
         self.master = master
 
         # Variables to track safety car events
+        logging.debug("Initializing safety car variables")
         self.ir_window = None
         self.start_time = None
         self.total_sc_events = 0
@@ -43,6 +44,8 @@ class Generator:
         Args:
             None
         """
+        logging.debug("Checking random safety car event")
+
         # Get relevant settings from the settings file
         enabled = self.master.settings["settings"]["random"]
         chance = float(self.master.settings["settings"]["random_prob"])
@@ -86,6 +89,8 @@ class Generator:
         Args:
             None
         """
+        logging.debug("Checking stopped car safety car event")
+
         # Get relevant settings from the settings file
         enabled = self.master.settings["settings"]["stopped"]
         threshold = float(self.master.settings["settings"]["stopped_min"])
@@ -152,6 +157,8 @@ class Generator:
         Args:
             None
         """
+        logging.debug("Checking off track safety car event")
+
         # Get relevant settings from the settings file
         enabled = self.master.settings["settings"]["off"]
         threshold = float(self.master.settings["settings"]["off_min"])
@@ -194,6 +201,8 @@ class Generator:
             The driver number, or None if not found
         """
         try:
+            logging.debug(f"Getting driver number for ID {id}")
+
             # Get the driver number from the iRacing SDK
             for driver in self.ir["DriverInfo"]["Drivers"]:
                 if driver["CarIdx"] == id:
@@ -212,6 +221,8 @@ class Generator:
         Args:
             None
         """
+        logging.debug("Starting safety car loop")
+
         # Get relevant settings from the settings file
         start_minute = float(self.master.settings["settings"]["start_minute"])
         end_minute = float(self.master.settings["settings"]["end_minute"])
@@ -221,6 +232,7 @@ class Generator:
         try:
             # Adjust start minute if < 3s to avoid triggering on standing start
             if start_minute < 0.05:
+                logging.debug("Adjusting start minute to 0.05")
                 start_minute = 0.05
         except Exception as e:
             logging.exception("An error occurred adjusting start minute")
@@ -235,6 +247,8 @@ class Generator:
             self.drivers.update()
 
             try:
+                logging.debug("Checking time")
+
                 # If it hasn't reached the start minute, wait
                 if time.time() - self.start_time < start_minute * 60:
                     time.sleep(1)
@@ -276,6 +290,8 @@ class Generator:
             None
         """
         try:
+            logging.info("Sending pacelaps command")
+
             # Get relevant settings from the settings file
             laps_under_sc = int(
                 self.master.settings["settings"]["laps_under_sc"]
@@ -330,6 +346,8 @@ class Generator:
             None
         """
         try:
+            logging.info("Sending wave around commands")
+
             # Get relevant settings from the settings file
             wave_around = self.master.settings["settings"]["imm_wave_around"]
 
@@ -402,6 +420,7 @@ class Generator:
             # Send the wave chat command for each car
             if len(cars_to_wave) > 0:
                 for car in cars_to_wave:
+                    logging.info(f"Sending wave around command for car {car}")
                     self.ir_window.set_focus()
                     self.ir.chat_command(1)
                     time.sleep(0.5)
@@ -420,6 +439,8 @@ class Generator:
             message: The message to send with the yellow flag command
         """
         try:
+            logging.info("Deploying safety car")
+
             # Set the UI message
             self.master.set_message(
                 "Connected to iRacing\nSafety car deployed."
@@ -457,6 +478,8 @@ class Generator:
             None
         """
         try:
+            logging.info("Waiting for green flag")
+
             # Add message to text box
             self.master.set_message(
                 "Connected to iRacing\nWaiting for green flag..."
@@ -496,6 +519,8 @@ class Generator:
             None
         """
         try:
+            logging.info("Connecting to iRacing")
+            
             # Create the iRacing SDK object
             self.ir = irsdk.IRSDK()
 
