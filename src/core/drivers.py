@@ -41,11 +41,24 @@ class Drivers:
             # Clear the current drivers
             self.current_drivers = []
 
+        except Exception as e:
+            logging.exception(
+                "An error occurred copying current drivers to previous drivers."
+            )
+            raise e
+
+        try:
             # Gather the updated driver data
             laps_completed = self.master.ir["CarIdxLapCompleted"]
             lap_distance = self.master.ir["CarIdxLapDistPct"]
             track_loc = self.master.ir["CarIdxTrackSurface"]
+        except Exception as e:
+            logging.exception(
+                "An error occurred gathering updated driver data."
+            )
+            raise e
 
+        try:
             # Organize the updated driver data and update the current drivers
             for i in range(len(laps_completed)):
                 self.current_drivers.append(
@@ -55,7 +68,8 @@ class Drivers:
                     "track_loc": track_loc[i],
                     }
                 )
-
         except Exception as e:
-            logging.exception(f"An error occurred while updating drivers")
+            logging.exception(
+                "An error occurred organizing updated driver data."
+            )
             raise e
