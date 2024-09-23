@@ -25,6 +25,7 @@ class Generator:
         self.last_sc_time = None
         self.total_random_sc_events = 0
 
+        # Create a shutdown event
         self.shutdown_event = threading.Event()
 
     def _is_shutting_down(self):
