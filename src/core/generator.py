@@ -1,10 +1,9 @@
-from copy import deepcopy
 import random
 import threading
 import time
 
 import irsdk
-import pyautogui
+from pywinauto.application import Application
 
 from core import drivers
 
@@ -20,10 +19,21 @@ class Generator:
         self.master = master
 
         # Variables to track safety car events
+        self.ir_window = None
         self.start_time = None
         self.total_sc_events = 0
         self.last_sc_time = None
         self.total_random_sc_events = 0
+
+        self.shutdown_event = threading.Event()
+
+    def _is_shutting_down(self):
+        """ Returns True if shutdown_event event was triggered
+        
+        Args:
+            None
+        """
+        return self.shutdown_event.is_set()
 
     def _check_random(self):
         """Check to see if a random safety car event should be triggered.
@@ -89,6 +99,10 @@ class Generator:
             previous_total = previous_comp + previous_dist
             if current_total <= previous_total:
                 stopped_cars.append(i)
+
+        # If length of stopped cars is entire field, clear list (lag spike fix)
+        if len(stopped_cars) >= len(self.drivers.current_drivers) - 1:
+            stopped_cars = []
 
         # For each stopped car, check if they're in pits, remove if so
         cars_to_remove = []
@@ -214,6 +228,10 @@ class Generator:
             self._check_stopped()
             self._check_off_track()
 
+            # Break the loop if we are shutting down the thread
+            if self._is_shutting_down():
+                break
+
             # Wait 1 second before checking again
             time.sleep(1)
 
@@ -251,17 +269,21 @@ class Generator:
             if max(laps_started) >= lap_at_yellow + 2:
                 # Only send if laps is greater than 1
                 if laps_under_sc > 1:
+                    self.ir_window.set_focus()
                     self.ir.chat_command(1)
-                    time.sleep(0.1)
-                    pyautogui.write(
-                        f"!p {laps_under_sc - 1}", interval=0.01
+                    time.sleep(0.5)
+                    self.ir_window.type_keys(
+                        f"!p {laps_under_sc - 1}{{ENTER}}",
+                        with_spaces=True
                     )
-                    time.sleep(0.05)
-                    pyautogui.press("enter")
                 
                 # Break the loop
                 break
 
+            # Break the loop if we are shutting down the thread
+            if self._is_shutting_down():
+                break
+            
             # Wait 1 second before checking again
             time.sleep(1)
 
@@ -343,12 +365,10 @@ class Generator:
         # Send the wave chat command for each car
         if len(cars_to_wave) > 0:
             for car in cars_to_wave:
+                self.ir_window.set_focus()
                 self.ir.chat_command(1)
-                time.sleep(0.1)
-                pyautogui.write(f"!w {car}", interval=0.01)
-                time.sleep(0.05)
-                pyautogui.press("enter")
-                time.sleep(0.05)
+                time.sleep(0.5)
+                self.ir_window.type_keys(f"!w {car}{{ENTER}}", with_spaces=True)
 
     def _start_safety_car(self, message=""):
         """Send a yellow flag to iRacing.
@@ -368,11 +388,10 @@ class Generator:
         self.last_sc_time = time.time()
 
         # Send yellow flag chat command
+        self.ir_window.set_focus()
         self.ir.chat_command(1)
-        time.sleep(0.1)
-        pyautogui.write(f"!y {message}", interval=0.01)
-        time.sleep(0.05)
-        pyautogui.press("enter")
+        time.sleep(0.5)
+        self.ir_window.type_keys(f"!y {message}{{ENTER}}", with_spaces=True)
 
         # Send the wave commands
         self._send_wave_arounds()
@@ -410,6 +429,10 @@ class Generator:
                 # Break the loop
                 break
 
+            # Break the loop if we are shutting down the thread
+            if self._is_shutting_down():
+                break
+
             # Wait 1 second before checking again
             time.sleep(1)
 
@@ -424,6 +447,11 @@ class Generator:
 
         # Attempt to connect and tell user if successful
         if self.ir.startup():
+            # Get reference to simulator window if successful
+            self.ir_window = Application().connect(
+                title="iRacing.com Simulator"
+            ).top_window()
+            
             self.master.set_message("Connected to iRacing\n")
         else:
             self.master.set_message("Error connecting to iRacing\n")

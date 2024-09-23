@@ -28,9 +28,14 @@ class App(tk.Tk):
 
         # Create generator object
         self.generator = generator.Generator(self)
+        self.shutdown_event = self.generator.shutdown_event
+
+        # Set handler for closing main window event
+        self.protocol('WM_DELETE_WINDOW', self.handle_delete_window)
 
         # Create widgets
         self._create_widgets()
+
 
     def load_tooltips_text(self):
         try:
@@ -38,6 +43,15 @@ class App(tk.Tk):
                 self.tooltips_text = json.load(file)
         except Exception as e:
             self.tooltips_text = {}
+
+    def handle_delete_window(self):
+        """ Event handler to trigger shutdown_event and destroy the main window
+        
+        Args:
+            None
+        """
+        self.shutdown_event.set()
+        self.destroy()
 
     def _create_widgets(self):
         """Create widgets for the main application window.
