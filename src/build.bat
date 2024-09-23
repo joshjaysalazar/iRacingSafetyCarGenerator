@@ -11,3 +11,5 @@ COPY settings.ini dist\settings.ini
 COPY ..\README.md dist\README.md
 :: Copy LICENSE to dist
 COPY ..\LICENSE dist\LICENSE
+:: Copy tooltips.json to dist
+COPY tooltips_text.json dist\tooltips_text.json
