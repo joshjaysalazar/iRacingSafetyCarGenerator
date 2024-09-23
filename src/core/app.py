@@ -19,7 +19,7 @@ class App(tk.Tk):
         super().__init__()
 
         # Load settings from config file
-        logging.debug("Loading settings from settings.ini")
+        logging.info("Loading settings from settings.ini")
         self.settings = configparser.ConfigParser()
         self.settings.read("settings.ini")
 
