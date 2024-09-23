@@ -17,8 +17,8 @@ class App(tk.Tk):
         super().__init__()
         logging.info("Initializing main application window")
         
-        # Load settings from config file
         try:
+            # Load settings from config file
             logging.info("Loading settings from settings.ini")
             self.settings = configparser.ConfigParser()
             self.settings.read("settings.ini")
@@ -26,8 +26,8 @@ class App(tk.Tk):
             logging.exception("An error occurred loading settings")
             raise e
 
-        # Set window properties
         try:
+            # Set window properties
             logging.debug("Setting window properties")
             self.title("iRacing Safety Car Generator")
         except Exception as e:
