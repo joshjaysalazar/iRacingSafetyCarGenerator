@@ -565,6 +565,8 @@ class App(tk.Tk):
             self.settings["settings"].getboolean("imm_wave_around")
         )
 
+        logging.info("Widgets created")
+
     def _save_and_run(self):
         """Save the settings to the config file and run the generator.
 
