@@ -1,5 +1,4 @@
 import configparser
-import logging
 import tkinter as tk
 from tkinter import ttk
 
@@ -10,18 +9,15 @@ class App(tk.Tk):
     """Main application window for the safety car generator."""
     def __init__(self):
         """Initialize the main application window.
-
+        
         Args:
             None
         """
         super().__init__()
 
-        logging.info("Initializing the main application window.")
-
         # Load settings from config file
         self.settings = configparser.ConfigParser()
         self.settings.read("settings.ini")
-        logging.info("Settings loaded from settings.ini.")
 
         # Set window properties
         self.title("iRacing Safety Car Generator")
@@ -29,26 +25,22 @@ class App(tk.Tk):
         # Create generator object
         self.generator = generator.Generator(self)
         self.shutdown_event = self.generator.shutdown_event
-        logging.info("Generator object created.")
 
         # Set handler for closing main window event
         self.protocol('WM_DELETE_WINDOW', self.handle_delete_window)
-        logging.debug("Close window protocol set.")
 
         # Create widgets
-        logging.info("Creating widgets.")
         self._create_widgets()
 
-    def handle_delete_window(self):
-        """Event handler to trigger shutdown_event and destroy the main window
 
+    def handle_delete_window(self):
+        """ Event handler to trigger shutdown_event and destroy the main window
+        
         Args:
             None
         """
-        logging.info("Main window close event triggered.")
         self.shutdown_event.set()
         self.destroy()
-        logging.info("Main window destroyed.")
 
     def _create_widgets(self):
         """Create widgets for the main application window.
@@ -56,14 +48,11 @@ class App(tk.Tk):
         Args:
             None
         """
-        logging.info("Creating widgets for the main application window.")
-
-        # Configure grid layout
+        # Configure
         self.columnconfigure(0, weight=1)
         self.columnconfigure(1, weight=1)
         self.rowconfigure(0, weight=1)
         self.rowconfigure(1, weight=1)
-        logging.debug("Main window grid configured.")
 
         # Create Safety Car Types frame
         self.frm_sc_types = ttk.LabelFrame(self, text="Safety Car Types")
@@ -75,7 +64,6 @@ class App(tk.Tk):
             padx=5,
             pady=5
         )
-        logging.debug("Safety Car Types frame created.")
 
         # Create variable to hold the current row in the frame
         sc_types_row = 0
@@ -96,12 +84,11 @@ class App(tk.Tk):
             pady=5
         )
         sc_types_row += 1
-        logging.debug("Random safety car options created.")
 
-        # Create maximum occurrences spinbox
+        # Create maximum occurences spinbox
         self.lbl_random_max_occ = ttk.Label(
             self.frm_sc_types,
-            text="Maximum occurrences"
+            text="Maximum occurences"
         )
         self.lbl_random_max_occ.grid(
             row=sc_types_row,
@@ -173,7 +160,6 @@ class App(tk.Tk):
             pady=5
         )
         sc_types_row += 1
-        logging.debug("Random safety car widgets created.")
 
         # Create cars stopped on track checkbox
         self.var_stopped = tk.IntVar()
@@ -245,7 +231,6 @@ class App(tk.Tk):
             pady=5
         )
         sc_types_row += 1
-        logging.debug("Cars stopped on track widgets created.")
 
         # Create cars off track checkbox
         self.var_off = tk.IntVar()
@@ -304,12 +289,10 @@ class App(tk.Tk):
             padx=5,
             pady=5
         )
-        logging.debug("Cars off track widgets created.")
 
         # Create General frame
         self.frm_general = ttk.LabelFrame(self, text="General")
         self.frm_general.grid(row=0, column=1, sticky="nesw", padx=5, pady=5)
-        logging.debug("General settings frame created.")
 
         # Create variable to hold the current row in the frame
         general_row = 0
@@ -440,13 +423,11 @@ class App(tk.Tk):
             padx=5,
             pady=5
         )
-        logging.debug("General settings widgets created.")
 
         # Create Controls frame
         self.frm_controls = ttk.Frame(self)
         self.frm_controls.grid(row=1, column=1, sticky="nesw", padx=5, pady=5)
         self.frm_controls.columnconfigure(0, weight=1)
-        logging.debug("Controls frame created.")
 
         # Create variable to hold the current row in the frame
         controls_row = 0
@@ -494,7 +475,6 @@ class App(tk.Tk):
             padx=5,
             pady=5
         )
-        logging.debug("Control widgets created.")
 
         # Fill in the widgets with the settings from the config file
         self.var_random.set(self.settings["settings"].getboolean("random"))
@@ -551,7 +531,6 @@ class App(tk.Tk):
         self.var_immediate_wave_around.set(
             self.settings["settings"].getboolean("imm_wave_around")
         )
-        logging.info("Widgets initialized with settings from config file.")
 
     def _save_and_run(self):
         """Save the settings to the config file and run the generator.
@@ -559,10 +538,7 @@ class App(tk.Tk):
         Args:
             None
         """
-        logging.info("Save and Run button clicked.")
         self._save_settings()
-        logging.info("Settings saved successfully.")
-        logging.info("Starting the generator.")
         self.generator.run()
 
     def _save_settings(self):
@@ -571,8 +547,6 @@ class App(tk.Tk):
         Args:
             None
         """
-        logging.info("Saving settings to config file.")
-
         # Get all the settings from the widgets
         random = self.var_random.get()
         random_max_occ = self.spn_random_max_occ.get()
@@ -590,8 +564,6 @@ class App(tk.Tk):
         min_time_between = self.ent_min_time_between.get()
         laps_under_sc = self.ent_laps_under_sc.get()
         imm_wave_around = self.var_immediate_wave_around.get()
-
-        logging.debug("Collected settings from widgets.")
 
         # Save the settings to the config file
         self.settings["settings"]["random"] = str(random)
@@ -613,7 +585,6 @@ class App(tk.Tk):
 
         with open("settings.ini", "w") as configfile:
             self.settings.write(configfile)
-        logging.info("Settings written to settings.ini.")
 
     def set_message(self, message):
         """Set the status label to a message.
@@ -621,6 +592,5 @@ class App(tk.Tk):
         Args:
             message (str): The message to set the status label to.
         """
-        logging.info(f"Status message updated to: {message}")
         self.lbl_status["text"] = message
         self.update_idletasks()
