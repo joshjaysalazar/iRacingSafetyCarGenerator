@@ -34,9 +34,13 @@ class App(tk.Tk):
             logging.exception("An error occurred setting window properties")
             raise e
 
-        # Create generator object
-        self.generator = generator.Generator(self)
-        self.shutdown_event = self.generator.shutdown_event
+        try:
+            # Create generator object
+            self.generator = generator.Generator(self)
+            self.shutdown_event = self.generator.shutdown_event
+        except Exception as e:
+            logging.exception("An error occurred creating generator object")
+            raise e
 
         # Set handler for closing main window event
         self.protocol('WM_DELETE_WINDOW', self.handle_delete_window)
