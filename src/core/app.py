@@ -1,9 +1,10 @@
 import configparser
 import tkinter as tk
+import json
 from tkinter import ttk
 
 from core import generator
-
+from core import tooltip
 
 class App(tk.Tk):
     """Main application window for the safety car generator."""
@@ -14,6 +15,9 @@ class App(tk.Tk):
             None
         """
         super().__init__()
+
+        # Tooltips text
+        self.load_tooltips_text()
 
         # Load settings from config file
         self.settings = configparser.ConfigParser()
@@ -32,6 +36,13 @@ class App(tk.Tk):
         # Create widgets
         self._create_widgets()
 
+
+    def load_tooltips_text(self):
+        try:
+            with open("tooltips_text.json", "r") as file:
+                self.tooltips_text = json.load(file)
+        except Exception as e:
+            self.tooltips_text = {}
 
     def handle_delete_window(self):
         """ Event handler to trigger shutdown_event and destroy the main window
@@ -83,6 +94,7 @@ class App(tk.Tk):
             padx=5,
             pady=5
         )
+        tooltip.CreateToolTip(self.chk_random, self.tooltips_text.get("random"))
         sc_types_row += 1
 
         # Create maximum occurences spinbox
@@ -110,6 +122,8 @@ class App(tk.Tk):
             padx=5,
             pady=5
         )
+        tooltip.CreateToolTip(self.lbl_random_max_occ, self.tooltips_text.get("random_max_occ"))
+        tooltip.CreateToolTip(self.spn_random_max_occ, self.tooltips_text.get("random_max_occ"))
         sc_types_row += 1
 
         # Create probability entry
@@ -132,6 +146,8 @@ class App(tk.Tk):
             padx=5,
             pady=5
         )
+        tooltip.CreateToolTip(self.lbl_random_prob, self.tooltips_text.get("random_prob"))
+        tooltip.CreateToolTip(self.ent_random_prob, self.tooltips_text.get("random_prob"))
         sc_types_row += 1
 
         # Create message entry
@@ -147,6 +163,7 @@ class App(tk.Tk):
             padx=5,
             pady=5
         )
+        tooltip.CreateToolTip(self.ent_random_message, self.tooltips_text.get("message"))
         sc_types_row += 1
 
         # Create horizontal separator
@@ -176,6 +193,7 @@ class App(tk.Tk):
             padx=5,
             pady=5
         )
+        tooltip.CreateToolTip(self.chk_stopped, self.tooltips_text.get("stopped"))
         sc_types_row += 1
 
         # Create minimum to trigger spinbox
@@ -203,6 +221,8 @@ class App(tk.Tk):
             padx=5,
             pady=5
         )
+        tooltip.CreateToolTip(self.lbl_stopped_min, self.tooltips_text.get("stopped_min"))
+        tooltip.CreateToolTip(self.spn_stopped_min, self.tooltips_text.get("stopped_min"))
         sc_types_row += 1
 
         # Create message entry
@@ -218,6 +238,7 @@ class App(tk.Tk):
             padx=5,
             pady=5
         )
+        tooltip.CreateToolTip(self.ent_stopped_message, self.tooltips_text.get("message"))
         sc_types_row += 1
 
         # Create horizontal separator
@@ -247,6 +268,7 @@ class App(tk.Tk):
             padx=5,
             pady=5
         )
+        tooltip.CreateToolTip(self.chk_off, self.tooltips_text.get("off"))
         sc_types_row += 1
 
         # Create minimum to trigger spinbox
@@ -274,6 +296,8 @@ class App(tk.Tk):
             padx=5,
             pady=5
         )
+        tooltip.CreateToolTip(self.lbl_off_min, self.tooltips_text.get("off_min"))
+        tooltip.CreateToolTip(self.spn_off_min, self.tooltips_text.get("off_min"))
         sc_types_row += 1
 
         # Create message entry
@@ -289,6 +313,7 @@ class App(tk.Tk):
             padx=5,
             pady=5
         )
+        tooltip.CreateToolTip(self.ent_off_message, self.tooltips_text.get("message"))
 
         # Create General frame
         self.frm_general = ttk.LabelFrame(self, text="General")
@@ -317,6 +342,8 @@ class App(tk.Tk):
             padx=5,
             pady=5
         )
+        tooltip.CreateToolTip(self.lbl_max_safety_cars, self.tooltips_text.get("max_safety_cars"))
+        tooltip.CreateToolTip(self.ent_max_safety_cars, self.tooltips_text.get("max_safety_cars"))
         general_row += 1
 
         # Create earliest possible minute spinbox
@@ -339,6 +366,8 @@ class App(tk.Tk):
             padx=5,
             pady=5
         )
+        tooltip.CreateToolTip(self.lbl_start_minute, self.tooltips_text.get("start_minute"))
+        tooltip.CreateToolTip(self.ent_start_minute, self.tooltips_text.get("start_minute"))
         general_row += 1
 
         # Create latest possible minute spinbox
@@ -361,6 +390,8 @@ class App(tk.Tk):
             padx=5,
             pady=5
         )
+        tooltip.CreateToolTip(self.lbl_end_minute, self.tooltips_text.get("end_minute"))
+        tooltip.CreateToolTip(self.ent_end_minute, self.tooltips_text.get("end_minute"))
         general_row += 1
 
         # Create minimum minutes between spinbox
@@ -383,6 +414,8 @@ class App(tk.Tk):
             padx=5,
             pady=5
         )
+        tooltip.CreateToolTip(self.lbl_min_time_between, self.tooltips_text.get("min_time_between"))
+        tooltip.CreateToolTip(self.ent_min_time_between, self.tooltips_text.get("min_time_between"))
         general_row += 1
 
         # Create laps under safety car spinbox
@@ -405,6 +438,8 @@ class App(tk.Tk):
             padx=5,
             pady=5
         )
+        tooltip.CreateToolTip(self.lbl_laps_under_sc, self.tooltips_text.get("laps_under_sc"))
+        tooltip.CreateToolTip(self.ent_laps_under_sc, self.tooltips_text.get("laps_under_sc"))
         general_row += 1
 
         # Create immediate wave arounds checkbox
@@ -423,6 +458,7 @@ class App(tk.Tk):
             padx=5,
             pady=5
         )
+        tooltip.CreateToolTip(self.chk_immediate_wave_around, self.tooltips_text.get("immediate_wave_around"))
 
         # Create Controls frame
         self.frm_controls = ttk.Frame(self)
