@@ -30,9 +30,15 @@ def main():
     # Set up logging
     setup_logging()
 
-    # Create and run the app
+    # Create the app
     app = App()
-    app.mainloop()
+
+    # Try to run the app and log exceptions
+    try:
+        app.mainloop()
+    except Exception as e:
+        logging.exception(e)
+        raise e
 
 if __name__ == "__main__":
     main()
