@@ -22,13 +22,13 @@ def setup_logging():
         level=logging.DEBUG
     )
 
+    # Log the start of the program
+    logging.info("Program started")
+
 def main():
     """Main function for the safety car generator."""
     # Set up logging
     setup_logging()
-
-    # Log the start of the program
-    logging.info("Program started")
 
     # Create and run the app
     app = App()
