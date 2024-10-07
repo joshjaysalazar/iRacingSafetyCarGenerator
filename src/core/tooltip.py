@@ -5,13 +5,7 @@ www.daniweb.com/programming/software-development/code/484591/a-tooltip-class-for
 
 Modified to include a delay time by Victor Zaccardo, 25mar16
 """
-
-try:
-    # for Python2
-    import Tkinter as tk
-except ImportError:
-    # for Python3
-    import tkinter as tk
+import tkinter as tk
 
 class CreateToolTip(object):
     """
