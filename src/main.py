@@ -30,14 +30,12 @@ def main():
     # Set up logging
     setup_logging()
 
-    # Create the app
-    app = App()
-
-    # Try to run the app and log exceptions
+    # Try to create and run the app, and log exceptions
     try:
+        app = App()
         app.mainloop()
     except Exception as e:
-        logging.exception(e)
+        logging.exception("A fatal error has occurred")
         raise e
 
 if __name__ == "__main__":
