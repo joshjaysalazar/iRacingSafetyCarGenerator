@@ -17,7 +17,7 @@ class Generator:
         Args:
             master: The parent window object
         """
-        self.info("Initializing safety car generator")
+        logging.info("Initializing safety car generator")
         self.master = master
 
         # Variables to track safety car events
