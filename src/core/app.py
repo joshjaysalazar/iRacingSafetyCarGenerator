@@ -1,6 +1,6 @@
 import configparser
-import tkinter as tk
 import json
+import tkinter as tk
 from tkinter import ttk
 
 from core import generator
