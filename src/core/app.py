@@ -36,7 +36,6 @@ class App(tk.Tk):
         # Create widgets
         self._create_widgets()
 
-
     def load_tooltips_text(self):
         try:
             with open("tooltips_text.json", "r") as file:
