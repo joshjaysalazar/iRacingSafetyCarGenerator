@@ -1,10 +1,11 @@
 import configparser
 import logging
 import tkinter as tk
+import json
 from tkinter import ttk
 
 from core import generator
-
+from core import tooltip
 
 class App(tk.Tk):
     """Main application window for the safety car generator."""
@@ -26,6 +27,7 @@ class App(tk.Tk):
             logging.exception("An error occurred loading settings")
             raise e
 
+<<<<<<< HEAD
         try:
             # Set window properties
             logging.debug("Setting window properties")
@@ -33,6 +35,14 @@ class App(tk.Tk):
         except Exception as e:
             logging.exception("An error occurred setting window properties")
             raise e
+=======
+        # Tooltips text
+        self.load_tooltips_text()
+
+        # Load settings from config file
+        self.settings = configparser.ConfigParser()
+        self.settings.read("settings.ini")
+>>>>>>> main
 
         try:
             # Create generator object
@@ -47,7 +57,19 @@ class App(tk.Tk):
 
         # Create widgets
         self._create_widgets()
+<<<<<<< HEAD
             
+=======
+
+
+    def load_tooltips_text(self):
+        try:
+            with open("tooltips_text.json", "r") as file:
+                self.tooltips_text = json.load(file)
+        except Exception as e:
+            self.tooltips_text = {}
+
+>>>>>>> main
     def handle_delete_window(self):
         """ Event handler to trigger shutdown_event and destroy the main window
         
@@ -90,6 +112,7 @@ class App(tk.Tk):
                 pady=5
             )
 
+<<<<<<< HEAD
             # Create variable to hold the current row in the frame
             sc_types_row = 0
 
@@ -161,6 +184,94 @@ class App(tk.Tk):
                 pady=5
             )
             sc_types_row += 1
+=======
+        # Create random checkbox
+        self.var_random = tk.IntVar()
+        self.var_random.set(1)
+        self.chk_random = ttk.Checkbutton(
+            self.frm_sc_types,
+            text="Random",
+            variable=self.var_random
+        )
+        self.chk_random.grid(
+            row=sc_types_row,
+            column=0,
+            sticky="w",
+            padx=5,
+            pady=5
+        )
+        tooltip.CreateToolTip(self.chk_random, self.tooltips_text.get("random"))
+        sc_types_row += 1
+
+        # Create maximum occurences spinbox
+        self.lbl_random_max_occ = ttk.Label(
+            self.frm_sc_types,
+            text="Maximum occurences"
+        )
+        self.lbl_random_max_occ.grid(
+            row=sc_types_row,
+            column=0,
+            sticky="w",
+            padx=5,
+            pady=5
+        )
+        self.spn_random_max_occ = ttk.Spinbox(
+            self.frm_sc_types,
+            from_=0,
+            to=100,
+            width=5
+        )
+        self.spn_random_max_occ.grid(
+            row=sc_types_row,
+            column=1,
+            sticky="e",
+            padx=5,
+            pady=5
+        )
+        tooltip.CreateToolTip(self.lbl_random_max_occ, self.tooltips_text.get("random_max_occ"))
+        tooltip.CreateToolTip(self.spn_random_max_occ, self.tooltips_text.get("random_max_occ"))
+        sc_types_row += 1
+
+        # Create probability entry
+        self.lbl_random_prob = ttk.Label(
+            self.frm_sc_types,
+            text="Probability"
+        )
+        self.lbl_random_prob.grid(
+            row=sc_types_row,
+            column=0,
+            sticky="w",
+            padx=5,
+            pady=5
+        )
+        self.ent_random_prob = ttk.Entry(self.frm_sc_types, width=7)
+        self.ent_random_prob.grid(
+            row=sc_types_row,
+            column=1,
+            sticky="e",
+            padx=5,
+            pady=5
+        )
+        tooltip.CreateToolTip(self.lbl_random_prob, self.tooltips_text.get("random_prob"))
+        tooltip.CreateToolTip(self.ent_random_prob, self.tooltips_text.get("random_prob"))
+        sc_types_row += 1
+
+        # Create message entry
+        self.ent_random_message = ttk.Entry(
+            self.frm_sc_types,
+            width=32
+        )
+        self.ent_random_message.grid(
+            row=sc_types_row,
+            column=0,
+            columnspan=2,
+            sticky="w",
+            padx=5,
+            pady=5
+        )
+        tooltip.CreateToolTip(self.ent_random_message, self.tooltips_text.get("message"))
+        sc_types_row += 1
+>>>>>>> main
 
             # Create message entry
             logging.debug("Creating message entry widget")
@@ -178,6 +289,7 @@ class App(tk.Tk):
             )
             sc_types_row += 1
 
+<<<<<<< HEAD
             # Create horizontal separator
             logging.debug("Creating horizontal separator widget")
             separator = ttk.Separator(self.frm_sc_types, orient="horizontal")
@@ -236,6 +348,70 @@ class App(tk.Tk):
                 pady=5
             )
             sc_types_row += 1
+=======
+        # Create cars stopped on track checkbox
+        self.var_stopped = tk.IntVar()
+        self.var_stopped.set(1)
+        self.chk_stopped = ttk.Checkbutton(
+            self.frm_sc_types,
+            text="Cars stopped on track",
+            variable=self.var_stopped
+        )
+        self.chk_stopped.grid(
+            row=sc_types_row,
+            column=0,
+            sticky="w",
+            padx=5,
+            pady=5
+        )
+        tooltip.CreateToolTip(self.chk_stopped, self.tooltips_text.get("stopped"))
+        sc_types_row += 1
+
+        # Create minimum to trigger spinbox
+        self.lbl_stopped_min = ttk.Label(
+            self.frm_sc_types,
+            text="Minimum to trigger"
+        )
+        self.lbl_stopped_min.grid(
+            row=sc_types_row,
+            column=0,
+            sticky="w",
+            padx=5,
+            pady=5
+        )
+        self.spn_stopped_min = ttk.Spinbox(
+            self.frm_sc_types,
+            from_=0,
+            to=100,
+            width=5
+        )
+        self.spn_stopped_min.grid(
+            row=sc_types_row,
+            column=1,
+            sticky="e",
+            padx=5,
+            pady=5
+        )
+        tooltip.CreateToolTip(self.lbl_stopped_min, self.tooltips_text.get("stopped_min"))
+        tooltip.CreateToolTip(self.spn_stopped_min, self.tooltips_text.get("stopped_min"))
+        sc_types_row += 1
+
+        # Create message entry
+        self.ent_stopped_message = ttk.Entry(
+            self.frm_sc_types,
+            width=32
+        )
+        self.ent_stopped_message.grid(
+            row=sc_types_row,
+            column=0,
+            columnspan=2,
+            sticky="w",
+            padx=5,
+            pady=5
+        )
+        tooltip.CreateToolTip(self.ent_stopped_message, self.tooltips_text.get("message"))
+        sc_types_row += 1
+>>>>>>> main
 
             # Create message entry
             logging.debug("Creating message entry widget")
@@ -253,6 +429,7 @@ class App(tk.Tk):
             )
             sc_types_row += 1
 
+<<<<<<< HEAD
             # Create horizontal separator
             logging.debug("Creating horizontal separator widget")
             separator = ttk.Separator(self.frm_sc_types, orient="horizontal")
@@ -311,6 +488,69 @@ class App(tk.Tk):
                 pady=5
             )
             sc_types_row += 1
+=======
+        # Create cars off track checkbox
+        self.var_off = tk.IntVar()
+        self.var_off.set(1)
+        self.chk_off = ttk.Checkbutton(
+            self.frm_sc_types,
+            text="Cars off track",
+            variable=self.var_off
+        )
+        self.chk_off.grid(
+            row=sc_types_row,
+            column=0,
+            sticky="w",
+            padx=5,
+            pady=5
+        )
+        tooltip.CreateToolTip(self.chk_off, self.tooltips_text.get("off"))
+        sc_types_row += 1
+
+        # Create minimum to trigger spinbox
+        self.lbl_off_min = ttk.Label(
+            self.frm_sc_types,
+            text="Minimum to trigger"
+        )
+        self.lbl_off_min.grid(
+            row=sc_types_row,
+            column=0,
+            sticky="w",
+            padx=5,
+            pady=5
+        )
+        self.spn_off_min = ttk.Spinbox(
+            self.frm_sc_types,
+            from_=0,
+            to=100,
+            width=5
+        )
+        self.spn_off_min.grid(
+            row=sc_types_row,
+            column=1,
+            sticky="e",
+            padx=5,
+            pady=5
+        )
+        tooltip.CreateToolTip(self.lbl_off_min, self.tooltips_text.get("off_min"))
+        tooltip.CreateToolTip(self.spn_off_min, self.tooltips_text.get("off_min"))
+        sc_types_row += 1
+
+        # Create message entry
+        self.ent_off_message = ttk.Entry(
+            self.frm_sc_types,
+            width=32
+        )
+        self.ent_off_message.grid(
+            row=sc_types_row,
+            column=0,
+            columnspan=2,
+            sticky="w",
+            padx=5,
+            pady=5
+        )
+        tooltip.CreateToolTip(self.ent_off_message, self.tooltips_text.get("message"))
+>>>>>>> main
 
             # Create message entry
             logging.debug("Creating message entry widget")
@@ -338,6 +578,7 @@ class App(tk.Tk):
                 pady=5
             )
 
+<<<<<<< HEAD
             # Create variable to hold the current row in the frame
             general_row = 0
 
@@ -455,6 +696,145 @@ class App(tk.Tk):
                 pady=5
             )
             general_row += 1
+=======
+        # Create maximum safety cars spinbox
+        self.lbl_max_safety_cars = ttk.Label(
+            self.frm_general,
+            text="Maximum safety cars"
+        )
+        self.lbl_max_safety_cars.grid(
+            row=general_row,
+            column=0,
+            sticky="w",
+            padx=5,
+            pady=5
+        )
+        self.ent_max_safety_cars = ttk.Entry(self.frm_general, width=5)
+        self.ent_max_safety_cars.grid(
+            row=general_row,
+            column=1,
+            sticky="e",
+            padx=5,
+            pady=5
+        )
+        tooltip.CreateToolTip(self.lbl_max_safety_cars, self.tooltips_text.get("max_safety_cars"))
+        tooltip.CreateToolTip(self.ent_max_safety_cars, self.tooltips_text.get("max_safety_cars"))
+        general_row += 1
+
+        # Create earliest possible minute spinbox
+        self.lbl_start_minute = ttk.Label(
+            self.frm_general,
+            text="Earliest possible minute"
+        )
+        self.lbl_start_minute.grid(
+            row=general_row,
+            column=0,
+            sticky="w",
+            padx=5,
+            pady=5
+        )
+        self.ent_start_minute = ttk.Entry(self.frm_general, width=5)
+        self.ent_start_minute.grid(
+            row=general_row,
+            column=1,
+            sticky="e",
+            padx=5,
+            pady=5
+        )
+        tooltip.CreateToolTip(self.lbl_start_minute, self.tooltips_text.get("start_minute"))
+        tooltip.CreateToolTip(self.ent_start_minute, self.tooltips_text.get("start_minute"))
+        general_row += 1
+
+        # Create latest possible minute spinbox
+        self.lbl_end_minute = ttk.Label(
+            self.frm_general,
+            text="Latest possible minute"
+        )
+        self.lbl_end_minute.grid(
+            row=general_row,
+            column=0,
+            sticky="w",
+            padx=5,
+            pady=5
+        )
+        self.ent_end_minute = ttk.Entry(self.frm_general, width=5)
+        self.ent_end_minute.grid(
+            row=general_row,
+            column=1,
+            sticky="e",
+            padx=5,
+            pady=5
+        )
+        tooltip.CreateToolTip(self.lbl_end_minute, self.tooltips_text.get("end_minute"))
+        tooltip.CreateToolTip(self.ent_end_minute, self.tooltips_text.get("end_minute"))
+        general_row += 1
+
+        # Create minimum minutes between spinbox
+        self.lbl_min_time_between = ttk.Label(
+            self.frm_general,
+            text="Minimum minutes between"
+        )
+        self.lbl_min_time_between.grid(
+            row=general_row,
+            column=0,
+            sticky="w",
+            padx=5,
+            pady=5
+        )
+        self.ent_min_time_between = ttk.Entry(self.frm_general, width=5)
+        self.ent_min_time_between.grid(
+            row=general_row,
+            column=1,
+            sticky="e",
+            padx=5,
+            pady=5
+        )
+        tooltip.CreateToolTip(self.lbl_min_time_between, self.tooltips_text.get("min_time_between"))
+        tooltip.CreateToolTip(self.ent_min_time_between, self.tooltips_text.get("min_time_between"))
+        general_row += 1
+
+        # Create laps under safety car spinbox
+        self.lbl_laps_under_sc = ttk.Label(
+            self.frm_general,
+            text="Laps under safety car"
+        )
+        self.lbl_laps_under_sc.grid(
+            row=general_row,
+            column=0,
+            sticky="w",
+            padx=5,
+            pady=5
+        )
+        self.ent_laps_under_sc = ttk.Entry(self.frm_general, width=5)
+        self.ent_laps_under_sc.grid(
+            row=general_row,
+            column=1,
+            sticky="e",
+            padx=5,
+            pady=5
+        )
+        tooltip.CreateToolTip(self.lbl_laps_under_sc, self.tooltips_text.get("laps_under_sc"))
+        tooltip.CreateToolTip(self.ent_laps_under_sc, self.tooltips_text.get("laps_under_sc"))
+        general_row += 1
+
+        # Create immediate wave arounds checkbox
+        self.var_immediate_wave_around = tk.IntVar()
+        self.var_immediate_wave_around.set(1)
+        self.chk_immediate_wave_around = ttk.Checkbutton(
+            self.frm_general,
+            text="Immediate wave arounds",
+            variable=self.var_immediate_wave_around
+        )
+        self.chk_immediate_wave_around.grid(
+            row=general_row,
+            column=0,
+            columnspan=2,
+            sticky="w",
+            padx=5,
+            pady=5
+        )
+        tooltip.CreateToolTip(self.chk_immediate_wave_around, self.tooltips_text.get("immediate_wave_around"))
+>>>>>>> main
 
             # Create immediate wave arounds checkbox
             logging.debug("Creating immediate wave arounds checkbox widget")
