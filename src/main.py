@@ -19,7 +19,7 @@ def setup_logging():
         filename=f"logs/{current_datetime}.log",
         filemode="w",
         format="%(asctime)s (%(module)s.py) [%(levelname)s] %(message)s",
-        level=logging.DEBUG
+        level=logging.INFO
     )
 
     # Log the start of the program
