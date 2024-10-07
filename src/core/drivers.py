@@ -35,46 +35,27 @@ class Drivers:
         Args:
             None
         """
-        try:
-            # Copy the current drivers to the previous drivers
-            logging.debug("Copying current drivers to previous drivers")
-            self.previous_drivers = deepcopy(self.current_drivers)
+        # Copy the current drivers to the previous drivers
+        logging.debug("Copying current drivers to previous drivers")
+        self.previous_drivers = deepcopy(self.current_drivers)
 
-            # Clear the current drivers
-            logging.debug("Clearing current drivers")
-            self.current_drivers = []
+        # Clear the current drivers
+        logging.debug("Clearing current drivers")
+        self.current_drivers = []
 
-        except Exception as e:
-            logging.exception(
-                "An error occurred copying current drivers to previous drivers"
+        # Gather the updated driver data
+        logging.debug("Gathering updated driver data")
+        laps_completed = self.master.ir["CarIdxLapCompleted"]
+        lap_distance = self.master.ir["CarIdxLapDistPct"]
+        track_loc = self.master.ir["CarIdxTrackSurface"]
+
+        # Organize the updated driver data and update the current drivers
+        logging.debug("Organizing updated driver data")
+        for i in range(len(laps_completed)):
+            self.current_drivers.append(
+                {
+                "laps_completed": laps_completed[i],
+                "lap_distance": lap_distance[i],
+                "track_loc": track_loc[i],
+                }
             )
-            raise e
-
-        try:
-            # Gather the updated driver data
-            logging.debug("Gathering updated driver data")
-            laps_completed = self.master.ir["CarIdxLapCompleted"]
-            lap_distance = self.master.ir["CarIdxLapDistPct"]
-            track_loc = self.master.ir["CarIdxTrackSurface"]
-        except Exception as e:
-            logging.exception(
-                "An error occurred gathering updated driver data"
-            )
-            raise e
-
-        try:
-            # Organize the updated driver data and update the current drivers
-            logging.debug("Organizing updated driver data")
-            for i in range(len(laps_completed)):
-                self.current_drivers.append(
-                    {
-                    "laps_completed": laps_completed[i],
-                    "lap_distance": lap_distance[i],
-                    "track_loc": track_loc[i],
-                    }
-                )
-        except Exception as e:
-            logging.exception(
-                "An error occurred organizing updated driver data"
-            )
-            raise e
