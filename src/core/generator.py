@@ -312,8 +312,6 @@ class Generator:
         Args:
             None
         """
-        logging.info("Sending wave around commands")
-
         # Get relevant settings from the settings file
         wave_around = self.master.settings["settings"]["imm_wave_around"]
 
