@@ -1,6 +1,7 @@
 import configparser
-import tkinter as tk
 import json
+import logging
+import tkinter as tk
 from tkinter import ttk
 
 from core import generator
@@ -14,12 +15,14 @@ class App(tk.Tk):
         Args:
             None
         """
+        logging.info("Initializing main application window")
         super().__init__()
 
         # Tooltips text
         self.load_tooltips_text()
 
         # Load settings from config file
+        logging.info("Loading settings from settings.ini")
         self.settings = configparser.ConfigParser()
         self.settings.read("settings.ini")
 
@@ -36,8 +39,8 @@ class App(tk.Tk):
         # Create widgets
         self._create_widgets()
 
-
     def load_tooltips_text(self):
+        logging.info("Loading tooltips text")
         try:
             with open("tooltips_text.json", "r") as file:
                 self.tooltips_text = json.load(file)
@@ -50,6 +53,7 @@ class App(tk.Tk):
         Args:
             None
         """
+        logging.info("Closing main application window")
         self.shutdown_event.set()
         self.destroy()
 
@@ -59,13 +63,17 @@ class App(tk.Tk):
         Args:
             None
         """
+        logging.info("Creating widgets for main application window")
+
         # Configure
+        logging.debug("Configuring main application window")
         self.columnconfigure(0, weight=1)
         self.columnconfigure(1, weight=1)
         self.rowconfigure(0, weight=1)
         self.rowconfigure(1, weight=1)
 
         # Create Safety Car Types frame
+        logging.debug("Creating Safety Car Types frame")
         self.frm_sc_types = ttk.LabelFrame(self, text="Safety Car Types")
         self.frm_sc_types.grid(
             row=0,
@@ -80,6 +88,7 @@ class App(tk.Tk):
         sc_types_row = 0
 
         # Create random checkbox
+        logging.debug("Creating random checkbox")
         self.var_random = tk.IntVar()
         self.var_random.set(1)
         self.chk_random = ttk.Checkbutton(
@@ -98,6 +107,7 @@ class App(tk.Tk):
         sc_types_row += 1
 
         # Create maximum occurences spinbox
+        logging.debug("Creating maximum occurences spinbox")
         self.lbl_random_max_occ = ttk.Label(
             self.frm_sc_types,
             text="Maximum occurences"
@@ -127,6 +137,7 @@ class App(tk.Tk):
         sc_types_row += 1
 
         # Create probability entry
+        logging.debug("Creating probability entry")
         self.lbl_random_prob = ttk.Label(
             self.frm_sc_types,
             text="Probability"
@@ -151,6 +162,7 @@ class App(tk.Tk):
         sc_types_row += 1
 
         # Create message entry
+        logging.debug("Creating message entry")
         self.ent_random_message = ttk.Entry(
             self.frm_sc_types,
             width=32
@@ -167,6 +179,7 @@ class App(tk.Tk):
         sc_types_row += 1
 
         # Create horizontal separator
+        logging.debug("Creating horizontal separator")
         separator = ttk.Separator(self.frm_sc_types, orient="horizontal")
         separator.grid(
             row=sc_types_row,
@@ -179,6 +192,7 @@ class App(tk.Tk):
         sc_types_row += 1
 
         # Create cars stopped on track checkbox
+        logging.debug("Creating cars stopped on track checkbox")
         self.var_stopped = tk.IntVar()
         self.var_stopped.set(1)
         self.chk_stopped = ttk.Checkbutton(
@@ -197,6 +211,7 @@ class App(tk.Tk):
         sc_types_row += 1
 
         # Create minimum to trigger spinbox
+        logging.debug("Creating minimum to trigger spinbox")
         self.lbl_stopped_min = ttk.Label(
             self.frm_sc_types,
             text="Minimum to trigger"
@@ -226,6 +241,7 @@ class App(tk.Tk):
         sc_types_row += 1
 
         # Create message entry
+        logging.debug("Creating message entry")
         self.ent_stopped_message = ttk.Entry(
             self.frm_sc_types,
             width=32
@@ -242,6 +258,7 @@ class App(tk.Tk):
         sc_types_row += 1
 
         # Create horizontal separator
+        logging.debug("Creating horizontal separator")
         separator = ttk.Separator(self.frm_sc_types, orient="horizontal")
         separator.grid(
             row=sc_types_row,
@@ -254,6 +271,7 @@ class App(tk.Tk):
         sc_types_row += 1
 
         # Create cars off track checkbox
+        logging.debug("Creating cars off track checkbox")
         self.var_off = tk.IntVar()
         self.var_off.set(1)
         self.chk_off = ttk.Checkbutton(
@@ -272,6 +290,7 @@ class App(tk.Tk):
         sc_types_row += 1
 
         # Create minimum to trigger spinbox
+        logging.debug("Creating minimum to trigger spinbox")
         self.lbl_off_min = ttk.Label(
             self.frm_sc_types,
             text="Minimum to trigger"
@@ -301,6 +320,7 @@ class App(tk.Tk):
         sc_types_row += 1
 
         # Create message entry
+        logging.debug("Creating message entry")
         self.ent_off_message = ttk.Entry(
             self.frm_sc_types,
             width=32
@@ -316,6 +336,7 @@ class App(tk.Tk):
         tooltip.CreateToolTip(self.ent_off_message, self.tooltips_text.get("message"))
 
         # Create General frame
+        logging.debug("Creating General frame")
         self.frm_general = ttk.LabelFrame(self, text="General")
         self.frm_general.grid(row=0, column=1, sticky="nesw", padx=5, pady=5)
 
@@ -323,6 +344,7 @@ class App(tk.Tk):
         general_row = 0
 
         # Create maximum safety cars spinbox
+        logging.debug("Creating maximum safety cars spinbox")
         self.lbl_max_safety_cars = ttk.Label(
             self.frm_general,
             text="Maximum safety cars"
@@ -347,6 +369,7 @@ class App(tk.Tk):
         general_row += 1
 
         # Create earliest possible minute spinbox
+        logging.debug("Creating earliest possible minute spinbox")
         self.lbl_start_minute = ttk.Label(
             self.frm_general,
             text="Earliest possible minute"
@@ -371,6 +394,7 @@ class App(tk.Tk):
         general_row += 1
 
         # Create latest possible minute spinbox
+        logging.debug("Creating latest possible minute spinbox")
         self.lbl_end_minute = ttk.Label(
             self.frm_general,
             text="Latest possible minute"
@@ -395,6 +419,7 @@ class App(tk.Tk):
         general_row += 1
 
         # Create minimum minutes between spinbox
+        logging.debug("Creating minimum minutes between spinbox")
         self.lbl_min_time_between = ttk.Label(
             self.frm_general,
             text="Minimum minutes between"
@@ -419,6 +444,7 @@ class App(tk.Tk):
         general_row += 1
 
         # Create laps under safety car spinbox
+        logging.debug("Creating laps under safety car spinbox")
         self.lbl_laps_under_sc = ttk.Label(
             self.frm_general,
             text="Laps under safety car"
@@ -443,6 +469,7 @@ class App(tk.Tk):
         general_row += 1
 
         # Create immediate wave arounds checkbox
+        logging.debug("Creating immediate wave arounds checkbox")
         self.var_immediate_wave_around = tk.IntVar()
         self.var_immediate_wave_around.set(1)
         self.chk_immediate_wave_around = ttk.Checkbutton(
@@ -461,6 +488,7 @@ class App(tk.Tk):
         tooltip.CreateToolTip(self.chk_immediate_wave_around, self.tooltips_text.get("immediate_wave_around"))
 
         # Create Controls frame
+        logging.debug("Creating Controls frame")
         self.frm_controls = ttk.Frame(self)
         self.frm_controls.grid(row=1, column=1, sticky="nesw", padx=5, pady=5)
         self.frm_controls.columnconfigure(0, weight=1)
@@ -469,6 +497,7 @@ class App(tk.Tk):
         controls_row = 0
 
         # Create save settings button
+        logging.debug("Creating save settings button")
         self.btn_save_settings = ttk.Button(
             self.frm_controls,
             text="Save Settings",
@@ -484,6 +513,7 @@ class App(tk.Tk):
         controls_row += 1
 
         # Create run button
+        logging.debug("Creating run button")
         self.btn_run = ttk.Button(
             self.frm_controls,
             text="Run",
@@ -499,6 +529,7 @@ class App(tk.Tk):
         controls_row += 1
 
         # Create status label
+        logging.debug("Creating status label")
         self.lbl_status = ttk.Label(
             self.frm_controls,
             text="Ready\n",
@@ -513,6 +544,7 @@ class App(tk.Tk):
         )
 
         # Fill in the widgets with the settings from the config file
+        logging.debug("Filling in widgets with settings from config file")
         self.var_random.set(self.settings["settings"].getboolean("random"))
         self.spn_random_max_occ.delete(0, "end")
         self.spn_random_max_occ.insert(
@@ -583,6 +615,8 @@ class App(tk.Tk):
         Args:
             None
         """
+        logging.info("Saving settings to config file")
+
         # Get all the settings from the widgets
         random = self.var_random.get()
         random_max_occ = self.spn_random_max_occ.get()
@@ -628,5 +662,6 @@ class App(tk.Tk):
         Args:
             message (str): The message to set the status label to.
         """
+        logging.debug(f"Setting status label to: {message}")
         self.lbl_status["text"] = message
         self.update_idletasks()

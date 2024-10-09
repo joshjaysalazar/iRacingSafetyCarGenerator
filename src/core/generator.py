@@ -1,3 +1,4 @@
+import logging
 import random
 import threading
 import time
@@ -16,15 +17,18 @@ class Generator:
         Args:
             master: The parent window object
         """
+        logging.info("Initializing safety car generator")
         self.master = master
 
         # Variables to track safety car events
+        logging.debug("Initializing safety car variables")
         self.ir_window = None
         self.start_time = None
         self.total_sc_events = 0
         self.last_sc_time = None
         self.total_random_sc_events = 0
 
+        # Create a shutdown event
         self.shutdown_event = threading.Event()
 
     def _is_shutting_down(self):
@@ -41,6 +45,8 @@ class Generator:
         Args:
             None
         """
+        logging.debug("Checking random safety car event")
+
         # Get relevant settings from the settings file
         enabled = self.master.settings["settings"]["random"]
         chance = float(self.master.settings["settings"]["random_prob"])
@@ -79,6 +85,8 @@ class Generator:
         Args:
             None
         """
+        logging.debug("Checking stopped car safety car event")
+
         # Get relevant settings from the settings file
         enabled = self.master.settings["settings"]["stopped"]
         threshold = float(self.master.settings["settings"]["stopped_min"])
@@ -93,14 +101,14 @@ class Generator:
         for i in range(len(self.drivers.current_drivers)):
             current_comp = self.drivers.current_drivers[i]["laps_completed"]
             current_dist = self.drivers.current_drivers[i]["lap_distance"]
-            previous_comp = self.drivers.previous_drivers[i]["laps_completed"]
-            previous_dist = self.drivers.previous_drivers[i]["lap_distance"]
+            prev_comp = self.drivers.previous_drivers[i]["laps_completed"]
+            prev_dist = self.drivers.previous_drivers[i]["lap_distance"]
             current_total = current_comp + current_dist
-            previous_total = previous_comp + previous_dist
-            if current_total <= previous_total:
+            prev_total = prev_comp + prev_dist
+            if current_total <= prev_total:
                 stopped_cars.append(i)
 
-        # If length of stopped cars is entire field, clear list (lag spike fix)
+        # If length of stopped cars is entire field, clear list (lag fix)
         if len(stopped_cars) >= len(self.drivers.current_drivers) - 1:
             stopped_cars = []
 
@@ -140,6 +148,8 @@ class Generator:
         Args:
             None
         """
+        logging.debug("Checking off track safety car event")
+
         # Get relevant settings from the settings file
         enabled = self.master.settings["settings"]["off"]
         threshold = float(self.master.settings["settings"]["off_min"])
@@ -176,6 +186,8 @@ class Generator:
         Returns:
             The driver number, or None if not found
         """
+        logging.debug(f"Getting driver number for ID {id}")
+
         # Get the driver number from the iRacing SDK
         for driver in self.ir["DriverInfo"]["Drivers"]:
             if driver["CarIdx"] == id:
@@ -183,13 +195,15 @@ class Generator:
                 
         # If the driver number wasn't found, return None
         return None
-
+    
     def _loop(self):
         """Main loop for the safety car generator.
         
         Args:
             None
         """
+        logging.debug("Starting safety car loop")
+
         # Get relevant settings from the settings file
         start_minute = float(self.master.settings["settings"]["start_minute"])
         end_minute = float(self.master.settings["settings"]["end_minute"])
@@ -198,6 +212,7 @@ class Generator:
 
         # Adjust start minute if < 3s to avoid triggering on standing start
         if start_minute < 0.05:
+            logging.debug("Adjusting start minute to 0.05")
             start_minute = 0.05
 
         # Wait for the green flag
@@ -207,6 +222,8 @@ class Generator:
         while self.total_sc_events < max_events:
             # Update the drivers object
             self.drivers.update()
+
+            logging.debug("Checking time")
 
             # If it hasn't reached the start minute, wait
             if time.time() - self.start_time < start_minute * 60:
@@ -244,6 +261,8 @@ class Generator:
         Args:
             None
         """
+        logging.info("Sending pacelaps command")
+
         # Get relevant settings from the settings file
         laps_under_sc = int(
             self.master.settings["settings"]["laps_under_sc"]
@@ -312,7 +331,7 @@ class Generator:
                 if driver["CarClassID"] not in class_ids:
                     class_ids.append(driver["CarClassID"])
 
-        # Zip together the number of laps started, position on track, and class
+        # Zip together number of laps started, position on track, and class
         drivers = zip(
             self.ir["CarIdxLap"],
             self.ir["CarIdxLapDistPct"],
@@ -347,12 +366,12 @@ class Generator:
 
             driver_number = None
 
-            # If driver has started 2 or fewer laps than class leader, wave them
+            # If driver started 2 or fewer laps than class leader, wave them
             lap_target = highest_lap[driver_class][0] - 2
             if driver[0] <= lap_target:
                 driver_number = self._get_driver_number(i)
 
-            # If they've started 1 fewer laps and are behind on track, wave them
+            # If they started 1 fewer laps & are behind on track, wave them
             lap_target = highest_lap[driver_class][0] - 1
             track_pos_target = highest_lap[driver_class][1]
             if driver[0] == lap_target and driver[1] < track_pos_target:
@@ -365,10 +384,13 @@ class Generator:
         # Send the wave chat command for each car
         if len(cars_to_wave) > 0:
             for car in cars_to_wave:
+                logging.info(f"Sending wave around command for car {car}")
                 self.ir_window.set_focus()
                 self.ir.chat_command(1)
                 time.sleep(0.5)
-                self.ir_window.type_keys(f"!w {car}{{ENTER}}", with_spaces=True)
+                self.ir_window.type_keys(
+                    f"!w {car}{{ENTER}}", with_spaces=True
+                )
 
     def _start_safety_car(self, message=""):
         """Send a yellow flag to iRacing.
@@ -376,6 +398,8 @@ class Generator:
         Args:
             message: The message to send with the yellow flag command
         """
+        logging.info("Deploying safety car")
+
         # Set the UI message
         self.master.set_message(
             "Connected to iRacing\nSafety car deployed."
@@ -408,6 +432,8 @@ class Generator:
         Args:
             None
         """
+        logging.info("Waiting for green flag")
+
         # Add message to text box
         self.master.set_message(
             "Connected to iRacing\nWaiting for green flag..."
@@ -442,7 +468,9 @@ class Generator:
         Args:
             None
         """
-        # Connect to iRacing
+        logging.info("Connecting to iRacing")
+        
+        # Create the iRacing SDK object
         self.ir = irsdk.IRSDK()
 
         # Attempt to connect and tell user if successful
