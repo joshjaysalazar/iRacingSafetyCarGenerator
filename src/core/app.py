@@ -53,7 +53,7 @@ class App(tk.Tk):
         Args:
             None
         """
-        logging.debug("Handling delete window event")
+        logging.info("Closing main application window")
         self.shutdown_event.set()
         self.destroy()
 
