@@ -2,7 +2,8 @@
 :: This batch file builds a Windows binary executable
 ECHO Building binary. Please wait...
 :: Build new binary
-pyinstaller --noconfirm --log-level=FATAL --noconsole --onefile main.py
+python -c "import pywinauto"
+pyinstaller --noconfirm --log-level=FATAL --noconsole --onefile --hidden-import=comtypes.gen.UIAutomationClient main.py
 
 ECHO Copying files to dist...
 :: Copy settings.ini to dist
