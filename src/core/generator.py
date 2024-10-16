@@ -296,6 +296,9 @@ class Generator:
                     if lap == max(laps_started):
                         lead_lap.append(i)
 
+                # Before next check, wait 1s to make sure leader is across line
+                time.sleep(1)
+
                 # Wait for max value in lap distance of the lead cars to be 50%
                 while True:
                     # Get the lap distance of these cars
@@ -303,12 +306,9 @@ class Generator:
                         self.ir["CarIdxLapDistPct"][car] for car in lead_lap
                     ]
 
-                    print(lead_dist)
-
                     # If any lead car is at 50%, break the loop
-                    for dist in lead_dist:
-                        if dist >= 0.5:
-                            break
+                    if any([dist >= 0.5 for dist in lead_dist]):
+                        break
 
                     # Break the loop if we are shutting down the thread
                     if self._is_shutting_down():
