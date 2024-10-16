@@ -268,6 +268,10 @@ class Generator:
             self.master.settings["settings"]["laps_under_sc"]
         )
 
+        # If laps under safety car is 0, return
+        if laps_under_sc == 0:
+            return
+
         # Get the max value from all cars' lap started count
         lap_at_yellow = max(self.ir["CarIdxLap"])
 
@@ -286,6 +290,33 @@ class Generator:
             
             # If the max value is 2 laps greater than the lap at yellow
             if max(laps_started) >= lap_at_yellow + 2:
+                # Get all cars on lead lap at check (in case multiple crossed)
+                lead_lap = []
+                for i, lap in enumerate(laps_started):
+                    if lap == max(laps_started):
+                        lead_lap.append(i)
+
+                # Wait for max value in lap distance of the lead cars to be 50%
+                while True:
+                    # Get the lap distance of these cars
+                    lead_dist = [
+                        self.ir["CarIdxLapDistPct"][car] for car in lead_lap
+                    ]
+
+                    print(lead_dist)
+
+                    # If any lead car is at 50%, break the loop
+                    for dist in lead_dist:
+                        if dist >= 0.5:
+                            break
+
+                    # Break the loop if we are shutting down the thread
+                    if self._is_shutting_down():
+                        break
+
+                    # Wait 1 second before checking again
+                    time.sleep(1)
+
                 # Only send if laps is greater than 1
                 if laps_under_sc > 1:
                     self.ir_window.set_focus()
