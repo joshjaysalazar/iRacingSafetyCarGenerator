@@ -261,14 +261,13 @@ class Generator:
         Args:
             None
         """
-        logging.info("Sending pacelaps command")
-
         # Get relevant settings from the settings file
         laps_under_sc = int(
             self.master.settings["settings"]["laps_under_sc"]
         )
 
         # If laps under safety car is 0, return
+        logging.debug("Laps under safety car set to 0; letting iRacing handle")
         if laps_under_sc == 0:
             return
 
@@ -276,6 +275,7 @@ class Generator:
         lap_at_yellow = max(self.ir["CarIdxLap"])
 
         # Wait for specified number of laps to be completed
+        logging.debug(f"Waiting for safety car to complete enough laps")
         while True:
             # Zip the CarIdxLap and CarIdxOnPitRoad arrays together
             laps_started = zip(
@@ -290,6 +290,7 @@ class Generator:
             
             # If the max value is 2 laps greater than the lap at yellow
             if max(laps_started) >= lap_at_yellow + 2:
+
                 # Get all cars on lead lap at check (in case multiple crossed)
                 lead_lap = []
                 for i, lap in enumerate(laps_started):
@@ -300,6 +301,7 @@ class Generator:
                 time.sleep(1)
 
                 # Wait for max value in lap distance of the lead cars to be 50%
+                logging.debug("Waiting for lead car to be halfway around track")
                 while True:
                     # Get the lap distance of these cars
                     lead_dist = [
@@ -319,6 +321,7 @@ class Generator:
 
                 # Only send if laps is greater than 1
                 if laps_under_sc > 1:
+                    logging.info("Sending pacelaps command")
                     self.ir_window.set_focus()
                     self.ir.chat_command(1)
                     time.sleep(0.5)
