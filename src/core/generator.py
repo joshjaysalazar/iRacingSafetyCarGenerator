@@ -27,6 +27,7 @@ class Generator:
         self.total_sc_events = 0
         self.last_sc_time = None
         self.total_random_sc_events = 0
+        self.lap_at_yellow = None
 
         # Create a shutdown event
         self.shutdown_event = threading.Event()
@@ -267,12 +268,9 @@ class Generator:
         )
 
         # If laps under safety car is 0, return
-        logging.debug("Laps under safety car set to 0; letting iRacing handle")
+        logging.debug("Laps under safety car set to 0, letting iRacing handle")
         if laps_under_sc == 0:
-            return
-
-        # Get the max value from all cars' lap started count
-        lap_at_yellow = max(self.ir["CarIdxLap"])
+            return True
 
         # Wait for specified number of laps to be completed
         logging.debug(f"Waiting for safety car to complete enough laps")
@@ -288,7 +286,7 @@ class Generator:
         ]
         
         # If the max value is 2 laps greater than the lap at yellow
-        if max(laps_started) >= lap_at_yellow + 2:
+        if max(laps_started) >= self.lap_at_yellow + 2:
             # Get all cars on lead lap at check (in case multiple crossed)
             lead_lap = []
             for i, lap in enumerate(laps_started):
@@ -331,10 +329,6 @@ class Generator:
         else:
             # If we haven't reached the lap to send command, return False
             return False
-
-        # Break the loop if we are shutting down the thread
-        if self._is_shutting_down():
-            return True
 
         # Return True when pace laps are done
         return True
@@ -436,6 +430,12 @@ class Generator:
         """
         logging.info("Deploying safety car")
 
+        # Send yellow flag chat command
+        self.ir_window.set_focus()
+        self.ir.chat_command(1)
+        time.sleep(0.5)
+        self.ir_window.type_keys(f"!y {message}{{ENTER}}", with_spaces=True)
+
         # Set the UI message
         self.master.set_message(
             "Connected to iRacing\nSafety car deployed."
@@ -447,11 +447,8 @@ class Generator:
         # Set the last safety car time
         self.last_sc_time = time.time()
 
-        # Send yellow flag chat command
-        self.ir_window.set_focus()
-        self.ir.chat_command(1)
-        time.sleep(0.5)
-        self.ir_window.type_keys(f"!y {message}{{ENTER}}", with_spaces=True)
+        # Set the lap at yellow flag
+        self.lap_at_yellow = max(self.ir["CarIdxLap"])
 
         # Manage wave arounds and pace laps
         waves_done = False
