@@ -298,33 +298,22 @@ class Generator:
 
             # Wait for max value in lap distance of the lead cars to be 50%
             logging.debug("Waiting for lead car to be halfway around track")
-            while True:
-                # Get the lap distance of these cars
-                lead_dist = [
-                    self.ir["CarIdxLapDistPct"][car] for car in lead_lap
-                ]
+            lead_dist = [
+                self.ir["CarIdxLapDistPct"][car] for car in lead_lap
+            ]
 
-                # If any lead car is at 50%, break the loop
-                if any([dist >= 0.5 for dist in lead_dist]):
-                    break
-
-                # Break the loop if we are shutting down the thread
-                if self._is_shutting_down():
-                    break
-
-                # Wait 1 second before checking again
-                time.sleep(1)
-
-            # Only send if laps is greater than 1
-            if laps_under_sc > 1:
-                logging.info("Sending pacelaps command")
-                self.ir_window.set_focus()
-                self.ir.chat_command(1)
-                time.sleep(0.5)
-                self.ir_window.type_keys(
-                    f"!p {laps_under_sc - 1}{{ENTER}}",
-                    with_spaces=True
-                )
+            # If any lead car is at 50%, break the loop
+            if any([dist >= 0.5 for dist in lead_dist]):
+                # Only send if laps is greater than 1
+                if laps_under_sc > 1:
+                    logging.info("Sending pacelaps command")
+                    self.ir_window.set_focus()
+                    self.ir.chat_command(1)
+                    time.sleep(0.5)
+                    self.ir_window.type_keys(
+                        f"!p {laps_under_sc - 1}{{ENTER}}",
+                        with_spaces=True
+                    )
         
         else:
             # If we haven't reached the lap to send command, return False
