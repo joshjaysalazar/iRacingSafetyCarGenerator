@@ -276,69 +276,65 @@ class Generator:
 
         # Wait for specified number of laps to be completed
         logging.debug(f"Waiting for safety car to complete enough laps")
-        while True:
-            # Zip the CarIdxLap and CarIdxOnPitRoad arrays together
-            laps_started = zip(
-                self.ir["CarIdxLap"],
-                self.ir["CarIdxOnPitRoad"]
-            )
+        # Zip the CarIdxLap and CarIdxOnPitRoad arrays together
+        laps_started = zip(
+            self.ir["CarIdxLap"],
+            self.ir["CarIdxOnPitRoad"]
+        )
 
-            # If pit road value is True, remove it, keeping only laps
-            laps_started = [
-                car[0] for car in laps_started if car[1] == False
-            ]
-            
-            # If the max value is 2 laps greater than the lap at yellow
-            if max(laps_started) >= lap_at_yellow + 2:
+        # If pit road value is True, remove it, keeping only laps
+        laps_started = [
+            car[0] for car in laps_started if car[1] == False
+        ]
+        
+        # If the max value is 2 laps greater than the lap at yellow
+        if max(laps_started) >= lap_at_yellow + 2:
+            # Get all cars on lead lap at check (in case multiple crossed)
+            lead_lap = []
+            for i, lap in enumerate(laps_started):
+                if lap == max(laps_started):
+                    lead_lap.append(i)
 
-                # Get all cars on lead lap at check (in case multiple crossed)
-                lead_lap = []
-                for i, lap in enumerate(laps_started):
-                    if lap == max(laps_started):
-                        lead_lap.append(i)
+            # Before next check, wait 1s to make sure leader is across line
+            time.sleep(1)
 
-                # Before next check, wait 1s to make sure leader is across line
+            # Wait for max value in lap distance of the lead cars to be 50%
+            logging.debug("Waiting for lead car to be halfway around track")
+            while True:
+                # Get the lap distance of these cars
+                lead_dist = [
+                    self.ir["CarIdxLapDistPct"][car] for car in lead_lap
+                ]
+
+                # If any lead car is at 50%, break the loop
+                if any([dist >= 0.5 for dist in lead_dist]):
+                    break
+
+                # Break the loop if we are shutting down the thread
+                if self._is_shutting_down():
+                    break
+
+                # Wait 1 second before checking again
                 time.sleep(1)
 
-                # Wait for max value in lap distance of the lead cars to be 50%
-                logging.debug("Waiting for lead car to be halfway around track")
-                while True:
-                    # Get the lap distance of these cars
-                    lead_dist = [
-                        self.ir["CarIdxLapDistPct"][car] for car in lead_lap
-                    ]
+            # Only send if laps is greater than 1
+            if laps_under_sc > 1:
+                logging.info("Sending pacelaps command")
+                self.ir_window.set_focus()
+                self.ir.chat_command(1)
+                time.sleep(0.5)
+                self.ir_window.type_keys(
+                    f"!p {laps_under_sc - 1}{{ENTER}}",
+                    with_spaces=True
+                )
+        
+        else:
+            # If we haven't reached the lap to send command, return False
+            return False
 
-                    # If any lead car is at 50%, break the loop
-                    if any([dist >= 0.5 for dist in lead_dist]):
-                        break
-
-                    # Break the loop if we are shutting down the thread
-                    if self._is_shutting_down():
-                        break
-
-                    # Wait 1 second before checking again
-                    time.sleep(1)
-
-                # Only send if laps is greater than 1
-                if laps_under_sc > 1:
-                    logging.info("Sending pacelaps command")
-                    self.ir_window.set_focus()
-                    self.ir.chat_command(1)
-                    time.sleep(0.5)
-                    self.ir_window.type_keys(
-                        f"!p {laps_under_sc - 1}{{ENTER}}",
-                        with_spaces=True
-                    )
-                
-                # Break the loop
-                break
-
-            # Break the loop if we are shutting down the thread
-            if self._is_shutting_down():
-                break
-            
-            # Wait 1 second before checking again
-            time.sleep(1)
+        # Break the loop if we are shutting down the thread
+        if self._is_shutting_down():
+            return True
 
         # Return True when pace laps are done
         return True
