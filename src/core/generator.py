@@ -340,6 +340,9 @@ class Generator:
             # Wait 1 second before checking again
             time.sleep(1)
 
+        # Return True when pace laps are done
+        return True
+
     def _send_wave_arounds(self):
         """Send the wave around chat commands to iRacing.
 
@@ -426,6 +429,9 @@ class Generator:
                     f"!w {car}{{ENTER}}", with_spaces=True
                 )
 
+        # Return True when wave arounds are done
+        return True
+
     def _start_safety_car(self, message=""):
         """Send a yellow flag to iRacing.
 
@@ -451,11 +457,24 @@ class Generator:
         time.sleep(0.5)
         self.ir_window.type_keys(f"!y {message}{{ENTER}}", with_spaces=True)
 
-        # Send the wave commands
-        self._send_wave_arounds()
+        # Manage wave arounds and pace laps
+        waves_done = False
+        pace_done = False
+        while not waves_done or not pace_done:
+            # If wave arounds aren't done, send the wave arounds
+            if not waves_done:
+                waves_done = self._send_wave_arounds()
 
-        # Send pacelaps command when the time is right
-        self._send_pacelaps()
+            # If pace laps aren't done, send the pace laps
+            if not pace_done:
+                pace_done = self._send_pacelaps()
+
+            # Break the loop if we are shutting down the thread
+            if self._is_shutting_down():
+                break
+
+            # Wait 1 second before checking again
+            time.sleep(1)
 
         # Wait for the green flag to be displayed
         self._wait_for_green_flag()
