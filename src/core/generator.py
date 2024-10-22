@@ -268,8 +268,8 @@ class Generator:
         )
 
         # If laps under safety car is 0, return
-        logging.debug("Laps under safety car set to 0, letting iRacing handle")
-        if laps_under_sc == 0:
+        logging.debug("Laps under safety car set too low, skipping command")
+        if laps_under_sc < 2:
             return True
 
         # Wait for specified number of laps to be completed
@@ -302,25 +302,22 @@ class Generator:
                 self.ir["CarIdxLapDistPct"][car] for car in lead_lap
             ]
 
-            # If any lead car is at 50%, break the loop
+            # If any lead car is at 50%, send the pacelaps command
             if any([dist >= 0.5 for dist in lead_dist]):
-                # Only send if laps is greater than 1
-                if laps_under_sc > 1:
-                    logging.info("Sending pacelaps command")
-                    self.ir_window.set_focus()
-                    self.ir.chat_command(1)
-                    time.sleep(0.5)
-                    self.ir_window.type_keys(
-                        f"!p {laps_under_sc - 1}{{ENTER}}",
-                        with_spaces=True
-                    )
-        
-        else:
-            # If we haven't reached the lap to send command, return False
-            return False
+                logging.info("Sending pacelaps command")
+                self.ir_window.set_focus()
+                self.ir.chat_command(1)
+                time.sleep(0.5)
+                self.ir_window.type_keys(
+                    f"!p {laps_under_sc - 1}{{ENTER}}",
+                    with_spaces=True
+                )
 
-        # Return True when pace laps are done
-        return True
+                # Return True when pace laps are done
+                return True
+        
+        # If we haven't reached the conditions to send command, return False
+        return False
 
     def _send_wave_arounds(self):
         """Send the wave around chat commands to iRacing.
