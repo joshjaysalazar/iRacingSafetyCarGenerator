@@ -273,7 +273,7 @@ class Generator:
             return True
 
         # Wait for specified number of laps to be completed
-        logging.debug(f"Waiting for safety car to complete enough laps")
+        logging.debug(f"Checking if safety car has completed enough laps")
         # Zip the CarIdxLap and CarIdxOnPitRoad arrays together
         laps_started = zip(
             self.ir["CarIdxLap"],
@@ -297,7 +297,7 @@ class Generator:
             time.sleep(1)
 
             # Wait for max value in lap distance of the lead cars to be 50%
-            logging.debug("Waiting for lead car to be halfway around track")
+            logging.debug("Checking if lead car is halfway around track")
             lead_dist = [
                 self.ir["CarIdxLapDistPct"][car] for car in lead_lap
             ]
