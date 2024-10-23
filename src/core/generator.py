@@ -27,7 +27,8 @@ class Generator:
         self.total_sc_events = 0
         self.last_sc_time = None
         self.total_random_sc_events = 0
-        self.lap_at_yellow = None
+        self.lap_at_sc = None
+        self.current_lap_under_sc = None
 
         # Create a shutdown event
         self.shutdown_event = threading.Event()
@@ -197,6 +198,28 @@ class Generator:
         # If the driver number wasn't found, return None
         return None
     
+    def _get_current_lap_under_sc(self):
+        """Get the current lap under safety car for each car on the track.
+        
+        Args:
+            None
+        """
+        logging.debug("Getting current laps under safety car")
+
+        # Zip the CarIdxLap and CarIdxOnPitRoad arrays together
+        current_lap_numbers = zip(
+            self.ir["CarIdxLap"],
+            self.ir["CarIdxOnPitRoad"]
+        )
+
+        # If pit road value is True, remove it, keeping only laps
+        current_lap_numbers = [
+            car[0] for car in current_lap_numbers if car[1] == False
+        ]
+
+        # Find the highest value in the list
+        self.current_lap_under_sc = max(current_lap_numbers)
+
     def _loop(self):
         """Main loop for the safety car generator.
         
@@ -261,6 +284,9 @@ class Generator:
         
         Args:
             None
+
+        Returns:
+            True if pace laps are done, False otherwise
         """
         # Get relevant settings from the settings file
         laps_under_sc = int(
@@ -271,26 +297,13 @@ class Generator:
         logging.debug("Laps under safety car set too low, skipping command")
         if laps_under_sc < 2:
             return True
-
-        # Wait for specified number of laps to be completed
-        logging.debug(f"Checking if safety car has completed enough laps")
-        # Zip the CarIdxLap and CarIdxOnPitRoad arrays together
-        laps_started = zip(
-            self.ir["CarIdxLap"],
-            self.ir["CarIdxOnPitRoad"]
-        )
-
-        # If pit road value is True, remove it, keeping only laps
-        laps_started = [
-            car[0] for car in laps_started if car[1] == False
-        ]
         
         # If the max value is 2 laps greater than the lap at yellow
-        if max(laps_started) >= self.lap_at_yellow + 2:
-            # Get all cars on lead lap at check (in case multiple crossed)
+        if self.current_lap_under_sc >= self.lap_at_sc + 2:
+            # Get all cars on lead lap at check
             lead_lap = []
-            for i, lap in enumerate(laps_started):
-                if lap == max(laps_started):
+            for i, lap in enumerate(self.ir["CarIdxLap"]):
+                if lap >= self.current_lap_under_sc:
                     lead_lap.append(i)
 
             # Before next check, wait 1s to make sure leader is across line
@@ -303,7 +316,7 @@ class Generator:
             ]
 
             # If any lead car is at 50%, send the pacelaps command
-            if any([dist >= 0.5 for dist in lead_dist]):
+            if max(lead_dist) >= 0.5:
                 logging.info("Sending pacelaps command")
                 self.ir_window.set_focus()
                 self.ir.chat_command(1)
@@ -324,10 +337,15 @@ class Generator:
 
         Args:
             None
+
+        Returns:
+            True if wave arounds are done, False otherwise
         """
         # Get relevant settings from the settings file
         wave_arounds = self.master.settings["settings"]["wave_arounds"]
-        laps_before = int(self.master.settings["settings"]["laps_before"])
+        laps_before = int(
+            self.master.settings["settings"]["laps_before_wave_around"]
+        )
 
         # If immediate waveby is disabled, return
         if wave_arounds == "0":
@@ -435,12 +453,15 @@ class Generator:
         self.last_sc_time = time.time()
 
         # Set the lap at yellow flag
-        self.lap_at_yellow = max(self.ir["CarIdxLap"])
+        self.lap_at_sc = max(self.ir["CarIdxLap"])
 
         # Manage wave arounds and pace laps
         waves_done = False
         pace_done = False
         while not waves_done or not pace_done:
+            # Get the current lap behind safety car
+            self._get_current_lap_under_sc()
+
             # If wave arounds aren't done, send the wave arounds
             if not waves_done:
                 waves_done = self._send_wave_arounds()
