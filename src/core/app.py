@@ -379,8 +379,8 @@ class App(tk.Tk):
         # Create variable to hold the current row in the frame
         general_row = 0
 
-        # Create maximum safety cars spinbox
-        logging.debug("Creating maximum safety cars spinbox")
+        # Create maximum safety cars entry
+        logging.debug("Creating maximum safety cars entry")
         self.lbl_max_safety_cars = ttk.Label(
             self.frm_general,
             text="Maximum safety cars"
@@ -410,8 +410,8 @@ class App(tk.Tk):
         )
         general_row += 1
 
-        # Create earliest possible minute spinbox
-        logging.debug("Creating earliest possible minute spinbox")
+        # Create earliest possible minute entry
+        logging.debug("Creating earliest possible minute entry")
         self.lbl_start_minute = ttk.Label(
             self.frm_general,
             text="Earliest possible minute"
@@ -441,8 +441,8 @@ class App(tk.Tk):
         )
         general_row += 1
 
-        # Create latest possible minute spinbox
-        logging.debug("Creating latest possible minute spinbox")
+        # Create latest possible minute entry
+        logging.debug("Creating latest possible minute entry")
         self.lbl_end_minute = ttk.Label(
             self.frm_general,
             text="Latest possible minute"
@@ -472,8 +472,8 @@ class App(tk.Tk):
         )
         general_row += 1
 
-        # Create minimum minutes between spinbox
-        logging.debug("Creating minimum minutes between spinbox")
+        # Create minimum minutes between entry
+        logging.debug("Creating minimum minutes between entry")
         self.lbl_min_time_between = ttk.Label(
             self.frm_general,
             text="Minimum minutes between"
@@ -503,8 +503,8 @@ class App(tk.Tk):
         )
         general_row += 1
 
-        # Create laps under safety car spinbox
-        logging.debug("Creating laps under safety car spinbox")
+        # Create laps under safety car entry
+        logging.debug("Creating laps under safety car entry")
         self.lbl_laps_under_sc = ttk.Label(
             self.frm_general,
             text="Laps under safety car"
@@ -554,6 +554,37 @@ class App(tk.Tk):
         tooltip.CreateToolTip(
             self.chk_immediate_wave_around,
             self.tooltips_text.get("immediate_wave_around")
+        )
+        general_row += 1
+
+        # Create laps before wave arounds entry
+        logging.debug("Creating laps before wave arounds entry")
+        self.lbl_laps_before_wave_around = ttk.Label(
+            self.frm_general,
+            text="Laps before wave arounds"
+        )
+        self.lbl_laps_before_wave_around.grid(
+            row=general_row,
+            column=0,
+            sticky="w",
+            padx=5,
+            pady=5
+        )
+        self.ent_laps_before_wave_around = ttk.Entry(self.frm_general, width=5)
+        self.ent_laps_before_wave_around.grid(
+            row=general_row,
+            column=1,
+            sticky="e",
+            padx=5,
+            pady=5
+        )
+        tooltip.CreateToolTip(
+            self.lbl_laps_before_wave_around,
+            self.tooltips_text.get("laps_before_wave_around")
+        )
+        tooltip.CreateToolTip(
+            self.ent_laps_before_wave_around,
+            self.tooltips_text.get("laps_before_wave_around")
         )
 
         # Create Controls frame
@@ -667,6 +698,11 @@ class App(tk.Tk):
         )
         self.var_immediate_wave_around.set(
             self.settings["settings"].getboolean("imm_wave_around")
+        )
+        self.ent_laps_before_wave_around.delete(0, "end")
+        self.ent_laps_before_wave_around.insert(
+            0,
+            self.settings["settings"]["laps_before_wave_around"]
         )
 
     def _save_and_run(self):
