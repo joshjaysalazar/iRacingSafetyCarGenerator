@@ -534,16 +534,16 @@ class App(tk.Tk):
         )
         general_row += 1
 
-        # Create immediate wave arounds checkbox
-        logging.debug("Creating immediate wave arounds checkbox")
-        self.var_immediate_wave_around = tk.IntVar()
-        self.var_immediate_wave_around.set(1)
-        self.chk_immediate_wave_around = ttk.Checkbutton(
+        # Create wave arounds checkbox
+        logging.debug("Creating automatic wave arounds checkbox")
+        self.var_wave_arounds = tk.IntVar()
+        self.var_wave_arounds.set(1)
+        self.chk_wave_arounds = ttk.Checkbutton(
             self.frm_general,
-            text="Immediate wave arounds",
-            variable=self.var_immediate_wave_around
+            text="Automatic wave arounds",
+            variable=self.var_wave_arounds
         )
-        self.chk_immediate_wave_around.grid(
+        self.chk_wave_arounds.grid(
             row=general_row,
             column=0,
             columnspan=2,
@@ -552,7 +552,7 @@ class App(tk.Tk):
             pady=5
         )
         tooltip.CreateToolTip(
-            self.chk_immediate_wave_around,
+            self.chk_wave_arounds,
             self.tooltips_text.get("immediate_wave_around")
         )
         general_row += 1
@@ -696,8 +696,8 @@ class App(tk.Tk):
             0,
             self.settings["settings"]["laps_under_sc"]
         )
-        self.var_immediate_wave_around.set(
-            self.settings["settings"].getboolean("imm_wave_around")
+        self.var_wave_arounds.set(
+            self.settings["settings"].getboolean("wave_arounds")
         )
         self.ent_laps_before_wave_around.delete(0, "end")
         self.ent_laps_before_wave_around.insert(
@@ -738,7 +738,7 @@ class App(tk.Tk):
         end_minute = self.ent_end_minute.get()
         min_time_between = self.ent_min_time_between.get()
         laps_under_sc = self.ent_laps_under_sc.get()
-        imm_wave_around = self.var_immediate_wave_around.get()
+        imm_wave_around = self.var_wave_arounds.get()
 
         # Save the settings to the config file
         self.settings["settings"]["random"] = str(random)
