@@ -738,7 +738,8 @@ class App(tk.Tk):
         end_minute = self.ent_end_minute.get()
         min_time_between = self.ent_min_time_between.get()
         laps_under_sc = self.ent_laps_under_sc.get()
-        imm_wave_around = self.var_wave_arounds.get()
+        wave_arounds = self.var_wave_arounds.get()
+        laps_before_wave_around = self.ent_laps_before_wave_around.get()
 
         # Save the settings to the config file
         self.settings["settings"]["random"] = str(random)
@@ -756,7 +757,10 @@ class App(tk.Tk):
         self.settings["settings"]["end_minute"] = str(end_minute)
         self.settings["settings"]["min_time_between"] = str(min_time_between)
         self.settings["settings"]["laps_under_sc"] = str(laps_under_sc)
-        self.settings["settings"]["imm_wave_around"] = str(imm_wave_around)
+        self.settings["settings"]["wave_arounds"] = str(wave_arounds)
+        self.settings["settings"]["laps_before_wave_around"] = str(
+            laps_before_wave_around
+        )
 
         with open("settings.ini", "w") as configfile:
             self.settings.write(configfile)
