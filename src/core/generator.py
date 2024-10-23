@@ -344,7 +344,7 @@ class Generator:
         # Get relevant settings from the settings file
         wave_arounds = self.master.settings["settings"]["wave_arounds"]
         laps_before = int(
-            self.master.settings["settings"]["laps_before_wave_around"]
+            self.master.settings["settings"]["laps_before_wave_arounds"]
         )
 
         # If immediate waveby is disabled, return

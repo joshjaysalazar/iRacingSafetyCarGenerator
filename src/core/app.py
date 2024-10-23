@@ -559,19 +559,19 @@ class App(tk.Tk):
 
         # Create laps before wave arounds entry
         logging.debug("Creating laps before wave arounds entry")
-        self.lbl_laps_before_wave_around = ttk.Label(
+        self.lbl_laps_before_wave_arounds = ttk.Label(
             self.frm_general,
             text="Laps before wave arounds"
         )
-        self.lbl_laps_before_wave_around.grid(
+        self.lbl_laps_before_wave_arounds.grid(
             row=general_row,
             column=0,
             sticky="w",
             padx=5,
             pady=5
         )
-        self.ent_laps_before_wave_around = ttk.Entry(self.frm_general, width=5)
-        self.ent_laps_before_wave_around.grid(
+        self.ent_laps_before_wave_arounds = ttk.Entry(self.frm_general, width=5)
+        self.ent_laps_before_wave_arounds.grid(
             row=general_row,
             column=1,
             sticky="e",
@@ -579,12 +579,12 @@ class App(tk.Tk):
             pady=5
         )
         tooltip.CreateToolTip(
-            self.lbl_laps_before_wave_around,
-            self.tooltips_text.get("laps_before_wave_around")
+            self.lbl_laps_before_wave_arounds,
+            self.tooltips_text.get("laps_before_wave_arounds")
         )
         tooltip.CreateToolTip(
-            self.ent_laps_before_wave_around,
-            self.tooltips_text.get("laps_before_wave_around")
+            self.ent_laps_before_wave_arounds,
+            self.tooltips_text.get("laps_before_wave_arounds")
         )
 
         # Create Controls frame
@@ -699,10 +699,10 @@ class App(tk.Tk):
         self.var_wave_arounds.set(
             self.settings["settings"].getboolean("wave_arounds")
         )
-        self.ent_laps_before_wave_around.delete(0, "end")
-        self.ent_laps_before_wave_around.insert(
+        self.ent_laps_before_wave_arounds.delete(0, "end")
+        self.ent_laps_before_wave_arounds.insert(
             0,
-            self.settings["settings"]["laps_before_wave_around"]
+            self.settings["settings"]["laps_before_wave_arounds"]
         )
 
     def _save_and_run(self):
@@ -739,7 +739,7 @@ class App(tk.Tk):
         min_time_between = self.ent_min_time_between.get()
         laps_under_sc = self.ent_laps_under_sc.get()
         wave_arounds = self.var_wave_arounds.get()
-        laps_before_wave_around = self.ent_laps_before_wave_around.get()
+        laps_before_wave_arounds = self.ent_laps_before_wave_arounds.get()
 
         # Save the settings to the config file
         self.settings["settings"]["random"] = str(random)
@@ -758,8 +758,8 @@ class App(tk.Tk):
         self.settings["settings"]["min_time_between"] = str(min_time_between)
         self.settings["settings"]["laps_under_sc"] = str(laps_under_sc)
         self.settings["settings"]["wave_arounds"] = str(wave_arounds)
-        self.settings["settings"]["laps_before_wave_around"] = str(
-            laps_before_wave_around
+        self.settings["settings"]["laps_before_wave_arounds"] = str(
+            laps_before_wave_arounds
         )
 
         with open("settings.ini", "w") as configfile:

@@ -13,5 +13,5 @@
     "min_time_between": "Minimum time interval before another safety car can be deployed.",
     "laps_under_sc": "Number of laps a safety car remains deployed. A value of 0 here allows iRacing to automatically control the number of laps instead. The command is sent halfway around the lap to avoid closing pits while drivers are pitting.\n\nNOTE: A value of 1 will be ignored by iRacing!",
     "immediate_wave_around": "Sends a wave around command to all lapped cars after a set number of laps behind the safety car.",
-    "laps_before_wave_around": "Number of laps a safety car must be deployed before a wave around command is sent to lapped cars. This is counted starting with the first full lap behind the safety car (i.e. not the safety car's out lap)."
+    "laps_before_wave_arounds": "Number of laps a safety car must be deployed before a wave around command is sent to lapped cars. This is counted starting with the first full lap behind the safety car (i.e. not the safety car's out lap)."
 }
