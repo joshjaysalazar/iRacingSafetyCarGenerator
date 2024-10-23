@@ -347,9 +347,16 @@ class Generator:
             self.master.settings["settings"]["laps_before_wave_arounds"]
         )
 
-        # If immediate waveby is disabled, return
+        # If immediate waveby is disabled, return True (no wave arounds)
         if wave_arounds == "0":
-            return
+            logging.debug("Wave arounds disabled, skipping wave arounds")
+            return True
+        
+        # If not time for wave arounds, return False
+        wave_lap = self.lap_at_sc + laps_before + 1
+        if self.current_lap_under_sc < wave_lap:
+            logging.debug("Haven't reached wave lap, skipping wave arounds")
+            return False
         
         # Get all class IDs (except safety car)
         class_ids = []

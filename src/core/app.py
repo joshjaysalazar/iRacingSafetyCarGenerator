@@ -553,7 +553,7 @@ class App(tk.Tk):
         )
         tooltip.CreateToolTip(
             self.chk_wave_arounds,
-            self.tooltips_text.get("immediate_wave_around")
+            self.tooltips_text.get("wave_arounds")
         )
         general_row += 1
 
