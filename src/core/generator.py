@@ -326,10 +326,10 @@ class Generator:
             None
         """
         # Get relevant settings from the settings file
-        wave_around = self.master.settings["settings"]["imm_wave_around"]
+        wave_arounds = self.master.settings["settings"]["wave_arounds"]
 
         # If immediate waveby is disabled, return
-        if wave_around == "0":
+        if wave_arounds == "0":
             return
         
         # Get all class IDs (except safety car)
