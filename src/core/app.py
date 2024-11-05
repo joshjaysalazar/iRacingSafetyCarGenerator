@@ -132,8 +132,14 @@ class App(tk.Tk):
             padx=5,
             pady=5
         )
-        tooltip.CreateToolTip(self.lbl_random_max_occ, self.tooltips_text.get("random_max_occ"))
-        tooltip.CreateToolTip(self.spn_random_max_occ, self.tooltips_text.get("random_max_occ"))
+        tooltip.CreateToolTip(
+            self.lbl_random_max_occ,
+            self.tooltips_text.get("random_max_occ")
+        )
+        tooltip.CreateToolTip(
+            self.spn_random_max_occ,
+            self.tooltips_text.get("random_max_occ")
+        )
         sc_types_row += 1
 
         # Create probability entry
@@ -157,8 +163,14 @@ class App(tk.Tk):
             padx=5,
             pady=5
         )
-        tooltip.CreateToolTip(self.lbl_random_prob, self.tooltips_text.get("random_prob"))
-        tooltip.CreateToolTip(self.ent_random_prob, self.tooltips_text.get("random_prob"))
+        tooltip.CreateToolTip(
+            self.lbl_random_prob,
+            self.tooltips_text.get("random_prob")
+        )
+        tooltip.CreateToolTip(
+            self.ent_random_prob,
+            self.tooltips_text.get("random_prob")
+        )
         sc_types_row += 1
 
         # Create message entry
@@ -175,7 +187,10 @@ class App(tk.Tk):
             padx=5,
             pady=5
         )
-        tooltip.CreateToolTip(self.ent_random_message, self.tooltips_text.get("message"))
+        tooltip.CreateToolTip(
+            self.ent_random_message,
+            self.tooltips_text.get("message")
+        )
         sc_types_row += 1
 
         # Create horizontal separator
@@ -207,7 +222,10 @@ class App(tk.Tk):
             padx=5,
             pady=5
         )
-        tooltip.CreateToolTip(self.chk_stopped, self.tooltips_text.get("stopped"))
+        tooltip.CreateToolTip(
+            self.chk_stopped,
+            self.tooltips_text.get("stopped")
+        )
         sc_types_row += 1
 
         # Create minimum to trigger spinbox
@@ -236,8 +254,14 @@ class App(tk.Tk):
             padx=5,
             pady=5
         )
-        tooltip.CreateToolTip(self.lbl_stopped_min, self.tooltips_text.get("stopped_min"))
-        tooltip.CreateToolTip(self.spn_stopped_min, self.tooltips_text.get("stopped_min"))
+        tooltip.CreateToolTip(
+            self.lbl_stopped_min,
+            self.tooltips_text.get("stopped_min")
+        )
+        tooltip.CreateToolTip(
+            self.spn_stopped_min,
+            self.tooltips_text.get("stopped_min")
+        )
         sc_types_row += 1
 
         # Create message entry
@@ -254,7 +278,10 @@ class App(tk.Tk):
             padx=5,
             pady=5
         )
-        tooltip.CreateToolTip(self.ent_stopped_message, self.tooltips_text.get("message"))
+        tooltip.CreateToolTip(
+            self.ent_stopped_message,
+            self.tooltips_text.get("message")
+        )
         sc_types_row += 1
 
         # Create horizontal separator
@@ -315,8 +342,14 @@ class App(tk.Tk):
             padx=5,
             pady=5
         )
-        tooltip.CreateToolTip(self.lbl_off_min, self.tooltips_text.get("off_min"))
-        tooltip.CreateToolTip(self.spn_off_min, self.tooltips_text.get("off_min"))
+        tooltip.CreateToolTip(
+            self.lbl_off_min,
+            self.tooltips_text.get("off_min")
+        )
+        tooltip.CreateToolTip(
+            self.spn_off_min,
+            self.tooltips_text.get("off_min")
+        )
         sc_types_row += 1
 
         # Create message entry
@@ -333,7 +366,10 @@ class App(tk.Tk):
             padx=5,
             pady=5
         )
-        tooltip.CreateToolTip(self.ent_off_message, self.tooltips_text.get("message"))
+        tooltip.CreateToolTip(
+            self.ent_off_message,
+            self.tooltips_text.get("message")
+        )
 
         # Create General frame
         logging.debug("Creating General frame")
@@ -343,8 +379,8 @@ class App(tk.Tk):
         # Create variable to hold the current row in the frame
         general_row = 0
 
-        # Create maximum safety cars spinbox
-        logging.debug("Creating maximum safety cars spinbox")
+        # Create maximum safety cars entry
+        logging.debug("Creating maximum safety cars entry")
         self.lbl_max_safety_cars = ttk.Label(
             self.frm_general,
             text="Maximum safety cars"
@@ -364,12 +400,18 @@ class App(tk.Tk):
             padx=5,
             pady=5
         )
-        tooltip.CreateToolTip(self.lbl_max_safety_cars, self.tooltips_text.get("max_safety_cars"))
-        tooltip.CreateToolTip(self.ent_max_safety_cars, self.tooltips_text.get("max_safety_cars"))
+        tooltip.CreateToolTip(
+            self.lbl_max_safety_cars,
+            self.tooltips_text.get("max_safety_cars")
+        )
+        tooltip.CreateToolTip(
+            self.ent_max_safety_cars,
+            self.tooltips_text.get("max_safety_cars")
+        )
         general_row += 1
 
-        # Create earliest possible minute spinbox
-        logging.debug("Creating earliest possible minute spinbox")
+        # Create earliest possible minute entry
+        logging.debug("Creating earliest possible minute entry")
         self.lbl_start_minute = ttk.Label(
             self.frm_general,
             text="Earliest possible minute"
@@ -389,12 +431,18 @@ class App(tk.Tk):
             padx=5,
             pady=5
         )
-        tooltip.CreateToolTip(self.lbl_start_minute, self.tooltips_text.get("start_minute"))
-        tooltip.CreateToolTip(self.ent_start_minute, self.tooltips_text.get("start_minute"))
+        tooltip.CreateToolTip(
+            self.lbl_start_minute,
+            self.tooltips_text.get("start_minute")
+        )
+        tooltip.CreateToolTip(
+            self.ent_start_minute,
+            self.tooltips_text.get("start_minute")
+        )
         general_row += 1
 
-        # Create latest possible minute spinbox
-        logging.debug("Creating latest possible minute spinbox")
+        # Create latest possible minute entry
+        logging.debug("Creating latest possible minute entry")
         self.lbl_end_minute = ttk.Label(
             self.frm_general,
             text="Latest possible minute"
@@ -414,12 +462,18 @@ class App(tk.Tk):
             padx=5,
             pady=5
         )
-        tooltip.CreateToolTip(self.lbl_end_minute, self.tooltips_text.get("end_minute"))
-        tooltip.CreateToolTip(self.ent_end_minute, self.tooltips_text.get("end_minute"))
+        tooltip.CreateToolTip(
+            self.lbl_end_minute,
+            self.tooltips_text.get("end_minute")
+        )
+        tooltip.CreateToolTip(
+            self.ent_end_minute,
+            self.tooltips_text.get("end_minute")
+        )
         general_row += 1
 
-        # Create minimum minutes between spinbox
-        logging.debug("Creating minimum minutes between spinbox")
+        # Create minimum minutes between entry
+        logging.debug("Creating minimum minutes between entry")
         self.lbl_min_time_between = ttk.Label(
             self.frm_general,
             text="Minimum minutes between"
@@ -439,12 +493,18 @@ class App(tk.Tk):
             padx=5,
             pady=5
         )
-        tooltip.CreateToolTip(self.lbl_min_time_between, self.tooltips_text.get("min_time_between"))
-        tooltip.CreateToolTip(self.ent_min_time_between, self.tooltips_text.get("min_time_between"))
+        tooltip.CreateToolTip(
+            self.lbl_min_time_between,
+            self.tooltips_text.get("min_time_between")
+        )
+        tooltip.CreateToolTip(
+            self.ent_min_time_between,
+            self.tooltips_text.get("min_time_between")
+        )
         general_row += 1
 
-        # Create laps under safety car spinbox
-        logging.debug("Creating laps under safety car spinbox")
+        # Create laps under safety car entry
+        logging.debug("Creating laps under safety car entry")
         self.lbl_laps_under_sc = ttk.Label(
             self.frm_general,
             text="Laps under safety car"
@@ -464,20 +524,26 @@ class App(tk.Tk):
             padx=5,
             pady=5
         )
-        tooltip.CreateToolTip(self.lbl_laps_under_sc, self.tooltips_text.get("laps_under_sc"))
-        tooltip.CreateToolTip(self.ent_laps_under_sc, self.tooltips_text.get("laps_under_sc"))
+        tooltip.CreateToolTip(
+            self.lbl_laps_under_sc,
+            self.tooltips_text.get("laps_under_sc")
+        )
+        tooltip.CreateToolTip(
+            self.ent_laps_under_sc,
+            self.tooltips_text.get("laps_under_sc")
+        )
         general_row += 1
 
-        # Create immediate wave arounds checkbox
-        logging.debug("Creating immediate wave arounds checkbox")
-        self.var_immediate_wave_around = tk.IntVar()
-        self.var_immediate_wave_around.set(1)
-        self.chk_immediate_wave_around = ttk.Checkbutton(
+        # Create wave arounds checkbox
+        logging.debug("Creating automatic wave arounds checkbox")
+        self.var_wave_arounds = tk.IntVar()
+        self.var_wave_arounds.set(1)
+        self.chk_wave_arounds = ttk.Checkbutton(
             self.frm_general,
-            text="Immediate wave arounds",
-            variable=self.var_immediate_wave_around
+            text="Automatic wave arounds",
+            variable=self.var_wave_arounds
         )
-        self.chk_immediate_wave_around.grid(
+        self.chk_wave_arounds.grid(
             row=general_row,
             column=0,
             columnspan=2,
@@ -485,7 +551,41 @@ class App(tk.Tk):
             padx=5,
             pady=5
         )
-        tooltip.CreateToolTip(self.chk_immediate_wave_around, self.tooltips_text.get("immediate_wave_around"))
+        tooltip.CreateToolTip(
+            self.chk_wave_arounds,
+            self.tooltips_text.get("wave_arounds")
+        )
+        general_row += 1
+
+        # Create laps before wave arounds entry
+        logging.debug("Creating laps before wave arounds entry")
+        self.lbl_laps_before_wave_arounds = ttk.Label(
+            self.frm_general,
+            text="Laps before wave arounds"
+        )
+        self.lbl_laps_before_wave_arounds.grid(
+            row=general_row,
+            column=0,
+            sticky="w",
+            padx=5,
+            pady=5
+        )
+        self.ent_laps_before_wave_arounds = ttk.Entry(self.frm_general, width=5)
+        self.ent_laps_before_wave_arounds.grid(
+            row=general_row,
+            column=1,
+            sticky="e",
+            padx=5,
+            pady=5
+        )
+        tooltip.CreateToolTip(
+            self.lbl_laps_before_wave_arounds,
+            self.tooltips_text.get("laps_before_wave_arounds")
+        )
+        tooltip.CreateToolTip(
+            self.ent_laps_before_wave_arounds,
+            self.tooltips_text.get("laps_before_wave_arounds")
+        )
 
         # Create Controls frame
         logging.debug("Creating Controls frame")
@@ -596,8 +696,13 @@ class App(tk.Tk):
             0,
             self.settings["settings"]["laps_under_sc"]
         )
-        self.var_immediate_wave_around.set(
-            self.settings["settings"].getboolean("imm_wave_around")
+        self.var_wave_arounds.set(
+            self.settings["settings"].getboolean("wave_arounds")
+        )
+        self.ent_laps_before_wave_arounds.delete(0, "end")
+        self.ent_laps_before_wave_arounds.insert(
+            0,
+            self.settings["settings"]["laps_before_wave_arounds"]
         )
 
     def _save_and_run(self):
@@ -633,7 +738,8 @@ class App(tk.Tk):
         end_minute = self.ent_end_minute.get()
         min_time_between = self.ent_min_time_between.get()
         laps_under_sc = self.ent_laps_under_sc.get()
-        imm_wave_around = self.var_immediate_wave_around.get()
+        wave_arounds = self.var_wave_arounds.get()
+        laps_before_wave_arounds = self.ent_laps_before_wave_arounds.get()
 
         # Save the settings to the config file
         self.settings["settings"]["random"] = str(random)
@@ -651,7 +757,10 @@ class App(tk.Tk):
         self.settings["settings"]["end_minute"] = str(end_minute)
         self.settings["settings"]["min_time_between"] = str(min_time_between)
         self.settings["settings"]["laps_under_sc"] = str(laps_under_sc)
-        self.settings["settings"]["imm_wave_around"] = str(imm_wave_around)
+        self.settings["settings"]["wave_arounds"] = str(wave_arounds)
+        self.settings["settings"]["laps_before_wave_arounds"] = str(
+            laps_before_wave_arounds
+        )
 
         with open("settings.ini", "w") as configfile:
             self.settings.write(configfile)

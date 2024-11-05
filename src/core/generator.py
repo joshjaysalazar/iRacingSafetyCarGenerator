@@ -27,6 +27,8 @@ class Generator:
         self.total_sc_events = 0
         self.last_sc_time = None
         self.total_random_sc_events = 0
+        self.lap_at_sc = None
+        self.current_lap_under_sc = None
 
         # Create a shutdown event
         self.shutdown_event = threading.Event()
@@ -196,6 +198,28 @@ class Generator:
         # If the driver number wasn't found, return None
         return None
     
+    def _get_current_lap_under_sc(self):
+        """Get the current lap under safety car for each car on the track.
+        
+        Args:
+            None
+        """
+        logging.debug("Getting current laps under safety car")
+
+        # Zip the CarIdxLap and CarIdxOnPitRoad arrays together
+        current_lap_numbers = zip(
+            self.ir["CarIdxLap"],
+            self.ir["CarIdxOnPitRoad"]
+        )
+
+        # If pit road value is True, remove it, keeping only laps
+        current_lap_numbers = [
+            car[0] for car in current_lap_numbers if car[1] == False
+        ]
+
+        # Find the highest value in the list
+        self.current_lap_under_sc = max(current_lap_numbers)
+
     def _loop(self):
         """Main loop for the safety car generator.
         
@@ -260,6 +284,9 @@ class Generator:
         
         Args:
             None
+
+        Returns:
+            True if pace laps are done, False otherwise
         """
         # Get relevant settings from the settings file
         laps_under_sc = int(
@@ -267,91 +294,69 @@ class Generator:
         )
 
         # If laps under safety car is 0, return
-        logging.debug("Laps under safety car set to 0; letting iRacing handle")
-        if laps_under_sc == 0:
-            return
+        logging.debug("Laps under safety car set too low, skipping command")
+        if laps_under_sc < 2:
+            return True
+        
+        # If the max value is 2 laps greater than the lap at yellow
+        if self.current_lap_under_sc >= self.lap_at_sc + 2:
+            # Get all cars on lead lap at check
+            lead_lap = []
+            for i, lap in enumerate(self.ir["CarIdxLap"]):
+                if lap >= self.current_lap_under_sc:
+                    lead_lap.append(i)
 
-        # Get the max value from all cars' lap started count
-        lap_at_yellow = max(self.ir["CarIdxLap"])
-
-        # Wait for specified number of laps to be completed
-        logging.debug(f"Waiting for safety car to complete enough laps")
-        while True:
-            # Zip the CarIdxLap and CarIdxOnPitRoad arrays together
-            laps_started = zip(
-                self.ir["CarIdxLap"],
-                self.ir["CarIdxOnPitRoad"]
-            )
-
-            # If pit road value is True, remove it, keeping only laps
-            laps_started = [
-                car[0] for car in laps_started if car[1] == False
-            ]
-            
-            # If the max value is 2 laps greater than the lap at yellow
-            if max(laps_started) >= lap_at_yellow + 2:
-
-                # Get all cars on lead lap at check (in case multiple crossed)
-                lead_lap = []
-                for i, lap in enumerate(laps_started):
-                    if lap == max(laps_started):
-                        lead_lap.append(i)
-
-                # Before next check, wait 1s to make sure leader is across line
-                time.sleep(1)
-
-                # Wait for max value in lap distance of the lead cars to be 50%
-                logging.debug("Waiting for lead car to be halfway around track")
-                while True:
-                    # Get the lap distance of these cars
-                    lead_dist = [
-                        self.ir["CarIdxLapDistPct"][car] for car in lead_lap
-                    ]
-
-                    # If any lead car is at 50%, break the loop
-                    if any([dist >= 0.5 for dist in lead_dist]):
-                        break
-
-                    # Break the loop if we are shutting down the thread
-                    if self._is_shutting_down():
-                        break
-
-                    # Wait 1 second before checking again
-                    time.sleep(1)
-
-                # Only send if laps is greater than 1
-                if laps_under_sc > 1:
-                    logging.info("Sending pacelaps command")
-                    self.ir_window.set_focus()
-                    self.ir.chat_command(1)
-                    time.sleep(0.5)
-                    self.ir_window.type_keys(
-                        f"!p {laps_under_sc - 1}{{ENTER}}",
-                        with_spaces=True
-                    )
-                
-                # Break the loop
-                break
-
-            # Break the loop if we are shutting down the thread
-            if self._is_shutting_down():
-                break
-            
-            # Wait 1 second before checking again
+            # Before next check, wait 1s to make sure leader is across line
             time.sleep(1)
+
+            # Wait for max value in lap distance of the lead cars to be 50%
+            logging.debug("Checking if lead car is halfway around track")
+            lead_dist = [
+                self.ir["CarIdxLapDistPct"][car] for car in lead_lap
+            ]
+
+            # If any lead car is at 50%, send the pacelaps command
+            if max(lead_dist) >= 0.5:
+                logging.info("Sending pacelaps command")
+                self.ir_window.set_focus()
+                self.ir.chat_command(1)
+                time.sleep(0.5)
+                self.ir_window.type_keys(
+                    f"!p {laps_under_sc - 1}{{ENTER}}",
+                    with_spaces=True
+                )
+
+                # Return True when pace laps are done
+                return True
+        
+        # If we haven't reached the conditions to send command, return False
+        return False
 
     def _send_wave_arounds(self):
         """Send the wave around chat commands to iRacing.
 
         Args:
             None
+
+        Returns:
+            True if wave arounds are done, False otherwise
         """
         # Get relevant settings from the settings file
-        wave_around = self.master.settings["settings"]["imm_wave_around"]
+        wave_arounds = self.master.settings["settings"]["wave_arounds"]
+        laps_before = int(
+            self.master.settings["settings"]["laps_before_wave_arounds"]
+        )
 
-        # If immediate waveby is disabled, return
-        if wave_around == "0":
-            return
+        # If immediate waveby is disabled, return True (no wave arounds)
+        if wave_arounds == "0":
+            logging.debug("Wave arounds disabled, skipping wave arounds")
+            return True
+        
+        # If not time for wave arounds, return False
+        wave_lap = self.lap_at_sc + laps_before + 1
+        if self.current_lap_under_sc < wave_lap:
+            logging.debug("Haven't reached wave lap, skipping wave arounds")
+            return False
         
         # Get all class IDs (except safety car)
         class_ids = []
@@ -426,6 +431,9 @@ class Generator:
                     f"!w {car}{{ENTER}}", with_spaces=True
                 )
 
+        # Return True when wave arounds are done
+        return True
+
     def _start_safety_car(self, message=""):
         """Send a yellow flag to iRacing.
 
@@ -433,6 +441,12 @@ class Generator:
             message: The message to send with the yellow flag command
         """
         logging.info("Deploying safety car")
+
+        # Send yellow flag chat command
+        self.ir_window.set_focus()
+        self.ir.chat_command(1)
+        time.sleep(0.5)
+        self.ir_window.type_keys(f"!y {message}{{ENTER}}", with_spaces=True)
 
         # Set the UI message
         self.master.set_message(
@@ -445,17 +459,30 @@ class Generator:
         # Set the last safety car time
         self.last_sc_time = time.time()
 
-        # Send yellow flag chat command
-        self.ir_window.set_focus()
-        self.ir.chat_command(1)
-        time.sleep(0.5)
-        self.ir_window.type_keys(f"!y {message}{{ENTER}}", with_spaces=True)
+        # Set the lap at yellow flag
+        self.lap_at_sc = max(self.ir["CarIdxLap"])
 
-        # Send the wave commands
-        self._send_wave_arounds()
+        # Manage wave arounds and pace laps
+        waves_done = False
+        pace_done = False
+        while not waves_done or not pace_done:
+            # Get the current lap behind safety car
+            self._get_current_lap_under_sc()
 
-        # Send pacelaps command when the time is right
-        self._send_pacelaps()
+            # If wave arounds aren't done, send the wave arounds
+            if not waves_done:
+                waves_done = self._send_wave_arounds()
+
+            # If pace laps aren't done, send the pace laps
+            if not pace_done:
+                pace_done = self._send_pacelaps()
+
+            # Break the loop if we are shutting down the thread
+            if self._is_shutting_down():
+                break
+
+            # Wait 1 second before checking again
+            time.sleep(1)
 
         # Wait for the green flag to be displayed
         self._wait_for_green_flag()
