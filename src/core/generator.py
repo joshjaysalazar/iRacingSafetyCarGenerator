@@ -487,13 +487,42 @@ class Generator:
         # Wait for the green flag to be displayed
         self._wait_for_green_flag()
 
-    def _wait_for_green_flag(self):
+    def _wait_for_green_flag(self, require_race_session=True):
         """Wait for the green flag to be displayed.
 
         Args:
             None
         """
         logging.info("Waiting for green flag")
+
+        # If required, wait for the session to be a race session
+        if require_race_session:
+            # Get the list of sessions
+            session_list = self.ir["SessionInfo"]["Sessions"]
+
+            # Create a dict of session names by index
+            sessions = {}
+            for i, session in enumerate(session_list):
+                sessions[i] = session["SessionName"]
+
+            # Loop until in a race session
+            while True:
+                # Get the current session index
+                current_idx = self.ir["SessionNum"]
+
+                # If the current session is PRACTICE, QUALIFY, or WARMUP
+                if sessions[current_idx] in ["PRACTICE", "QUALIFY", "WARMUP"]:
+                    # Add message to text box
+                    self.master.set_message(
+                        "Connected to iRacing\nWaiting for race session..."
+                    )
+
+                    # Wait 1 second before checking again
+                    time.sleep(1)
+                
+                # If the current session is anything else, break the loop
+                else:
+                    break
 
         # Add message to text box
         self.master.set_message(
@@ -536,7 +565,7 @@ class Generator:
 
         # Attempt to connect and tell user if successful
         if self.ir.startup():
-            # Get reference to simulator window if successful
+            # Get reference to simulator window if successfulir
             self.ir_window = Application().connect(
                 title="iRacing.com Simulator"
             ).top_window()
