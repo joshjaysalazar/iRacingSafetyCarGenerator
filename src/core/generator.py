@@ -485,7 +485,7 @@ class Generator:
             time.sleep(1)
 
         # Wait for the green flag to be displayed
-        self._wait_for_green_flag()
+        self._wait_for_green_flag(require_race_session=False)
 
     def _wait_for_green_flag(self, require_race_session=True):
         """Wait for the green flag to be displayed.
@@ -498,7 +498,7 @@ class Generator:
         # If required, wait for the session to be a race session
         if require_race_session:
             logging.info("Waiting for race session")
-            
+
             # Get the list of sessions
             session_list = self.ir["SessionInfo"]["Sessions"]
 
