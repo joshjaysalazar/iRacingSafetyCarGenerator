@@ -497,6 +497,8 @@ class Generator:
 
         # If required, wait for the session to be a race session
         if require_race_session:
+            logging.info("Waiting for race session")
+            
             # Get the list of sessions
             session_list = self.ir["SessionInfo"]["Sessions"]
 
