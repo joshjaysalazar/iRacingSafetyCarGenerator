@@ -2,6 +2,7 @@ import logging
 import random
 import threading
 import time
+import traceback
 
 import irsdk
 from pywinauto.application import Application
@@ -555,6 +556,9 @@ class Generator:
             # Wait 1 second before checking again
             time.sleep(1)
 
+    def generator_thread_excepthook(self, args):
+        logger.critical("Uncaught exception:", exc_info=args)
+
     def run(self):
         """Run the safety car generator.
 
@@ -581,6 +585,8 @@ class Generator:
         # Create the Drivers object
         self.drivers = drivers.Drivers(self)
         
+        threading.excepthook = self.generator_thread_excepthook
+
         # Run the loop in a separate thread
         self.thread = threading.Thread(target=self._loop)
         self.thread.start()
