@@ -1,6 +1,7 @@
 from copy import deepcopy
 import logging
 
+logger = logging.getLogger(__name__)
 
 class Drivers:
     """The Drivers class is responsible for tracking the state of the drivers.
@@ -19,7 +20,7 @@ class Drivers:
         self.master = master
 
         # Dictionaries to track the state of the drivers
-        logging.debug("Creating drivers dictionaries")
+        logger.debug("Creating drivers dictionaries")
         self.current_drivers = []
         self.previous_drivers = []
 
@@ -36,21 +37,21 @@ class Drivers:
             None
         """
         # Copy the current drivers to the previous drivers
-        logging.debug("Copying current drivers to previous drivers")
+        logger.debug("Copying current drivers to previous drivers")
         self.previous_drivers = deepcopy(self.current_drivers)
 
         # Clear the current drivers
-        logging.debug("Clearing current drivers")
+        logger.debug("Clearing current drivers")
         self.current_drivers = []
 
         # Gather the updated driver data
-        logging.debug("Gathering updated driver data")
+        logger.debug("Gathering updated driver data")
         laps_completed = self.master.ir["CarIdxLapCompleted"]
         lap_distance = self.master.ir["CarIdxLapDistPct"]
         track_loc = self.master.ir["CarIdxTrackSurface"]
 
         # Organize the updated driver data and update the current drivers
-        logging.debug("Organizing updated driver data")
+        logger.debug("Organizing updated driver data")
         for i in range(len(laps_completed)):
             self.current_drivers.append(
                 {
