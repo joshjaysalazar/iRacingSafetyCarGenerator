@@ -1,9 +1,12 @@
 from datetime import datetime
+from dotenv import load_dotenv
+
 import logging
 import os
 
 from core.app import App
 
+load_dotenv()  # take environment variables from .env.
 
 def setup_logging():
     """Set up logging configuration."""
@@ -18,9 +21,10 @@ def setup_logging():
     logging.basicConfig(
         filename=f"logs/{current_datetime}.log",
         filemode="w",
-        format="%(asctime)s (%(module)s.py) [%(levelname)s] %(message)s",
-        level=logging.INFO
+        format="%(asctime)s (%(module)s.py) [%(levelname)s] %(message)s"
     )
+
+    logging.getLogger().setLevel(level=os.getenv('LOGGING_LEVEL', logging.INFO).upper())
 
     # Log the start of the program
     logging.info("Program started")
