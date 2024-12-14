@@ -1,4 +1,6 @@
 from datetime import datetime
+from dotenv import load_dotenv
+
 import logging
 import logging.config
 import json
@@ -6,6 +8,7 @@ import os
 
 from core.app import App
 
+load_dotenv()  # take environment variables from .env.
 
 def setup_logging():
     """Set up logging configuration."""
@@ -25,6 +28,8 @@ def setup_logging():
     logging_conf["handlers"]["file"]["filename"] = logfile.replace("{current_datetime}", current_datetime)
 
     logging.config.dictConfig(logging_conf)
+
+    logging.getLogger().setLevel(level=os.getenv('LOGGING_LEVEL', logging.INFO).upper())
 
     # Log the start of the program
     logger.info("Program started")
