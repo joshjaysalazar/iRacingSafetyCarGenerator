@@ -29,7 +29,7 @@ def setup_logging():
 
     logging.config.dictConfig(logging_conf)
 
-    logging.getLogger().setLevel(level=os.getenv('LOGGING_LEVEL', logging.INFO).upper())
+    logging.getLogger().setLevel(level=os.getenv("LOGGING_LEVEL", "INFO").upper())
 
     # Log the start of the program
     logger.info("Program started")
