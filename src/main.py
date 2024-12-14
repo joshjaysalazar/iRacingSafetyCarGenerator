@@ -24,7 +24,7 @@ def setup_logging():
         format="%(asctime)s (%(module)s.py) [%(levelname)s] %(message)s"
     )
 
-    logging.getLogger().setLevel(level=os.getenv('LOGGING_LEVEL', logging.INFO).upper())
+    logging.getLogger().setLevel(level=os.getenv("LOGGING_LEVEL", "INFO").upper())
 
     # Log the start of the program
     logging.info("Program started")
