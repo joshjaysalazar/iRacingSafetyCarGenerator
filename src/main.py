@@ -21,8 +21,8 @@ def setup_logging():
 
     # Dynamically set log file name to current time
     current_datetime = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
-    logfile = logging_conf['handlers']['file']['filename']
-    logging_conf['handlers']['file']['filename'] = logfile.replace("{current_datetime}", current_datetime)
+    logfile = logging_conf["handlers"]["file"]["filename"]
+    logging_conf["handlers"]["file"]["filename"] = logfile.replace("{current_datetime}", current_datetime)
 
     logging.config.dictConfig(logging_conf)
 
