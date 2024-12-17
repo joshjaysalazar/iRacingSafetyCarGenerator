@@ -9,7 +9,7 @@ pyinstaller --noconfirm --log-level=FATAL --noconsole --onefile --hidden-import=
 ECHO Copying files to dist...
 :: Copy settings.ini to dist
 COPY settings.ini dist\settings.ini
-:: Copy logging.yaml to dist
+:: Copy logging.json to dist
 COPY logging.json dist\logging.json
 :: Copy README.md to dist
 COPY ..\README.md dist\README.md
