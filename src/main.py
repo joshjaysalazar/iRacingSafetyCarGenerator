@@ -1,5 +1,7 @@
 from datetime import datetime
 import logging
+import logging.config
+import json
 import os
 
 from core.app import App
@@ -11,19 +13,21 @@ def setup_logging():
     if not os.path.exists("logs"):
         os.makedirs("logs")
 
-    # Get current datetime formatted as a string
-    current_datetime = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+    logger = logging.getLogger(__name__)
 
-    # Set up logging
-    logging.basicConfig(
-        filename=f"logs/{current_datetime}.log",
-        filemode="w",
-        format="%(asctime)s (%(module)s.py) [%(levelname)s] %(message)s",
-        level=logging.INFO
-    )
+    # Configure logging
+    with open("logging.json") as logging_conf_file:
+        logging_conf = json.load(logging_conf_file)
+
+    # Dynamically set log file name to current time
+    current_datetime = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+    logfile = logging_conf["handlers"]["file"]["filename"]
+    logging_conf["handlers"]["file"]["filename"] = logfile.replace("{current_datetime}", current_datetime)
+
+    logging.config.dictConfig(logging_conf)
 
     # Log the start of the program
-    logging.info("Program started")
+    logger.info("Program started")
 
 def main():
     """Main function for the safety car generator."""

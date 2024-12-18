@@ -1,0 +1,42 @@
+{
+	"version": 1,
+	"disable_existing_loggers": false,
+	"formatters": {
+		"simple": { 
+			"format": "%(asctime)s (%(name)s) [%(levelname)s] %(message)s"
+		}
+	},
+	"handlers": {
+		"file": {
+			"class": "logging.FileHandler",
+			"formatter": "simple",
+			"filename": "logs/{current_datetime}.log"
+		}
+	},
+	"loggers": {
+		"__main__": {
+			"level": "INFO",
+			"handlers": [
+				"file"
+			]
+		},
+		"core.app": {
+			"level": "INFO",
+			"handlers": [
+				"file"
+			]
+		},
+		"core.drivers": {
+			"level": "INFO",
+			"handlers": [
+				"file"
+			]
+		},
+		"core.generator": {
+			"level": "INFO",
+			"handlers": [
+				"file"
+			]
+		}
+	}
+}
