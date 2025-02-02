@@ -19,6 +19,7 @@ class App(tk.Tk):
         """
         logger.info("Initializing main application window")
         super().__init__()
+        self.arguments = arguments
 
         # Tooltips text
         self.load_tooltips_text()
@@ -34,6 +35,7 @@ class App(tk.Tk):
         # Create generator object
         self.generator = generator.Generator(arguments, self)
         self.shutdown_event = self.generator.shutdown_event
+        self.skip_wait_for_green_event = self.generator.skip_wait_for_green_event
 
         # Set handler for closing main window event
         self.protocol('WM_DELETE_WINDOW', self.handle_delete_window)
@@ -644,6 +646,32 @@ class App(tk.Tk):
             padx=5,
             pady=5
         )
+        controls_row += 1
+
+        # Add dev mode controls
+        if self.arguments.developer_mode:
+            logger.debug("Creating developer_mode UI")
+            self.frm_dev_mode = ttk.LabelFrame(self.frm_controls, text="DEVELOPER MODE")
+            self.frm_dev_mode.grid(
+                row=controls_row,
+                column=0,
+                sticky="ew", 
+                padx=5,
+                pady=5
+            )
+
+            self.btn_skip_wait_for_green = ttk.Button(
+                self.frm_dev_mode,
+                text="Skip Wait for Green",
+                command=self._skip_wait_for_green
+            )
+            self.btn_skip_wait_for_green.grid(
+                row=0,
+                column=0,
+                sticky="ew",
+                padx=5,
+                pady=5
+            )
 
         # Fill in the widgets with the settings from the config file
         logger.debug("Filling in widgets with settings from config file")
@@ -776,3 +804,11 @@ class App(tk.Tk):
         logger.debug(f"Setting status label to: {message}")
         self.lbl_status["text"] = message
         self.update_idletasks()
+
+    def _skip_wait_for_green(self):
+        """Move from waiting for green to monitoring session state.
+
+        Args:
+            None
+        """
+        self.skip_wait_for_green_event.set()

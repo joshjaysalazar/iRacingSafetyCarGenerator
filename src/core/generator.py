@@ -41,6 +41,7 @@ class Generator:
 
         # Create a shutdown event
         self.shutdown_event = threading.Event()
+        self.skip_wait_for_green_event = threading.Event()
 
     def _is_shutting_down(self):
         """ Returns True if shutdown_event event was triggered
@@ -49,6 +50,14 @@ class Generator:
             None
         """
         return self.shutdown_event.is_set()
+    
+    def _skip_waiting_for_green(self):
+        """ Returns True if skip_wait_for_green_event event was triggered
+        
+        Args:
+            None
+        """
+        return self.skip_wait_for_green_event.is_set()
 
     def _check_random(self):
         """Check to see if a random safety car event should be triggered.
@@ -516,6 +525,11 @@ class Generator:
                 # Get the current session index
                 current_idx = self.ir["SessionNum"]
 
+                # Break the loop if we are shutting down the thread or skipping the wait
+                if self._is_shutting_down() or self._skip_waiting_for_green():
+                    logger.debug("Skipping wait for green because of a threading event")
+                    return
+
                 # If the current session is PRACTICE, QUALIFY, or WARMUP
                 if sessions[current_idx] in ["PRACTICE", "QUALIFY", "WARMUP"]:
                     # Add message to text box
@@ -529,6 +543,7 @@ class Generator:
                 # If the current session is anything else, break the loop
                 else:
                     break
+
 
         # Add message to text box
         self.master.set_message(
@@ -551,9 +566,10 @@ class Generator:
                 # Break the loop
                 break
 
-            # Break the loop if we are shutting down the thread
-            if self._is_shutting_down():
-                break
+            # Break the loop if we are shutting down the thread or skipping the wait
+            if self._is_shutting_down() or self._skip_waiting_for_green():
+                logger.debug("Skipping wait for green because of a threading event")
+                return
 
             # Wait 1 second before checking again
             time.sleep(1)
