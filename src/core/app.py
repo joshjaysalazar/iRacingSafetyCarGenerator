@@ -11,7 +11,7 @@ logger = logging.getLogger(__name__)
 
 class App(tk.Tk):
     """Main application window for the safety car generator."""
-    def __init__(self):
+    def __init__(self, arguments):
         """Initialize the main application window.
         
         Args:
@@ -32,7 +32,7 @@ class App(tk.Tk):
         self.title("iRacing Safety Car Generator")
 
         # Create generator object
-        self.generator = generator.Generator(self)
+        self.generator = generator.Generator(arguments, self)
         self.shutdown_event = self.generator.shutdown_event
 
         # Set handler for closing main window event
