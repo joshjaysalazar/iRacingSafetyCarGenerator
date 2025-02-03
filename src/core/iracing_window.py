@@ -1,7 +1,6 @@
 import importlib
 import logging
 
-Application = None
 logger = logging.getLogger(__name__)
 
 class IRacingWindow():
@@ -9,11 +8,11 @@ class IRacingWindow():
     def __init__(self):
         logger.debug("Instantiating IRacingWindow, importing pywinauto.application")
         self.ir_window = None
-        Application = importlib.import_module('pywinauto.application')
+        self.Application = importlib.import_module('pywinauto.application').Application
 
     def connect(self):
         logger.debug("Connect to the iRacing application window and save ref for future interactions")
-        self.ir_window = Application().connect(
+        self.ir_window = self.Application().connect(
             title="iRacing.com Simulator"
         ).top_window()
 

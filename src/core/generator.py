@@ -528,7 +528,7 @@ class Generator:
                 # Break the loop if we are shutting down the thread or skipping the wait
                 if self._is_shutting_down() or self._skip_waiting_for_green():
                     logger.debug("Skipping wait for green because of a threading event")
-                    return
+                    break
 
                 # If the current session is PRACTICE, QUALIFY, or WARMUP
                 if sessions[current_idx] in ["PRACTICE", "QUALIFY", "WARMUP"]:
@@ -569,7 +569,14 @@ class Generator:
             # Break the loop if we are shutting down the thread or skipping the wait
             if self._is_shutting_down() or self._skip_waiting_for_green():
                 logger.debug("Skipping wait for green because of a threading event")
-                return
+                if self.start_time is None:
+                    self.start_time = time.time()
+
+                # Set the UI message
+                self.master.set_message(
+                    "Connected to iRacing\nGenerating safety cars..."
+                )
+                break
 
             # Wait 1 second before checking again
             time.sleep(1)
