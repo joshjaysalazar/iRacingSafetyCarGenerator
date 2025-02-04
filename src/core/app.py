@@ -6,6 +6,7 @@ from tkinter import ttk
 
 from core import generator
 from core import tooltip
+from core.generator import GeneratorState
 
 logger = logging.getLogger(__name__)
 
@@ -36,6 +37,10 @@ class App(tk.Tk):
         self.generator = generator.Generator(arguments, self)
         self.shutdown_event = self.generator.shutdown_event
         self.skip_wait_for_green_event = self.generator.skip_wait_for_green_event
+
+        # Set state variables
+        self.generator_state = tk.StringVar(value=GeneratorState.STOPPED.name)
+        self.generator_state.trace_add('write', self.update_button_state)
 
         # Set handler for closing main window event
         self.protocol('WM_DELETE_WINDOW', self.handle_delete_window)
@@ -618,10 +623,14 @@ class App(tk.Tk):
 
         # Create run button
         logger.debug("Creating run button")
+        self.btn_run_style = ttk.Style()
+        self.btn_run_style.configure("BtnRun.TButton", foreground="white", background="green")
+
         self.btn_run = ttk.Button(
             self.frm_controls,
             text="Run",
-            command=self._save_and_run
+            command=self._save_and_run,
+            style="BtnRun.TButton"
         )
         self.btn_run.grid(
             row=controls_row,
@@ -741,8 +750,15 @@ class App(tk.Tk):
         Args:
             None
         """
-        self._save_settings()
-        self.generator.run()
+        # self._save_settings()
+        # self.generator.run()
+        current_state = GeneratorState[self.generator_state.get()]
+        if current_state == GeneratorState.RUNNING:
+            logger.debug("Test a")
+            self.generator_state.set(GeneratorState.STOPPED.name)
+        else:
+            logger.debug("Test b")
+            self.generator_state.set(GeneratorState.RUNNING.name)
 
     def _save_settings(self):
         """Save the settings to the config file.
@@ -804,6 +820,20 @@ class App(tk.Tk):
         logger.debug(f"Setting status label to: {message}")
         self.lbl_status["text"] = message
         self.update_idletasks()
+
+    def update_button_state(self, *args):
+        state = GeneratorState[self.generator_state.get()]
+        match state:
+            case GeneratorState.STOPPED:
+                logger.debug("Changing run button to STOPPED state")
+                self.btn_run['text'] = "Start SC Generator"
+                self.btn_run_style.configure("BtnRun.TButton", foreground="white", background="green")
+            case GeneratorState.RUNNING:
+                logger.debug("Changing run button to RUNNING state")
+                self.btn_run['text'] = "Stop SC Generator"
+                self.btn_run_style.configure("BtnRun.TButton", foreground="white", background="red")
+            case _:
+                logger.error(f"Unexpected generator_state value: {state}")
 
     def _skip_wait_for_green(self):
         """Move from waiting for green to monitoring session state.

@@ -10,6 +10,8 @@ from core import drivers
 from core import iracing_window
 from core import mock_window
 
+from enum import Enum
+
 logger = logging.getLogger(__name__)
 
 def WindowFactory(arguments):
@@ -17,6 +19,11 @@ def WindowFactory(arguments):
         return mock_window.MockWindow()
     return iracing_window.IRacingWindow()
 
+
+class GeneratorState(Enum):
+    STOPPED = 1
+    RUNNING = 2
+    
 class Generator:
     """Generates safety car events in iRacing."""
     def __init__(self, arguments, master=None):
