@@ -23,7 +23,7 @@ def WindowFactory(arguments):
 class GeneratorState(Enum):
     STOPPED = 1
     RUNNING = 2
-    
+
 class Generator:
     """Generates safety car events in iRacing."""
     def __init__(self, arguments, master=None):
@@ -34,6 +34,7 @@ class Generator:
         """
         logger.info("Initializing safety car generator")
         self.master = master
+        self.thread = None
 
         # Variables to track safety car events
         logger.debug("Initializing safety car variables")
@@ -617,5 +618,6 @@ class Generator:
         threading.excepthook = self.generator_thread_excepthook
 
         # Run the loop in a separate thread
-        self.thread = threading.Thread(target=self._loop)
-        self.thread.start()
+        if self.thread == None or not self.thread.is_alive():
+            self.thread = threading.Thread(target=self._loop)
+            self.thread.start()
