@@ -610,7 +610,7 @@ class Generator:
             self.master.set_message("Connected to iRacing\n")
         else:
             self.master.set_message("Error connecting to iRacing\n")
-            return
+            return False
     
         # Create the Drivers object
         self.drivers = drivers.Drivers(self)
@@ -619,5 +619,14 @@ class Generator:
 
         # Run the loop in a separate thread
         if self.thread == None or not self.thread.is_alive():
+            logger.info("Starting the loop thread")
             self.thread = threading.Thread(target=self._loop)
             self.thread.start()
+            return True
+        else:
+            logger.warning("Not starting the loop thread because it is still alive")
+            return False
+
+    def stop(self):
+        logger.info("Triggering shutdown event to stop generator")
+        self.shutdown_event.set()

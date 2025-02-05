@@ -750,15 +750,18 @@ class App(tk.Tk):
         Args:
             None
         """
-        # self._save_settings()
-        # self.generator.run()
         current_state = GeneratorState[self.generator_state.get()]
-        if current_state == GeneratorState.RUNNING:
-            logger.debug("Test a")
-            self.generator_state.set(GeneratorState.STOPPED.name)
-        else:
-            logger.debug("Test b")
-            self.generator_state.set(GeneratorState.RUNNING.name)
+        match current_state:
+            case GeneratorState.STOPPED:
+                logger.info('Saving settings and starting the generator')
+                self._save_settings()
+                started = self.generator.run()
+                if started:
+                    self.generator_state.set(GeneratorState.RUNNING.name)
+            case GeneratorState.RUNNING:
+                logger.info('Shutting down generator due to manual stop')
+                self.generator.stop()
+                self.generator_state.set(GeneratorState.STOPPED.name)    
 
     def _save_settings(self):
         """Save the settings to the config file.
@@ -822,8 +825,8 @@ class App(tk.Tk):
         self.update_idletasks()
 
     def update_button_state(self, *args):
-        state = GeneratorState[self.generator_state.get()]
-        match state:
+        current_state = GeneratorState[self.generator_state.get()]
+        match current_state:
             case GeneratorState.STOPPED:
                 logger.debug("Changing run button to STOPPED state")
                 self.btn_run['text'] = "Start SC Generator"
@@ -833,7 +836,7 @@ class App(tk.Tk):
                 self.btn_run['text'] = "Stop SC Generator"
                 self.btn_run_style.configure("BtnRun.TButton", foreground="white", background="red")
             case _:
-                logger.error(f"Unexpected generator_state value: {state}")
+                logger.error(f"Unexpected generator_state value: {current_state}")
 
     def _skip_wait_for_green(self):
         """Move from waiting for green to monitoring session state.
