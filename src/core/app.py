@@ -623,14 +623,17 @@ class App(tk.Tk):
 
         # Create run button
         logger.debug("Creating run button")
-        self.btn_run_style = ttk.Style()
-        self.btn_run_style.configure("BtnRun.TButton", foreground="white", background="green")
+
+        self.play_icon = tk.PhotoImage(file='./assets/play.png')
+        self.play_icon = self.play_icon.zoom(2)
+        self.stop_icon = tk.PhotoImage(file='./assets/stop.png')
 
         self.btn_run = ttk.Button(
             self.frm_controls,
-            text="Run",
-            command=self._save_and_run,
-            style="BtnRun.TButton"
+            text="Start SC Generator",
+            image=self.play_icon,
+            compound=tk.LEFT,
+            command=self._save_and_run
         )
         self.btn_run.grid(
             row=controls_row,
@@ -830,11 +833,11 @@ class App(tk.Tk):
             case GeneratorState.STOPPED:
                 logger.debug("Changing run button to STOPPED state")
                 self.btn_run['text'] = "Start SC Generator"
-                self.btn_run_style.configure("BtnRun.TButton", foreground="white", background="green")
+                self.btn_run['image'] = self.play_icon
             case GeneratorState.RUNNING:
                 logger.debug("Changing run button to RUNNING state")
                 self.btn_run['text'] = "Stop SC Generator"
-                self.btn_run_style.configure("BtnRun.TButton", foreground="white", background="red")
+                self.btn_run['image'] = self.stop_icon
             case _:
                 logger.error(f"Unexpected generator_state value: {current_state}")
 
