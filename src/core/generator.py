@@ -22,7 +22,13 @@ def WindowFactory(arguments):
 
 class GeneratorState(Enum):
     STOPPED = 1
-    RUNNING = 2
+    CONNECTING_TO_IRACING = 2
+    CONNECTED = 3
+    ERROR_CONNECTING = 4
+    WAITING_FOR_RACE_SESSION = 5
+    WAITING_FOR_GREEN = 6
+    MONITORING_FOR_INCIDENTS = 7
+    SAFETY_CAR_DEPLOYED = 8
 
 class Generator:
     """Generates safety car events in iRacing."""
@@ -297,6 +303,7 @@ class Generator:
 
             # Break the loop if we are shutting down the thread
             if self._is_shutting_down():
+                self.master.generator_state.set(GeneratorState.STOPPED.name)
                 break
 
             # Wait 1 second before checking again
@@ -469,10 +476,8 @@ class Generator:
         time.sleep(0.5)
         self.ir_window.send_message(f"!y {message}{{ENTER}}")
 
-        # Set the UI message
-        self.master.set_message(
-            "Connected to iRacing\nSafety car deployed."
-        )
+        # Move to SC deployed state
+        self.master.generator_state.set(GeneratorState.SAFETY_CAR_DEPLOYED.name)
 
         # Increment the total safety car events
         self.total_sc_events += 1
@@ -528,6 +533,9 @@ class Generator:
             for i, session in enumerate(session_list):
                 sessions[i] = session["SessionName"]
 
+            # Progress state to waiting for race session
+            self.master.generator_state.set(GeneratorState.WAITING_FOR_RACE_SESSION.name)
+
             # Loop until in a race session
             while True:
                 # Get the current session index
@@ -540,11 +548,6 @@ class Generator:
 
                 # If the current session is PRACTICE, QUALIFY, or WARMUP
                 if sessions[current_idx] in ["PRACTICE", "QUALIFY", "WARMUP"]:
-                    # Add message to text box
-                    self.master.set_message(
-                        "Connected to iRacing\nWaiting for race session..."
-                    )
-
                     # Wait 1 second before checking again
                     time.sleep(1)
                 
@@ -553,10 +556,8 @@ class Generator:
                     break
 
 
-        # Add message to text box
-        self.master.set_message(
-            "Connected to iRacing\nWaiting for green flag..."
-        )
+        # Progress state to waiting for green
+        self.master.generator_state.set(GeneratorState.WAITING_FOR_GREEN.name)
 
         # Loop until the green flag is displayed
         while True:
@@ -566,11 +567,9 @@ class Generator:
                 if self.start_time is None:
                     self.start_time = time.time()
 
-                # Set the UI message
-                self.master.set_message(
-                    "Connected to iRacing\nGenerating safety cars..."
-                )
-
+                # Progress to monitoring for SC state
+                self.master.generator_state.set(GeneratorState.MONITORING_FOR_INCIDENTS.name)
+                
                 # Break the loop
                 break
 
@@ -580,10 +579,9 @@ class Generator:
                 if self.start_time is None:
                     self.start_time = time.time()
 
-                # Set the UI message
-                self.master.set_message(
-                    "Connected to iRacing\nGenerating safety cars..."
-                )
+                # Progress to monitoring for SC state
+                self.master.generator_state.set(GeneratorState.MONITORING_FOR_INCIDENTS.name)
+                
                 break
 
             # Wait 1 second before checking again
@@ -599,6 +597,7 @@ class Generator:
             None
         """
         logger.info("Connecting to iRacing")
+        self.master.generator_state.set(GeneratorState.CONNECTING_TO_IRACING.name)
         
         # Create the iRacing SDK object
         self.ir = irsdk.IRSDK()
@@ -607,9 +606,9 @@ class Generator:
         if self.ir.startup():
             # Get reference to simulator window if successfulir
             self.ir_window.connect()
-            self.master.set_message("Connected to iRacing\n")
+            self.master.generator_state.set(GeneratorState.CONNECTED.name)
         else:
-            self.master.set_message("Error connecting to iRacing\n")
+            self.master.generator_state.set(GeneratorState.ERROR_CONNECTING.name)
             return False
     
         # Create the Drivers object

@@ -7,6 +7,7 @@ from tkinter import ttk
 from core import generator
 from core import tooltip
 from core.generator import GeneratorState
+from util.state_values import generator_state_messages
 
 logger = logging.getLogger(__name__)
 
@@ -33,14 +34,14 @@ class App(tk.Tk):
         # Set window properties
         self.title("iRacing Safety Car Generator")
 
+        # Trace state variables
+        self.generator_state = tk.StringVar(value=GeneratorState.STOPPED.name)
+        self.generator_state.trace_add('write', self.process_generator_state_change)
+
         # Create generator object
         self.generator = generator.Generator(arguments, self)
         self.shutdown_event = self.generator.shutdown_event
         self.skip_wait_for_green_event = self.generator.skip_wait_for_green_event
-
-        # Set state variables
-        self.generator_state = tk.StringVar(value=GeneratorState.STOPPED.name)
-        self.generator_state.trace_add('write', self.update_button_state)
 
         # Set handler for closing main window event
         self.protocol('WM_DELETE_WINDOW', self.handle_delete_window)
@@ -624,15 +625,17 @@ class App(tk.Tk):
         # Create run button
         logger.debug("Creating run button")
 
-        self.play_icon = tk.PhotoImage(file='./assets/play.png')
-        self.play_icon = self.play_icon.subsample(2)
-        self.stop_icon = tk.PhotoImage(file='./assets/stop.png')
-        self.stop_icon = self.stop_icon.subsample(2)
+        play_icon = tk.PhotoImage(file='./assets/play.png')
+        play_icon = play_icon.subsample(2)
+        stop_icon = tk.PhotoImage(file='./assets/stop.png')
+        stop_icon = stop_icon.subsample(2)
+
+        self.generator_state_messages = generator_state_messages(play_icon, stop_icon)
 
         self.btn_run = ttk.Button(
             self.frm_controls,
-            text="Start SC Generator",
-            image=self.play_icon,
+            text=self.generator_state_messages[GeneratorState.STOPPED]['btn_run_text'],
+            image=self.generator_state_messages[GeneratorState.STOPPED]['btn_run_icon'],
             compound=tk.LEFT,
             command=self._save_and_run
         )
@@ -755,17 +758,15 @@ class App(tk.Tk):
             None
         """
         current_state = GeneratorState[self.generator_state.get()]
-        match current_state:
-            case GeneratorState.STOPPED:
-                logger.info('Saving settings and starting the generator')
-                self._save_settings()
-                started = self.generator.run()
-                if started:
-                    self.generator_state.set(GeneratorState.RUNNING.name)
-            case GeneratorState.RUNNING:
-                logger.info('Shutting down generator due to manual stop')
-                self.generator.stop()
-                self.generator_state.set(GeneratorState.STOPPED.name)    
+        if current_state == GeneratorState.STOPPED:
+            logger.info('Saving settings and starting the generator')
+            self._save_settings()
+            started = self.generator.run()
+            if not started:
+                logger.info('Could not start generator')
+        else:
+            logger.info('Shutting down generator due to manual stop')
+            self.generator.stop()
 
     def _save_settings(self):
         """Save the settings to the config file.
@@ -828,19 +829,17 @@ class App(tk.Tk):
         self.lbl_status["text"] = message
         self.update_idletasks()
 
-    def update_button_state(self, *args):
+    def process_generator_state_change(self, *args):
         current_state = GeneratorState[self.generator_state.get()]
-        match current_state:
-            case GeneratorState.STOPPED:
-                logger.debug("Changing run button to STOPPED state")
-                self.btn_run['text'] = "Start SC Generator"
-                self.btn_run['image'] = self.play_icon
-            case GeneratorState.RUNNING:
-                logger.debug("Changing run button to RUNNING state")
-                self.btn_run['text'] = "Stop SC Generator"
-                self.btn_run['image'] = self.stop_icon
-            case _:
-                logger.error(f"Unexpected generator_state value: {current_state}")
+        logger.debug(f"Updating state to {current_state} state")
+        
+        if current_state not in self.generator_state_messages:
+            logger.error(f"Unexpected generator_state value: {current_state}")
+            return
+
+        self.btn_run['text'] = self.generator_state_messages[current_state]['btn_run_text']
+        self.btn_run['image'] = self.generator_state_messages[current_state]['btn_run_icon']
+        self.set_message(self.generator_state_messages[current_state]['message'])
 
     def _skip_wait_for_green(self):
         """Move from waiting for green to monitoring session state.
