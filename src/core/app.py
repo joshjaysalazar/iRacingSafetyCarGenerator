@@ -625,8 +625,9 @@ class App(tk.Tk):
         logger.debug("Creating run button")
 
         self.play_icon = tk.PhotoImage(file='./assets/play.png')
-        self.play_icon = self.play_icon.zoom(2)
+        self.play_icon = self.play_icon.subsample(2)
         self.stop_icon = tk.PhotoImage(file='./assets/stop.png')
+        self.stop_icon = self.stop_icon.subsample(2)
 
         self.btn_run = ttk.Button(
             self.frm_controls,
