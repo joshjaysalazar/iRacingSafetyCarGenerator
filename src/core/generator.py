@@ -47,16 +47,25 @@ class Generator:
         logger.debug("Initializing safety car variables")
 
         self.ir_window = WindowFactory(arguments)
+        self._init_state_variables()
+
+        # Create a shutdown event
+        self.shutdown_event = threading.Event()
+        self.skip_wait_for_green_event = threading.Event()
+
+    def _init_state_variables(self):
+        """ (Re)set generator state variables, called whenever we start the generator
+        
+        Args:
+            None
+        """
+        logger.debug(f"Initializing the state variables.")
         self.start_time = None
         self.total_sc_events = 0
         self.last_sc_time = None
         self.total_random_sc_events = 0
         self.lap_at_sc = None
         self.current_lap_under_sc = None
-
-        # Create a shutdown event
-        self.shutdown_event = threading.Event()
-        self.skip_wait_for_green_event = threading.Event()
 
     def _is_shutting_down(self):
         """ Returns True if shutdown_event event was triggered
@@ -606,6 +615,9 @@ class Generator:
         """
         logger.info("Connecting to iRacing")
         self.master.generator_state.set(GeneratorState.CONNECTING_TO_IRACING.name)
+
+        # Reset state variables
+        self._init_state_variables()
         
         # Create the iRacing SDK object
         self.ir = irsdk.IRSDK()
