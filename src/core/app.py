@@ -7,7 +7,7 @@ from tkinter import ttk
 from core import generator
 from core import tooltip
 from core.generator import GeneratorState
-from util.state_values import generator_state_messages
+from util.state_utils import generator_state_messages, is_stopped_state
 
 logger = logging.getLogger(__name__)
 
@@ -758,7 +758,7 @@ class App(tk.Tk):
             None
         """
         current_state = GeneratorState[self.generator_state.get()]
-        if current_state == GeneratorState.STOPPED:
+        if is_stopped_state(current_state):
             logger.info('Saving settings and starting the generator')
             self._save_settings()
             started = self.generator.run()

@@ -44,5 +44,17 @@ def generator_state_messages(play_icon, stop_icon):
             'btn_run_text': stop_generator_text,
             'btn_run_icon': stop_icon,
             'message': "Connected to iRacing\nSafety car deployed.",
-        }
+        },
+        GeneratorState.UNCAUGHT_EXCEPTION: {
+            'btn_run_text': start_generator_text,
+            'btn_run_icon': play_icon,
+            'message': "Generator threw uncaught exception,\nmore details in log.",
+        },
     }
+
+def is_stopped_state(state):
+    return state in [
+        GeneratorState.STOPPED,
+        GeneratorState.ERROR_CONNECTING,
+        GeneratorState.UNCAUGHT_EXCEPTION,
+    ] 

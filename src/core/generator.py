@@ -29,6 +29,7 @@ class GeneratorState(Enum):
     WAITING_FOR_GREEN = 6
     MONITORING_FOR_INCIDENTS = 7
     SAFETY_CAR_DEPLOYED = 8
+    UNCAUGHT_EXCEPTION = 9
 
 class Generator:
     """Generates safety car events in iRacing."""
@@ -258,59 +259,66 @@ class Generator:
         Args:
             None
         """
-        logger.debug("Starting safety car loop")
+        try:
+            logger.debug("Starting safety car loop")
 
-        # Get relevant settings from the settings file
-        start_minute = float(self.master.settings["settings"]["start_minute"])
-        end_minute = float(self.master.settings["settings"]["end_minute"])
-        max_events = int(self.master.settings["settings"]["max_safety_cars"])
-        min_time = float(self.master.settings["settings"]["min_time_between"])
+            # Get relevant settings from the settings file
+            start_minute = float(self.master.settings["settings"]["start_minute"])
+            end_minute = float(self.master.settings["settings"]["end_minute"])
+            max_events = int(self.master.settings["settings"]["max_safety_cars"])
+            min_time = float(self.master.settings["settings"]["min_time_between"])
 
-        # Adjust start minute if < 3s to avoid triggering on standing start
-        if start_minute < 0.05:
-            logger.debug("Adjusting start minute to 0.05")
-            start_minute = 0.05
+            # Adjust start minute if < 3s to avoid triggering on standing start
+            if start_minute < 0.05:
+                logger.debug("Adjusting start minute to 0.05")
+                start_minute = 0.05
 
-        # Wait for the green flag
-        self._wait_for_green_flag()
+            # Wait for the green flag
+            self._wait_for_green_flag()
 
-        # Loop until the max number of safety car events is reached
-        while self.total_sc_events < max_events:
-            # Update the drivers object
-            self.drivers.update()
+            # Loop until the max number of safety car events is reached
+            while self.total_sc_events < max_events and not self._is_shutting_down():
+                # Update the drivers object
+                self.drivers.update()
 
-            logger.debug("Checking time")
+                logger.debug("Checking time")
 
-            # If it hasn't reached the start minute, wait
-            if time.time() - self.start_time < start_minute * 60:
-                time.sleep(1)
-                continue
-
-            # If it has reached the end minute, break the loop
-            if time.time() - self.start_time > end_minute * 60:
-                break
-
-            # If it hasn't been long enough since the last event, wait
-            if self.last_sc_time is not None:
-                if time.time() - self.last_sc_time < min_time * 60:
+                # If it hasn't reached the start minute, wait
+                if time.time() - self.start_time < start_minute * 60:
                     time.sleep(1)
                     continue
 
-            # If all checks are passed, check for events
-            self._check_random()
-            self._check_stopped()
-            self._check_off_track()
+                # If it has reached the end minute, break the loop
+                if time.time() - self.start_time > end_minute * 60:
+                    break
 
-            # Break the loop if we are shutting down the thread
-            if self._is_shutting_down():
-                self.master.generator_state.set(GeneratorState.STOPPED.name)
-                break
+                # If it hasn't been long enough since the last event, wait
+                if self.last_sc_time is not None:
+                    if time.time() - self.last_sc_time < min_time * 60:
+                        time.sleep(1)
+                        continue
 
-            # Wait 1 second before checking again
-            time.sleep(1)
+                # If all checks are passed, check for events
+                self._check_random()
+                self._check_stopped()
+                self._check_off_track()
 
-        # Shutdown the iRacing SDK after all safety car events are complete
-        self.ir.shutdown()
+                # Wait 1 second before checking again
+                time.sleep(1)
+
+            # Move to a stopped state
+            self.master.generator_state.set(GeneratorState.STOPPED.name)
+
+        except Exception as e:
+            self.master.generator_state.set(GeneratorState.UNCAUGHT_EXCEPTION.name)
+            logger.exception('Generator thread threw an exception', exc_info=e)
+            raise e
+        finally:
+            # Shutdown the iRacing SDK after all safety car events are complete
+            self.ir.shutdown()
+
+            # Clear thread event to allow for future signals to be passed
+            self.shutdown_event.clear()
 
     def _send_pacelaps(self):
         """Send a pacelaps chat command to iRacing.
