@@ -4,9 +4,11 @@ ECHO Building binary. Please wait...
 :: Import pywinauto before building to avoid missing library error
 python -c "import pywinauto"
 :: Build new binary
-pyinstaller --noconfirm --log-level=FATAL --noconsole --onefile --hidden-import=comtypes.gen.UIAutomationClient --name=iRSCG main.py
+pyinstaller --noconfirm --log-level=FATAL --noconsole --onefile --hidden-import=comtypes.gen.UIAutomationClient --hidden-import=pywinauto.application --name=iRSCG main.py
 
 ECHO Copying files to dist...
+:: Copy all assets to dist  
+ROBOCOPY assets dist\assets /E 
 :: Copy settings.ini to dist
 COPY settings.ini dist\settings.ini
 :: Copy logging.json to dist

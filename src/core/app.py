@@ -625,9 +625,9 @@ class App(tk.Tk):
         # Create run button
         logger.debug("Creating run button")
 
-        play_icon = tk.PhotoImage(file='./assets/play.png')
+        play_icon = tk.PhotoImage(file='assets/play.png')
         play_icon = play_icon.subsample(2)
-        stop_icon = tk.PhotoImage(file='./assets/stop.png')
+        stop_icon = tk.PhotoImage(file='assets/stop.png')
         stop_icon = stop_icon.subsample(2)
 
         self.generator_state_messages = generator_state_messages(play_icon, stop_icon)
