@@ -35,9 +35,8 @@ class App(tk.Tk):
         self.title("iRacing Safety Car Generator")
 
         # Trace state variables
-        self.generator_state = tk.StringVar(value=GeneratorState.STOPPED.name)
-        self.generator_state.trace_add('write', self.process_generator_state_change)
-
+        self._generator_state = GeneratorState.STOPPED
+        
         # Create generator object
         self.generator = generator.Generator(arguments, self)
         self.shutdown_event = self.generator.shutdown_event
@@ -757,8 +756,7 @@ class App(tk.Tk):
         Args:
             None
         """
-        current_state = GeneratorState[self.generator_state.get()]
-        if is_stopped_state(current_state):
+        if is_stopped_state(self.generator_state):
             logger.info('Saving settings and starting the generator')
             self._save_settings()
             started = self.generator.run()
@@ -829,17 +827,25 @@ class App(tk.Tk):
         self.lbl_status["text"] = message
         self.update_idletasks()
 
-    def process_generator_state_change(self, *args):
-        current_state = GeneratorState[self.generator_state.get()]
-        logger.debug(f"Updating state to {current_state} state")
+    @property
+    def generator_state(self):
+        return self._generator_state
+    
+    @generator_state.setter
+    def generator_state(self, new_state):
+        self._generator_state = new_state
+        self.on_generator_state_change()
+
+    def on_generator_state_change(self):
+        logger.debug(f"Updating state to {self.generator_state} state")
         
-        if current_state not in self.generator_state_messages:
-            logger.error(f"Unexpected generator_state value: {current_state}")
+        if self.generator_state not in self.generator_state_messages:
+            logger.error(f"Unexpected generator_state value: {self.generator_state}")
             return
 
-        self.btn_run['text'] = self.generator_state_messages[current_state]['btn_run_text']
-        self.btn_run['image'] = self.generator_state_messages[current_state]['btn_run_icon']
-        self.set_message(self.generator_state_messages[current_state]['message'])
+        self.btn_run['text'] = self.generator_state_messages[self.generator_state]['btn_run_text']
+        self.btn_run['image'] = self.generator_state_messages[self.generator_state]['btn_run_icon']
+        self.set_message(self.generator_state_messages[self.generator_state]['message'])
 
     def _skip_wait_for_green(self):
         """Move from waiting for green to monitoring session state.

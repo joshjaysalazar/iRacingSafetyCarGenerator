@@ -316,10 +316,10 @@ class Generator:
                 time.sleep(1)
 
             # Move to a stopped state
-            self.master.generator_state.set(GeneratorState.STOPPED.name)
+            self.master.generator_state = GeneratorState.STOPPED
 
         except Exception as e:
-            self.master.generator_state.set(GeneratorState.UNCAUGHT_EXCEPTION.name)
+            self.master.generator_state = GeneratorState.UNCAUGHT_EXCEPTION
             logger.exception('Generator thread threw an exception', exc_info=e)
             raise e
         finally:
@@ -494,7 +494,7 @@ class Generator:
         self.ir_window.send_message(f"!y {message}{{ENTER}}")
 
         # Move to SC deployed state
-        self.master.generator_state.set(GeneratorState.SAFETY_CAR_DEPLOYED.name)
+        self.master.generator_state = GeneratorState.SAFETY_CAR_DEPLOYED
 
         # Increment the total safety car events
         self.total_sc_events += 1
@@ -551,7 +551,7 @@ class Generator:
                 sessions[i] = session["SessionName"]
 
             # Progress state to waiting for race session
-            self.master.generator_state.set(GeneratorState.WAITING_FOR_RACE_SESSION.name)
+            self.master.generator_state = GeneratorState.WAITING_FOR_RACE_SESSION
 
             # Loop until in a race session
             while True:
@@ -574,7 +574,7 @@ class Generator:
 
 
         # Progress state to waiting for green
-        self.master.generator_state.set(GeneratorState.WAITING_FOR_GREEN.name)
+        self.master.generator_state = GeneratorState.WAITING_FOR_GREEN
 
         # Loop until the green flag is displayed
         while True:
@@ -585,7 +585,7 @@ class Generator:
                     self.start_time = time.time()
 
                 # Progress to monitoring for SC state
-                self.master.generator_state.set(GeneratorState.MONITORING_FOR_INCIDENTS.name)
+                self.master.generator_state = GeneratorState.MONITORING_FOR_INCIDENTS
                 
                 # Break the loop
                 break
@@ -597,7 +597,7 @@ class Generator:
                     self.start_time = time.time()
 
                 # Progress to monitoring for SC state
-                self.master.generator_state.set(GeneratorState.MONITORING_FOR_INCIDENTS.name)
+                self.master.generator_state = GeneratorState.MONITORING_FOR_INCIDENTS
                 
                 break
 
@@ -614,7 +614,7 @@ class Generator:
             None
         """
         logger.info("Connecting to iRacing")
-        self.master.generator_state.set(GeneratorState.CONNECTING_TO_IRACING.name)
+        self.master.generator_state = GeneratorState.CONNECTING_TO_IRACING
 
         # Reset state variables
         self._init_state_variables()
@@ -626,9 +626,9 @@ class Generator:
         if self.ir.startup():
             # Get reference to simulator window if successfulir
             self.ir_window.connect()
-            self.master.generator_state.set(GeneratorState.CONNECTED.name)
+            self.master.generator_state = GeneratorState.CONNECTED
         else:
-            self.master.generator_state.set(GeneratorState.ERROR_CONNECTING.name)
+            self.master.generator_state = GeneratorState.ERROR_CONNECTING
             return False
     
         # Create the Drivers object
