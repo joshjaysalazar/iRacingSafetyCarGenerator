@@ -29,18 +29,30 @@ def setup_logging():
     # Log the start of the program
     logger.info("Program started")
 
-def main():
+def parse_arguments():
+    import argparse
+    parser = argparse.ArgumentParser(
+        prog='iRacingSafetyCarGenerator',
+        description='Trigger automated safety car events in iRacing')
+    parser.add_argument('-dwi', '--disable-window-interactions', action='store_true')
+    parser.add_argument('-dev', '--developer-mode', action='store_true')
+    args = parser.parse_args()
+    
+    return args
+
+def main(arguments):
     """Main function for the safety car generator."""
     # Set up logging
     setup_logging()
 
     # Try to create and run the app, and log exceptions
     try:
-        app = App()
+        app = App(arguments)
         app.mainloop()
     except Exception as e:
         logging.exception("A fatal error has occurred")
         raise e
 
 if __name__ == "__main__":
-    main()
+    arguments = parse_arguments()
+    main(arguments)

@@ -5,15 +5,35 @@ import time
 import traceback
 
 import irsdk
-from pywinauto.application import Application
 
 from core import drivers
+from core import iracing_window
+from core import mock_window
+
+from enum import Enum
 
 logger = logging.getLogger(__name__)
 
+def WindowFactory(arguments):
+    if arguments.disable_window_interactions:
+        return mock_window.MockWindow()
+    return iracing_window.IRacingWindow()
+
+
+class GeneratorState(Enum):
+    STOPPED = 1
+    CONNECTING_TO_IRACING = 2
+    CONNECTED = 3
+    ERROR_CONNECTING = 4
+    WAITING_FOR_RACE_SESSION = 5
+    WAITING_FOR_GREEN = 6
+    MONITORING_FOR_INCIDENTS = 7
+    SAFETY_CAR_DEPLOYED = 8
+    UNCAUGHT_EXCEPTION = 9
+
 class Generator:
     """Generates safety car events in iRacing."""
-    def __init__(self, master=None):
+    def __init__(self, arguments, master=None):
         """Initialize the generator object.
 
         Args:
@@ -21,19 +41,31 @@ class Generator:
         """
         logger.info("Initializing safety car generator")
         self.master = master
+        self.thread = None
 
         # Variables to track safety car events
         logger.debug("Initializing safety car variables")
-        self.ir_window = None
+
+        self.ir_window = WindowFactory(arguments)
+        self._init_state_variables()
+
+        # Create a shutdown event
+        self.shutdown_event = threading.Event()
+        self.skip_wait_for_green_event = threading.Event()
+
+    def _init_state_variables(self):
+        """ (Re)set generator state variables, called whenever we start the generator
+        
+        Args:
+            None
+        """
+        logger.debug(f"Initializing the state variables.")
         self.start_time = None
         self.total_sc_events = 0
         self.last_sc_time = None
         self.total_random_sc_events = 0
         self.lap_at_sc = None
         self.current_lap_under_sc = None
-
-        # Create a shutdown event
-        self.shutdown_event = threading.Event()
 
     def _is_shutting_down(self):
         """ Returns True if shutdown_event event was triggered
@@ -42,6 +74,14 @@ class Generator:
             None
         """
         return self.shutdown_event.is_set()
+    
+    def _skip_waiting_for_green(self):
+        """ Returns True if skip_wait_for_green_event event was triggered
+        
+        Args:
+            None
+        """
+        return self.skip_wait_for_green_event.is_set()
 
     def _check_random(self):
         """Check to see if a random safety car event should be triggered.
@@ -228,58 +268,66 @@ class Generator:
         Args:
             None
         """
-        logger.debug("Starting safety car loop")
+        try:
+            logger.debug("Starting safety car loop")
 
-        # Get relevant settings from the settings file
-        start_minute = float(self.master.settings["settings"]["start_minute"])
-        end_minute = float(self.master.settings["settings"]["end_minute"])
-        max_events = int(self.master.settings["settings"]["max_safety_cars"])
-        min_time = float(self.master.settings["settings"]["min_time_between"])
+            # Get relevant settings from the settings file
+            start_minute = float(self.master.settings["settings"]["start_minute"])
+            end_minute = float(self.master.settings["settings"]["end_minute"])
+            max_events = int(self.master.settings["settings"]["max_safety_cars"])
+            min_time = float(self.master.settings["settings"]["min_time_between"])
 
-        # Adjust start minute if < 3s to avoid triggering on standing start
-        if start_minute < 0.05:
-            logger.debug("Adjusting start minute to 0.05")
-            start_minute = 0.05
+            # Adjust start minute if < 3s to avoid triggering on standing start
+            if start_minute < 0.05:
+                logger.debug("Adjusting start minute to 0.05")
+                start_minute = 0.05
 
-        # Wait for the green flag
-        self._wait_for_green_flag()
+            # Wait for the green flag
+            self._wait_for_green_flag()
 
-        # Loop until the max number of safety car events is reached
-        while self.total_sc_events < max_events:
-            # Update the drivers object
-            self.drivers.update()
+            # Loop until the max number of safety car events is reached
+            while self.total_sc_events < max_events and not self._is_shutting_down():
+                # Update the drivers object
+                self.drivers.update()
 
-            logger.debug("Checking time")
+                logger.debug("Checking time")
 
-            # If it hasn't reached the start minute, wait
-            if time.time() - self.start_time < start_minute * 60:
-                time.sleep(1)
-                continue
-
-            # If it has reached the end minute, break the loop
-            if time.time() - self.start_time > end_minute * 60:
-                break
-
-            # If it hasn't been long enough since the last event, wait
-            if self.last_sc_time is not None:
-                if time.time() - self.last_sc_time < min_time * 60:
+                # If it hasn't reached the start minute, wait
+                if time.time() - self.start_time < start_minute * 60:
                     time.sleep(1)
                     continue
 
-            # If all checks are passed, check for events
-            self._check_random()
-            self._check_stopped()
-            self._check_off_track()
+                # If it has reached the end minute, break the loop
+                if time.time() - self.start_time > end_minute * 60:
+                    break
 
-            # Break the loop if we are shutting down the thread
-            if self._is_shutting_down():
-                break
+                # If it hasn't been long enough since the last event, wait
+                if self.last_sc_time is not None:
+                    if time.time() - self.last_sc_time < min_time * 60:
+                        time.sleep(1)
+                        continue
 
-            # Wait 1 second before checking again
-            time.sleep(1)
+                # If all checks are passed, check for events
+                self._check_random()
+                self._check_stopped()
+                self._check_off_track()
 
-        # Shutdown the iRacing SDK after all safety car events are complete
-        self.ir.shutdown()
+                # Wait 1 second before checking again
+                time.sleep(1)
+
+            # Move to a stopped state
+            self.master.generator_state = GeneratorState.STOPPED
+
+        except Exception as e:
+            self.master.generator_state = GeneratorState.UNCAUGHT_EXCEPTION
+            logger.exception('Generator thread threw an exception', exc_info=e)
+            raise e
+        finally:
+            # Shutdown the iRacing SDK after all safety car events are complete
+            self.ir.shutdown()
+
+            # Clear thread event to allow for future signals to be passed
+            self.shutdown_event.clear()
 
     def _send_pacelaps(self):
         """Send a pacelaps chat command to iRacing.
@@ -320,13 +368,10 @@ class Generator:
             # If any lead car is at 50%, send the pacelaps command
             if max(lead_dist) >= 0.5:
                 logger.info("Sending pacelaps command")
-                self.ir_window.set_focus()
+                self.ir_window.focus()
                 self.ir.chat_command(1)
                 time.sleep(0.5)
-                self.ir_window.type_keys(
-                    f"!p {laps_under_sc - 1}{{ENTER}}",
-                    with_spaces=True
-                )
+                self.ir_window.send_message(f"!p {laps_under_sc - 1}{{ENTER}}")
 
                 # Return True when pace laps are done
                 return True
@@ -426,12 +471,10 @@ class Generator:
         if len(cars_to_wave) > 0:
             for car in cars_to_wave:
                 logger.info(f"Sending wave around command for car {car}")
-                self.ir_window.set_focus()
+                self.ir_window.focus()
                 self.ir.chat_command(1)
                 time.sleep(0.5)
-                self.ir_window.type_keys(
-                    f"!w {car}{{ENTER}}", with_spaces=True
-                )
+                self.ir_window.send_message(f"!w {car}{{ENTER}}")
 
         # Return True when wave arounds are done
         return True
@@ -445,15 +488,13 @@ class Generator:
         logger.info("Deploying safety car")
 
         # Send yellow flag chat command
-        self.ir_window.set_focus()
+        self.ir_window.focus()
         self.ir.chat_command(1)
         time.sleep(0.5)
-        self.ir_window.type_keys(f"!y {message}{{ENTER}}", with_spaces=True)
+        self.ir_window.send_message(f"!y {message}{{ENTER}}")
 
-        # Set the UI message
-        self.master.set_message(
-            "Connected to iRacing\nSafety car deployed."
-        )
+        # Move to SC deployed state
+        self.master.generator_state = GeneratorState.SAFETY_CAR_DEPLOYED
 
         # Increment the total safety car events
         self.total_sc_events += 1
@@ -509,18 +550,21 @@ class Generator:
             for i, session in enumerate(session_list):
                 sessions[i] = session["SessionName"]
 
+            # Progress state to waiting for race session
+            self.master.generator_state = GeneratorState.WAITING_FOR_RACE_SESSION
+
             # Loop until in a race session
             while True:
                 # Get the current session index
                 current_idx = self.ir["SessionNum"]
 
+                # Break the loop if we are shutting down the thread or skipping the wait
+                if self._is_shutting_down() or self._skip_waiting_for_green():
+                    logger.debug("Skip waiting for race session because of a threading event")
+                    break
+
                 # If the current session is PRACTICE, QUALIFY, or WARMUP
                 if sessions[current_idx] in ["PRACTICE", "QUALIFY", "WARMUP"]:
-                    # Add message to text box
-                    self.master.set_message(
-                        "Connected to iRacing\nWaiting for race session..."
-                    )
-
                     # Wait 1 second before checking again
                     time.sleep(1)
                 
@@ -528,10 +572,9 @@ class Generator:
                 else:
                     break
 
-        # Add message to text box
-        self.master.set_message(
-            "Connected to iRacing\nWaiting for green flag..."
-        )
+
+        # Progress state to waiting for green
+        self.master.generator_state = GeneratorState.WAITING_FOR_GREEN
 
         # Loop until the green flag is displayed
         while True:
@@ -541,16 +584,21 @@ class Generator:
                 if self.start_time is None:
                     self.start_time = time.time()
 
-                # Set the UI message
-                self.master.set_message(
-                    "Connected to iRacing\nGenerating safety cars..."
-                )
-
+                # Progress to monitoring for SC state
+                self.master.generator_state = GeneratorState.MONITORING_FOR_INCIDENTS
+                
                 # Break the loop
                 break
 
-            # Break the loop if we are shutting down the thread
-            if self._is_shutting_down():
+            # Break the loop if we are shutting down the thread or skipping the wait
+            if self._is_shutting_down() or self._skip_waiting_for_green():
+                logger.debug("Skipping wait for green because of a threading event")
+                if self.start_time is None:
+                    self.start_time = time.time()
+
+                # Progress to monitoring for SC state
+                self.master.generator_state = GeneratorState.MONITORING_FOR_INCIDENTS
+                
                 break
 
             # Wait 1 second before checking again
@@ -566,6 +614,10 @@ class Generator:
             None
         """
         logger.info("Connecting to iRacing")
+        self.master.generator_state = GeneratorState.CONNECTING_TO_IRACING
+
+        # Reset state variables
+        self._init_state_variables()
         
         # Create the iRacing SDK object
         self.ir = irsdk.IRSDK()
@@ -573,14 +625,11 @@ class Generator:
         # Attempt to connect and tell user if successful
         if self.ir.startup():
             # Get reference to simulator window if successfulir
-            self.ir_window = Application().connect(
-                title="iRacing.com Simulator"
-            ).top_window()
-            
-            self.master.set_message("Connected to iRacing\n")
+            self.ir_window.connect()
+            self.master.generator_state = GeneratorState.CONNECTED
         else:
-            self.master.set_message("Error connecting to iRacing\n")
-            return
+            self.master.generator_state = GeneratorState.ERROR_CONNECTING
+            return False
     
         # Create the Drivers object
         self.drivers = drivers.Drivers(self)
@@ -588,5 +637,15 @@ class Generator:
         threading.excepthook = self.generator_thread_excepthook
 
         # Run the loop in a separate thread
-        self.thread = threading.Thread(target=self._loop)
-        self.thread.start()
+        if self.thread == None or not self.thread.is_alive():
+            logger.info("Starting the loop thread")
+            self.thread = threading.Thread(target=self._loop)
+            self.thread.start()
+            return True
+        else:
+            logger.warning("Not starting the loop thread because it is still alive")
+            return False
+
+    def stop(self):
+        logger.info("Triggering shutdown event to stop generator")
+        self.shutdown_event.set()

@@ -6,12 +6,14 @@ from tkinter import ttk
 
 from core import generator
 from core import tooltip
+from core.generator import GeneratorState
+from util.state_utils import generator_state_messages, is_stopped_state
 
 logger = logging.getLogger(__name__)
 
 class App(tk.Tk):
     """Main application window for the safety car generator."""
-    def __init__(self):
+    def __init__(self, arguments):
         """Initialize the main application window.
         
         Args:
@@ -19,6 +21,7 @@ class App(tk.Tk):
         """
         logger.info("Initializing main application window")
         super().__init__()
+        self.arguments = arguments
 
         # Tooltips text
         self.load_tooltips_text()
@@ -31,9 +34,13 @@ class App(tk.Tk):
         # Set window properties
         self.title("iRacing Safety Car Generator")
 
+        # Trace state variables
+        self._generator_state = GeneratorState.STOPPED
+        
         # Create generator object
-        self.generator = generator.Generator(self)
+        self.generator = generator.Generator(arguments, self)
         self.shutdown_event = self.generator.shutdown_event
+        self.skip_wait_for_green_event = self.generator.skip_wait_for_green_event
 
         # Set handler for closing main window event
         self.protocol('WM_DELETE_WINDOW', self.handle_delete_window)
@@ -616,9 +623,19 @@ class App(tk.Tk):
 
         # Create run button
         logger.debug("Creating run button")
+
+        play_icon = tk.PhotoImage(file='assets/play.png')
+        play_icon = play_icon.subsample(2)
+        stop_icon = tk.PhotoImage(file='assets/stop.png')
+        stop_icon = stop_icon.subsample(2)
+
+        self.generator_state_messages = generator_state_messages(play_icon, stop_icon)
+
         self.btn_run = ttk.Button(
             self.frm_controls,
-            text="Run",
+            text=self.generator_state_messages[GeneratorState.STOPPED]['btn_run_text'],
+            image=self.generator_state_messages[GeneratorState.STOPPED]['btn_run_icon'],
+            compound=tk.LEFT,
             command=self._save_and_run
         )
         self.btn_run.grid(
@@ -644,6 +661,32 @@ class App(tk.Tk):
             padx=5,
             pady=5
         )
+        controls_row += 1
+
+        # Add dev mode controls
+        if self.arguments.developer_mode:
+            logger.debug("Creating developer_mode UI")
+            self.frm_dev_mode = ttk.LabelFrame(self.frm_controls, text="DEVELOPER MODE")
+            self.frm_dev_mode.grid(
+                row=controls_row,
+                column=0,
+                sticky="ew", 
+                padx=5,
+                pady=5
+            )
+
+            self.btn_skip_wait_for_green = ttk.Button(
+                self.frm_dev_mode,
+                text="Skip Wait for Green",
+                command=self._skip_wait_for_green
+            )
+            self.btn_skip_wait_for_green.grid(
+                row=0,
+                column=0,
+                sticky="ew",
+                padx=5,
+                pady=5
+            )
 
         # Fill in the widgets with the settings from the config file
         logger.debug("Filling in widgets with settings from config file")
@@ -713,8 +756,15 @@ class App(tk.Tk):
         Args:
             None
         """
-        self._save_settings()
-        self.generator.run()
+        if is_stopped_state(self.generator_state):
+            logger.info('Saving settings and starting the generator')
+            self._save_settings()
+            started = self.generator.run()
+            if not started:
+                logger.info('Could not start generator')
+        else:
+            logger.info('Shutting down generator due to manual stop')
+            self.generator.stop()
 
     def _save_settings(self):
         """Save the settings to the config file.
@@ -776,3 +826,31 @@ class App(tk.Tk):
         logger.debug(f"Setting status label to: {message}")
         self.lbl_status["text"] = message
         self.update_idletasks()
+
+    @property
+    def generator_state(self):
+        return self._generator_state
+    
+    @generator_state.setter
+    def generator_state(self, new_state):
+        self._generator_state = new_state
+        self.on_generator_state_change()
+
+    def on_generator_state_change(self):
+        logger.debug(f"Updating state to {self.generator_state} state")
+        
+        if self.generator_state not in self.generator_state_messages:
+            logger.error(f"Unexpected generator_state value: {self.generator_state}")
+            return
+
+        self.btn_run['text'] = self.generator_state_messages[self.generator_state]['btn_run_text']
+        self.btn_run['image'] = self.generator_state_messages[self.generator_state]['btn_run_icon']
+        self.set_message(self.generator_state_messages[self.generator_state]['message'])
+
+    def _skip_wait_for_green(self):
+        """Move from waiting for green to monitoring session state.
+
+        Args:
+            None
+        """
+        self.skip_wait_for_green_event.set()

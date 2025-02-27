@@ -37,6 +37,18 @@
 			"handlers": [
 				"file"
 			]
+		},
+		"core.iracing_window": {
+			"level": "INFO",
+			"handlers": [
+				"file"
+			]
+		},
+		"core.mock_window": {
+			"level": "DEBUG",
+			"handlers": [
+				"file"
+			]
 		}
 	}
 }
