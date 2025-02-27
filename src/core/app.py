@@ -787,6 +787,19 @@ class App(tk.Tk):
                 pady=5
             )
 
+            self.btn_split_classes = ttk.Button(
+                self.frm_dev_mode,
+                text="Split classes",
+                command=self._split_classes
+            )
+            self.btn_split_classes.grid(
+                row=2,
+                column=0,
+                sticky="ew",
+                padx=5,
+                pady=5
+            )
+
         # Fill in the widgets with the settings from the config file
         logger.debug("Filling in widgets with settings from config file")
         self.var_random.set(self.settings["settings"].getboolean("random"))
@@ -964,8 +977,16 @@ class App(tk.Tk):
 
     def _copy_sdk_data(self):
         """Copy current SDK data to clipboard
-
+    
         Args:
             None
         """
         copy_sdk_data_to_clipboard()
+
+    def _split_classes(self):
+        """Send EOL commands to split the classes
+
+        Args:
+            None
+        """
+        pass
