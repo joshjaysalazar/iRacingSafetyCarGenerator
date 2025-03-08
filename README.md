@@ -6,7 +6,7 @@ This program is designed to trigger safety car events in iRacing with more contr
 
 ## Usage
 
-1. Set your settings in the applicaiton window, then click the `Save Settings` button. This will write your settings to a file and load them back up next time you launch the app.
+1. Set your settings in the application window, then click the `Save Settings` button. This will write your settings to a file and load them back up next time you launch the app.
 
 2. Launch your iRacing simulator session.
 
@@ -38,7 +38,7 @@ python main.py
 # Run dev mode (from src)
 python main.py -dev
 
-# Run on a non-Windows machine (removes dependency on Windows only pywinauto dependency)
+# Run on a non-Windows machine (mocks the Windows-only pywinauto dependency)
 python main.py -dev -dwi
 
 ```
@@ -105,7 +105,8 @@ When a Safety Car event is thrown, the following happens:
 
 * The current lap is noted to be able to offset any of the events in the procedure accordingly.
 * We wait until the lead car has done enough laps under Safety Car before throwing wave arounds. This is configured through the "Laps before wave arounds" setting.
-* "Laps under safety car"
+* Based on the "Laps under safety car" setting, we will signal how many laps are left before green.
+* We wait for the green flag to be shown before starting to monitor for events again.
 
 #### Wave arounds
 
