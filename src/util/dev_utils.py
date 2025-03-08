@@ -23,7 +23,7 @@ def copy_sdk_data_to_clipboard():
             "CarIdxOnPitRoad": ir["CarIdxOnPitRoad"],
         }
         
-        pyperclip.copy(json.dumps(data))
+        pyperclip.copy(json.dumps(data, indent=4))
 
     finally:
         if connected:

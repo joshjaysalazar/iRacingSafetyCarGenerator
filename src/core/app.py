@@ -689,12 +689,12 @@ class App(tk.Tk):
                 pady=5
             )
 
-            self.btn_dump_sdk_data = ttk.Button(
+            self.btn_copy_sdk_data = ttk.Button(
                 self.frm_dev_mode,
-                text="Dump SDK data",
-                command=self._dump_sdk_data
+                text="Copy SDK data",
+                command=self._copy_sdk_data
             )
-            self.btn_dump_sdk_data.grid(
+            self.btn_copy_sdk_data.grid(
                 row=1,
                 column=0,
                 sticky="ew",
@@ -869,7 +869,7 @@ class App(tk.Tk):
         """
         self.skip_wait_for_green_event.set()
 
-    def _dump_sdk_data(self):
+    def _copy_sdk_data(self):
         """Copy current SDK data to clipboard
 
         Args:
