@@ -8,6 +8,7 @@ from core import generator
 from core import tooltip
 from core.generator import GeneratorState
 from util.state_utils import generator_state_messages, is_stopped_state
+from util.dev_utils import copy_sdk_data_to_clipboard
 
 logger = logging.getLogger(__name__)
 
@@ -688,6 +689,19 @@ class App(tk.Tk):
                 pady=5
             )
 
+            self.btn_dump_sdk_data = ttk.Button(
+                self.frm_dev_mode,
+                text="Dump SDK data",
+                command=self._dump_sdk_data
+            )
+            self.btn_dump_sdk_data.grid(
+                row=1,
+                column=0,
+                sticky="ew",
+                padx=5,
+                pady=5
+            )
+
         # Fill in the widgets with the settings from the config file
         logger.debug("Filling in widgets with settings from config file")
         self.var_random.set(self.settings["settings"].getboolean("random"))
@@ -854,3 +868,11 @@ class App(tk.Tk):
             None
         """
         self.skip_wait_for_green_event.set()
+
+    def _dump_sdk_data(self):
+        """Copy current SDK data to clipboard
+
+        Args:
+            None
+        """
+        copy_sdk_data_to_clipboard()
