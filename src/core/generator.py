@@ -58,6 +58,7 @@ class Generator:
         # Create a shutdown event
         self.shutdown_event = threading.Event()
         self.skip_wait_for_green_event = threading.Event()
+        self.split_classes_event = threading.Event()
 
     def _init_state_variables(self):
         """ (Re)set generator state variables, called whenever we start the generator
@@ -88,6 +89,14 @@ class Generator:
             None
         """
         return self.skip_wait_for_green_event.is_set()
+    
+    def _split_classes_event_is_set(self):
+        """ Returns True if split_classes_event event was triggered
+        
+        Args:
+            None
+        """
+        return self.split_classes_event.is_set()
 
     def _check_random(self):
         """Check to see if a random safety car event should be triggered.
@@ -496,6 +505,21 @@ class Generator:
 
         # Return True when wave arounds are done
         return True
+    
+    def _split_classes(self):
+        """Split the classes by sending EOL chat commands for the slower class. 
+            This functionality is experimental, manually triggered and limited to 
+            races with only two classes.
+
+        Args:
+            None
+        """
+        # Determine what classes are on the grid
+
+        # Decide which one is the slower one
+
+        # Send EOL commands from lead through last in-order
+    
 
     def _start_safety_car(self, message=""):
         """Send a yellow flag to iRacing.
@@ -604,6 +628,14 @@ class Generator:
                 
                 # Break the loop
                 break
+
+            # If we are waiting for green as part of a safety car procedure, check for a split classes signal
+            if self.start_time is not None and self._split_classes_event_is_set():
+                logger.debug("We are splitting classes")
+                self._split_classes()
+
+                # Clear the event so that we may send it again in the future
+                self.split_classes_event.clear()
 
             # Break the loop if we are shutting down the thread or skipping the wait
             if self._is_shutting_down() or self._skip_waiting_for_green():
