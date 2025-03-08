@@ -14,11 +14,34 @@ This program is designed to trigger safety car events in iRacing with more contr
 
 4. The app will wait for the race to start and then monitor for any of the incident thresholds to be met to throw a Safety Car event.
 
-5. Important: do not use chat while the generator is running as it uses automated chat inputs to send commands to the simulator. When yellows are thrown, also make sure to not alt-tab around your running programs as iRacing will need to maintain focus to send the commands.
+5. Important: do not use chat while the generator is running as the app uses automated chat inputs to send commands to the simulator. When yellows are thrown, also make sure to not alt-tab around your running programs as iRacing will need to maintain focus to send the commands.
 
-## Inner workings of the generator (aka developer documentation)
+## Developer documentation
 
 The desciptions below go into the nitty gritty of how the app functions and is documented to help users and other developers understand some of the mechanics utilized to make the app work around some of the SDK limitations.
+
+### Run the application
+
+```
+# Clone the repository (or use your own fork!)
+git clone git@github.com:joshjaysalazar/iRacingSafetyCarGenerator.git
+
+# Set up your python virtual environment
+python -m venv myenv
+
+# Install dependencies
+pip install -r requirements.txt
+
+# Run vanilla mode (from src)
+python main.py
+
+# Run dev mode (from src)
+python main.py -dev
+
+# Run on a non-Windows machine (removes dependency on Windows only pywinauto dependency)
+python main.py -dev -dwi
+
+```
 
 ### High level execution
 
@@ -35,7 +58,7 @@ Steps:
 
 * Waits for the race session to begin
 * Waits for the green flag to be thrown
-* Note that in its current iteration, the app will not work when started _after_ the green flag is shown.
+* Note that in its current iteration, the app will not work when started _after_ the green flag is shown. In the developer tools a "Skip wait for green" button was added to make testing easier.
 
 ### Driver updates
 
@@ -43,7 +66,7 @@ Steps:
 * Before doing so, we keep a copy of the current information so that we can look at the delta
 * The information gathered is:
     * Laps completed
-    * The current lap distance (as a fraction of the total lap - _To be confirmed_)
+    * The current lap distance (as a fraction of the total lap)
     * The surface the car is on (on or off track, pit, etc.)
 
 ### Eligible Safety Car window
@@ -52,15 +75,15 @@ Steps:
 
 **Time since last Safety Car**: Safety Cars will not be thrown when the last Safety Car occurred within the set "Minimum minutes between" time. Note that this time is currently recorded _at the start_ of a Safety Car event, not when it ends.
 
-**Max Safety Car events**: When the "Maximum safety cars" has been reached, the app stops monitor for Safety Car events.
+**Max Safety Car events**: When the "Maximum safety cars" has been reached, the app stops monitoring for Safety Car events.
 
 ### Random events
 
-We generate a random number and then check if that number is smaller than the odds of the event occurring at any second. Takes into account the overall window length.
+We generate a random number and check if that number is smaller than the odds of the event occurring at any second. Takes into account the overall window length.
 
 ### Stopped cars events
 
-* For each driver, we check their laps completed and current lap distance to calculated their total distance. Note: Based on the logic, I believe current lap distance is represented as a fraction of the total lap rather than the actual distance, but I have not confirmed this.
+* For each driver, we check their laps completed and current lap distance to calculated their total distance. Note: current lap distance is represented as a fraction of the total lap rather than the actual distance.
 * We compare this to their total distance from the previous loop iteration. If it is the same, the car is stopped.
 * When the threshold of stopped cars is met, we throw a Safety Car event.
 
@@ -78,13 +101,33 @@ We account for:
 
 ### Safety Car procedure
 
-TODO
+When a Safety Car event is thrown, the following happens:
 
-## References
+* The current lap is noted to be able to offset any of the events in the procedure accordingly.
+* We wait until the lead car has done enough laps under Safety Car before throwing wave arounds. This is configured through the "Laps before wave arounds" setting.
+* "Laps under safety car"
 
-Basic irSDK usage: https://github.com/kutu/pyirsdk/tree/master/tutorials
-A list of variables available through the SDK: https://github.com/kutu/pyirsdk/blob/master/vars.txt
-Unofficial, more comprehensive, SDK docs: https://sajax.github.io/irsdkdocs/yaml
+#### Wave arounds
+
+* First off, this is skipped if "Automatic Wave arounds" is unchecked.
+* We noted earlier when the Safety Car event started, which is used to determine when the wave around signals should be sent, based on the "Laps before wave arounds" setting.
+* Once the first car reaches the target wave lap, signals will be sent.
+* We determine the lead car for all classes in the race.
+* Cars are waved when:
+    * A car is two laps down (i.e. crossed S/F 2 fewer times, which could also be a lap and a bit).
+    * A car is a lap down AND are behind their class lead on the current lap.
+    * POTENTIAL ISSUE: What about cars on the same lap but ahead of the lead in their class?
+* We send the wave commands for all cars who qualify for a wave-around with 0.5 second delay between each command.
+
+### Developer mode
+
+The `-dev` argument can be used to start the application in a dev mode, which will add a panel to the GUI with some developer tools (like "Skip wait for green" to make testing easier) and is your place to add any experimental features.
+
+### References
+
+* Basic irSDK usage: https://github.com/kutu/pyirsdk/tree/master/tutorials
+* A list of variables available through the SDK: https://github.com/kutu/pyirsdk/blob/master/vars.txt
+* Unofficial, more comprehensive, SDK docs: https://sajax.github.io/irsdkdocs/yaml
 
 ## License
 
