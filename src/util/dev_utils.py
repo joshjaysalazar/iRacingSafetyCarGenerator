@@ -14,9 +14,9 @@ def copy_sdk_data_to_clipboard():
         
         data = {
             "SessionNum": ir["SessionNum"],
-            "SessionInfo_Sessions": ir["SessionInfo"]["Sessions"],
+            "SessionInfo": ir["SessionInfo"],
             "SessionFlags": ir["SessionFlags"],
-            "DriverInfo_Drivers": ir["DriverInfo"]["Drivers"],
+            "DriverInfo": ir["DriverInfo"],
             "CarIdxLap": ir["CarIdxLap"],
             "CarIdxLapDistPct": ir["CarIdxLapDistPct"],
             "CarIdxClass": ir["CarIdxClass"],
