@@ -11,6 +11,7 @@ from core import drivers
 from core.interactions import command_sender
 from core.interactions import iracing_window
 from core.interactions import mock_window
+from util.generator_utils import get_split_class_commands
 
 from enum import Enum
 
@@ -514,12 +515,24 @@ class Generator:
         Args:
             None
         """
-        # Determine what classes are on the grid
+        logger.info("Determining if we need to split classes")
 
-        # Decide which one is the slower one
+        # Get the commands
+        drivers = self.ir["DriverInfo"]["Drivers"]
+        car_positions = self.ir["CarIdxLapDistPct"]
+        on_pit_road = self.ir["CarIdxOnPitRoad"]
+        pace_car_idx = self.ir["PaceCarIdx"]
+        commands = get_split_class_commands(drivers, car_positions, on_pit_road, pace_car_idx)
 
         # Send EOL commands from lead through last in-order
-    
+        for eol_command in commands:
+            logger.info(f"Sending EOL command: {eol_command}")
+            self.ir_window.focus()
+            self.ir.chat_command(1)
+            time.sleep(0.5)
+            self.ir_window.send_message(f"{eol_command}{{ENTER}}")
+
+        logger.info("Done splitting classes")
 
     def _start_safety_car(self, message=""):
         """Send a yellow flag to iRacing.
