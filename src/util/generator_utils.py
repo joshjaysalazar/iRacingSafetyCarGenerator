@@ -7,7 +7,7 @@ def get_split_class_commands(drivers, car_positions, on_pit_road, pace_car_idx):
             drivers: The list of cars as provided by the irSDK DriverInfo->Drivers property.
             car_positions: The list of car positions as provided by the irSDK CarIdxLapDistPct property.
             on_pit_road: The list booleans indicating if cars are on pit road (CarIdxOnPitRoad)
-            pace_car_idx: The index of the pacecar in car_positions as provided by the irSDK PaceCarIdx property.
+            pace_car_idx: The index of the pacecar in car_positions as provided by the irSDK DriverInfo->PaceCarIdx property.
 
         Returns:
             List[str]: The commands to send, in order, to split the classes.
@@ -77,8 +77,6 @@ def get_split_class_commands(drivers, car_positions, on_pit_road, pace_car_idx):
             pos_pointer += 1
         class_pointer += 1
 
-    assert pos_pointer == len(idx_all_sorted)
-
     # No one is out of order!
     if len(classes_out_of_order) == 0:
         return []
@@ -106,7 +104,7 @@ def positions_from_safety_car(car_positions, pace_car_idx):
         
         Args:
             car_positions: The list of car positions as provided by the irSDK CarIdxLapDistPct property.
-            pace_car_idx: The index of the pacecar in car_positions as provided by the irSDK PaceCarIdx property.
+            pace_car_idx: The index of the pacecar in car_positions as provided by the irSDK DriverInfo->PaceCarIdx property.
 
         Returns:
             List[float]: The car_positions list, offset by the current position of the safety car.

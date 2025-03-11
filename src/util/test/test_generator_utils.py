@@ -51,36 +51,36 @@ split_class_test_data = [
     {
         # Test case: Cars are already in the right order
         "drivers": drivers,
-        "car_positions": [2.0, 1.9, 1.8, 1.7, 2.1],
-        "on_pit_road": [False, False, False, False, False],
+        "car_positions": [2.0, 1.9, 1.8, 1.7, 2.1, -1, -1, -1, -1],
+        "on_pit_road": [False, False, False, False, False, False, False, False, False],
         "expected": [],
     },
     {
         # Two are swapped
         "drivers": drivers,
-        "car_positions": [2.0, 1.8, 1.9, 1.7, 2.1],
-        "on_pit_road": [False, False, False, False, False],
+        "car_positions": [2.0, 1.8, 1.9, 1.7, 2.1, -1, -1, -1, -1],
+        "on_pit_road": [False, False, False, False, False, False, False, False, False],
         "expected": ["!eol 3 Splitting classes", "!eol 4 Splitting classes"],
     },
     {
         # Slower class is ahead
         "drivers": drivers,
-        "car_positions": [1.8, 1.7, 2.0, 1.9, 2.1],
-        "on_pit_road": [False, False, False, False, False],
+        "car_positions": [1.8, 1.7, 2.0, 1.9, 2.1, -1, -1, -1, -1],
+        "on_pit_road": [False, False, False, False, False, False, False, False, False],
         "expected": ["!eol 3 Splitting classes", "!eol 4 Splitting classes"],
     },
     {
         # Faster class is pitting
         "drivers": drivers,
-        "car_positions": [2.0, 1.8, 1.9, 1.7, 2.1],
-        "on_pit_road": [False, True, False, False, False],
+        "car_positions": [2.0, 1.8, 1.9, 1.7, 2.1, -1, -1, -1, -1],
+        "on_pit_road": [False, True, False, False, False, False, False, False, False],
         "expected": [],
     },
     {
         # Slower class is pitting
         "drivers": drivers,
-        "car_positions": [2.0, 1.8, 1.9, 1.7, 2.1],
-        "on_pit_road": [False, False, True, False, False],
+        "car_positions": [2.0, 1.8, 1.9, 1.7, 2.1, -1, -1, -1, -1],
+        "on_pit_road": [False, False, True, False, False, False, False, False, False],
         "expected": [],
     },
 ]
