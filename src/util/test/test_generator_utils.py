@@ -83,6 +83,13 @@ split_class_test_data = [
         "on_pit_road": [False, False, True, False, False, False, False, False, False],
         "expected": [],
     },
+    {
+        # Car in the back is pitting
+        "drivers": drivers,
+        "car_positions": [2.0, 1.8, 1.9, 1.7, 2.1, -1, -1, -1, -1],
+        "on_pit_road": [False, False, False, True, False, False, False, False, False],
+        "expected": ["!eol 3 Splitting classes", "!eol 4 Splitting classes"],
+    },
 ]
 
 @pytest.mark.parametrize("test_data", split_class_test_data)
