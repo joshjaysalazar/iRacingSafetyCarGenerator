@@ -20,14 +20,18 @@ def get_split_class_commands(drivers, car_positions, on_pit_road, pace_car_idx):
     classes = {}
     drivers_to_class = {}
     for idx, driver in enumerate(drivers):
-        if driver["CarIsPaceCar"] == 1 or on_pit_road[idx]:
+        if driver["CarIsPaceCar"] == 1:
             continue
         
         class_info = classes.get(driver["CarClassID"], { "est_lap_time": 0.0, "drivers": set(), "drivers_ordered": [] })
         class_info["est_lap_time"] = driver["CarClassEstLapTime"]
-        class_info["drivers"].add(idx)
+
+        # Ignore cars that are currently in the pit for the sorting order
+        if not on_pit_road[idx]:
+            class_info["drivers"].add(idx)
         
         # we are keeping a sorted list of drivers based on their position to be able to send EOL in order
+        # Note that we do include anyone in the pit here since they could otherwise end up at the front of their class
         heappush(class_info["drivers_ordered"], (pos_from_sc[idx], idx)) 
         classes[driver["CarClassID"]] = class_info
 
