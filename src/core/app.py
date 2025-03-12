@@ -689,7 +689,7 @@ class App(tk.Tk):
         self.var_class_split.set(1)
         self.chk_class_split = ttk.Checkbutton(
             self.frm_general,
-            text="Split classes",
+            text="Split classes (Experimental)",
             variable=self.var_class_split
         )
         self.chk_class_split.grid(
