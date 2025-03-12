@@ -59,7 +59,6 @@ class Generator:
         # Create a shutdown event
         self.shutdown_event = threading.Event()
         self.skip_wait_for_green_event = threading.Event()
-        self.split_classes_event = threading.Event()
 
     def _init_state_variables(self):
         """ (Re)set generator state variables, called whenever we start the generator
@@ -90,14 +89,6 @@ class Generator:
             None
         """
         return self.skip_wait_for_green_event.is_set()
-    
-    def _split_classes_event_is_set(self):
-        """ Returns True if split_classes_event event was triggered
-        
-        Args:
-            None
-        """
-        return self.split_classes_event.is_set()
 
     def _check_random(self):
         """Check to see if a random safety car event should be triggered.
@@ -515,6 +506,25 @@ class Generator:
         Args:
             None
         """
+
+        # Check if class splitting is enabled
+        class_split_setting = self.master.settings["settings"]["class_split"]
+        
+        if class_split_setting == "0":
+            logger.debug("Class splits disabled, skipping")
+            return True
+        
+        # Check if we are one to green
+        laps_under_sc = int(
+            self.master.settings["settings"]["laps_under_sc"]
+        )
+        laps_under_sc = max(laps_under_sc, 2)
+
+        if laps_under_sc - self.current_lap_under_sc > 1:
+            # Wait longer 
+            return False
+
+        # Now is the right time to send the commands
         logger.info("Determining if we need to split classes")
 
         # Get the commands
@@ -533,6 +543,7 @@ class Generator:
             self.ir_window.send_message(f"{eol_command}{{ENTER}}")
 
         logger.info("Done splitting classes")
+        return True
 
     def _start_safety_car(self, message=""):
         """Send a yellow flag to iRacing.
@@ -558,6 +569,7 @@ class Generator:
         self.lap_at_sc = max(self.ir["CarIdxLap"])
 
         # Manage wave arounds and pace laps
+        logger.info("Waiting to do wave arounds and pace lap signal")
         waves_done = False
         pace_done = False
         while not waves_done or not pace_done:
@@ -577,6 +589,21 @@ class Generator:
                 break
 
             # Wait 1 second before checking again
+            time.sleep(1)
+
+        # Manage splitting classes
+        logger.info("Waiting to split the classes")
+        while True:
+            # Update the current lap behind safety car
+            self._get_current_lap_under_sc()
+
+            if self._split_classes():
+                break
+
+            # Break the loop if we are shutting down the thread
+            if self._is_shutting_down():
+                break
+
             time.sleep(1)
 
         # Wait for the green flag to be displayed
@@ -641,14 +668,6 @@ class Generator:
                 
                 # Break the loop
                 break
-
-            # If we are waiting for green as part of a safety car procedure, check for a split classes signal
-            if self.start_time is not None and self._split_classes_event_is_set():
-                logger.debug("We are splitting classes")
-                self._split_classes()
-
-                # Clear the event so that we may send it again in the future
-                self.split_classes_event.clear()
 
             # Break the loop if we are shutting down the thread or skipping the wait
             if self._is_shutting_down() or self._skip_waiting_for_green():
