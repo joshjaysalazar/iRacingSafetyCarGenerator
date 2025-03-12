@@ -518,9 +518,10 @@ class Generator:
         laps_under_sc = int(
             self.master.settings["settings"]["laps_under_sc"]
         )
-        laps_under_sc = max(laps_under_sc, 2)
+        laps_under_sc = max(laps_under_sc, 3)
 
-        if laps_under_sc - self.current_lap_under_sc > 1:
+        logger.debug(f"Checking if we need to split classes: current_lap_under_sc={self.current_lap_under_sc}, lap_at_sc={self.lap_at_sc}, laps_under_sc={laps_under_sc}, self.current_lap_under_sc - self.lap_at_sc < laps_under_sc={self.current_lap_under_sc - self.lap_at_sc < laps_under_sc}")
+        if self.current_lap_under_sc - self.lap_at_sc < laps_under_sc:
             # Wait longer 
             return False
 
