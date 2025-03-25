@@ -33,6 +33,7 @@ class CommandSender:
 
         self.iracing_window.focus()
         self.irsdk.chat_command(1)
+        time.sleep(0.5)
         self.iracing_window.send_message(f"{command}{{ENTER}}")
 
     def send_commands(self, commands, delay = 0.5):
