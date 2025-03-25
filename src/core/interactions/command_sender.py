@@ -1,28 +1,20 @@
 import logging
 import time
 
-from interactions import iracing_window
-from interactions import mock_window
-
 logger = logging.getLogger(__name__)
-
-def WindowFactory(arguments):
-    if arguments.disable_window_interactions:
-        return mock_window.MockWindow()
-    return iracing_window.IRacingWindow()
 
 class CommandSender:
     """ Sends commands to the iRacing application. """
 
-    def __init__(self, arguments, irsdk):
+    def __init__(self, iracing_window, irsdk):
         """Initialize the CommandSender object.
 
         Args:
-            arguments: arguments passed to the application during startup.
-            irsdk: a reference to an irSDK instance.
+            iracing_window: The window object used to interact with the iRacing application.
+            irsdk: A reference to an irSDK instance.
         """
         logger.info("Initializing CommandSender")
-        self.iracing_window = WindowFactory(arguments)
+        self.iracing_window = iracing_window
         self.irsdk = irsdk
 
 

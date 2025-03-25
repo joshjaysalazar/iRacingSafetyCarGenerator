@@ -7,12 +7,18 @@ import traceback
 import irsdk
 
 from core import drivers
-from core.interactions.command_sender import CommandSender
-
+from interactions import command_sender
+from interactions import iracing_window
+from interactions import mock_window
 
 from enum import Enum
 
 logger = logging.getLogger(__name__)
+
+def WindowFactory(arguments):
+    if arguments.disable_window_interactions:
+        return mock_window.MockWindow()
+    return iracing_window.IRacingWindow()
 
 class GeneratorState(Enum):
     STOPPED = 1
@@ -41,7 +47,8 @@ class Generator:
         # Create the iRacing SDK object and command sender
         logger.debug("Initializing SDK and CommandSender")
         self.ir = irsdk.IRSDK()
-        self.command_sender = CommandSender(arguments, self.ir)
+        iracing_window = WindowFactory(arguments)
+        self.command_sender = command_sender.CommandSender(iracing_window, self.ir)
 
         # Variables to track safety car events
         logger.debug("Initializing safety car variables")
