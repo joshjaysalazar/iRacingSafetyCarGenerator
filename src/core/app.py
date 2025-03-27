@@ -8,6 +8,7 @@ from core import generator
 from core import tooltip
 from core.generator import GeneratorState
 from util.state_utils import generator_state_messages, is_stopped_state
+from util.dev_utils import copy_sdk_data_to_clipboard
 
 logger = logging.getLogger(__name__)
 
@@ -595,6 +596,30 @@ class App(tk.Tk):
             self.ent_laps_before_wave_arounds,
             self.tooltips_text.get("laps_before_wave_arounds")
         )
+        general_row += 1
+
+        # Create class split checkbox
+        logger.debug("Creating class split checkbox")
+        self.var_class_split = tk.IntVar()
+        self.var_class_split.set(1)
+        self.chk_class_split = ttk.Checkbutton(
+            self.frm_general,
+            text="Split classes (Experimental)",
+            variable=self.var_class_split
+        )
+        self.chk_class_split.grid(
+            row=general_row,
+            column=0,
+            columnspan=2,
+            sticky="w",
+            padx=5,
+            pady=5
+        )
+        tooltip.CreateToolTip(
+            self.chk_class_split,
+            self.tooltips_text.get("class_split")
+        )
+        general_row += 1
 
         # Create Controls frame
         logger.debug("Creating Controls frame")
@@ -688,6 +713,19 @@ class App(tk.Tk):
                 pady=5
             )
 
+            self.btn_copy_sdk_data = ttk.Button(
+                self.frm_dev_mode,
+                text="Copy SDK data",
+                command=self._copy_sdk_data
+            )
+            self.btn_copy_sdk_data.grid(
+                row=1,
+                column=0,
+                sticky="ew",
+                padx=5,
+                pady=5
+            )
+
         # Fill in the widgets with the settings from the config file
         logger.debug("Filling in widgets with settings from config file")
         self.var_random.set(self.settings["settings"].getboolean("random"))
@@ -749,6 +787,9 @@ class App(tk.Tk):
             0,
             self.settings["settings"]["laps_before_wave_arounds"]
         )
+        self.var_class_split.set(
+            self.settings["settings"].getboolean("class_split")
+        )
 
     def _save_and_run(self):
         """Save the settings to the config file and run the generator.
@@ -792,6 +833,7 @@ class App(tk.Tk):
         laps_under_sc = self.ent_laps_under_sc.get()
         wave_arounds = self.var_wave_arounds.get()
         laps_before_wave_arounds = self.ent_laps_before_wave_arounds.get()
+        class_split = self.var_class_split.get()
 
         # Save the settings to the config file
         self.settings["settings"]["random"] = str(random)
@@ -813,6 +855,7 @@ class App(tk.Tk):
         self.settings["settings"]["laps_before_wave_arounds"] = str(
             laps_before_wave_arounds
         )
+        self.settings["settings"]["class_split"] = str(class_split)
 
         with open("settings.ini", "w") as configfile:
             self.settings.write(configfile)
@@ -854,3 +897,11 @@ class App(tk.Tk):
             None
         """
         self.skip_wait_for_green_event.set()
+
+    def _copy_sdk_data(self):
+        """Copy current SDK data to clipboard
+    
+        Args:
+            None
+        """
+        copy_sdk_data_to_clipboard()
