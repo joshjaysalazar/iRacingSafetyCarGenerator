@@ -3,6 +3,11 @@ import json
 import pyperclip
 
 def copy_sdk_data_to_clipboard():
+    """Takes a snapshot of data provided by the SDK and copies it to your clipboard
+    
+    Args: 
+        None
+    """
     ir = irsdk.IRSDK()
     connected = False
     try:
