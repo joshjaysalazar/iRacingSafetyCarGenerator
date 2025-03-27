@@ -117,7 +117,6 @@ When a Safety Car event is thrown, the following happens:
 * Cars are waved when:
     * A car is two laps down (i.e. crossed S/F 2 fewer times, which could also be a lap and a bit).
     * A car is a lap down AND are behind their class lead on the current lap.
-    * POTENTIAL ISSUE: What about cars that are a lap down but ahead of the lead in their class?
 * We send the wave commands for all cars who qualify for a wave-around with 0.5 second delay between each command.
 
 ### Developer mode
