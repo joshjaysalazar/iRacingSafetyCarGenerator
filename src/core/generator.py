@@ -7,9 +7,9 @@ import traceback
 import irsdk
 
 from core import drivers
-from interactions import command_sender
-from interactions import iracing_window
-from interactions import mock_window
+from core.interactions import command_sender
+from core.interactions import iracing_window
+from core.interactions import mock_window
 
 from enum import Enum
 
