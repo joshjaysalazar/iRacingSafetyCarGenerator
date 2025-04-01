@@ -2,7 +2,6 @@
 
 This program is designed to trigger safety car events in iRacing with more control than the built-in automatic yellows in iRacing, with adjustable settings.
 
-Making a change for demonstration purposes
 
 ![Screenshot of the main window](screenshot.png)
 
