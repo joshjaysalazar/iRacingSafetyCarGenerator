@@ -231,11 +231,9 @@ class Generator:
         
         multi_time = self.master.settings["settings"]["start_multi_time"]
         should_adjust = (time.time() - self.start_time) < multi_time
-
-        if should_adjust:
-            return math.floor(threshold * multiplier)
-        else:
-            return threshold
+        return_val = math.ceil(threshold * multiplier) if should_adjust else threshold
+        
+        return return_val
 
     def _get_driver_number(self, id):
         """Get the driver number from the iRacing SDK.

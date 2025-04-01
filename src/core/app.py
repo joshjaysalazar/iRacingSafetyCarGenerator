@@ -393,12 +393,48 @@ class App(tk.Tk):
             pady=5
         )
         sc_types_row += 1
+        
+        # Create Race Start Multiplier spinbox
+        logger.debug("Creating race start SC multiplier spinbox")
+        self.lbl_start_multiplier = ttk.Label(
+            self.frm_sc_types,
+            text="SC threshold multiplier"
+        )
+        self.lbl_start_multiplier.grid(
+            row=sc_types_row,
+            column=0,
+            sticky="w",
+            padx=5,
+            pady=5
+        )
+        self.spn_start_multiplier = ttk.Spinbox(
+            self.frm_sc_types,
+            from_=1,
+            to=10,
+            width=5
+        )
+        self.spn_start_multiplier.grid(
+            row=sc_types_row,
+            column=1,
+            sticky="e",
+            padx=5,
+            pady=5
+        )
+        tooltip.CreateToolTip(
+            self.lbl_start_multiplier,
+            self.tooltips_text.get("start_multi_val")
+        )
+        tooltip.CreateToolTip(
+            self.spn_start_multiplier,
+            self.tooltips_text.get("start_multi_val")
+        )
+        sc_types_row += 1
 
         # Create Race Start Multiplier Time spinbox
-        logger.debug("Creating race start multiplier time spinbox")
+        logger.debug("Creating race start SC multiplier active time spinbox")
         self.lbl_start_multi_time = ttk.Label(
             self.frm_sc_types,
-            text="Start multiplier time"
+            text="SC multiplier active time"
         )
         self.lbl_start_multi_time.grid(
             row=sc_types_row,
@@ -427,42 +463,6 @@ class App(tk.Tk):
         tooltip.CreateToolTip(
             self.spn_start_multi_time,
             self.tooltips_text.get("start_multi_time")
-        )
-        sc_types_row += 1
-
-        # Create Race Start Multiplier spinbox
-        logger.debug("Creating race start multiplier spinbox")
-        self.lbl_start_multiplier = ttk.Label(
-            self.frm_sc_types,
-            text="Starting multiplier"
-        )
-        self.lbl_start_multiplier.grid(
-            row=sc_types_row,
-            column=0,
-            sticky="w",
-            padx=5,
-            pady=5
-        )
-        self.spn_start_multiplier = ttk.Spinbox(
-            self.frm_sc_types,
-            from_=0,
-            to=10,
-            width=5
-        )
-        self.spn_start_multiplier.grid(
-            row=sc_types_row,
-            column=1,
-            sticky="e",
-            padx=5,
-            pady=5
-        )
-        tooltip.CreateToolTip(
-            self.lbl_start_multiplier,
-            self.tooltips_text.get("start_multi_val")
-        )
-        tooltip.CreateToolTip(
-            self.spn_start_multiplier,
-            self.tooltips_text.get("start_multi_val")
         )
 
         # Create General frame
