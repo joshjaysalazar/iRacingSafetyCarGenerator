@@ -647,6 +647,20 @@ class App(tk.Tk):
         )
         controls_row += 1
 
+        self.btn_start_sc = ttk.Button(
+            self.frm_controls,
+            text="Throw double yellows",
+            command=self._start_safety_car
+        )
+        self.btn_start_sc.grid(
+            row=controls_row,
+            column=0,
+            sticky="ew",
+            padx=5,
+            pady=5
+        )
+        controls_row += 1
+
         # Create status label
         logger.debug("Creating status label")
         self.lbl_status = ttk.Label(
@@ -765,6 +779,18 @@ class App(tk.Tk):
         else:
             logger.info('Shutting down generator due to manual stop')
             self.generator.stop()
+
+    def _start_safety_car(self):
+        """Starts a safety car procedure controlled by the software.
+
+        Args:
+            None
+        """
+        if not is_stopped_state(self.generator_state):
+            logger.info('Starting a manual safety car')
+            self.generator.throw_manual_safety_car()
+        else:
+            logger.info('Tried to throw a manual SC, but generator not running')
 
     def _save_settings(self):
         """Save the settings to the config file.

@@ -51,6 +51,7 @@ class Generator:
 
         # Create a shutdown event
         self.shutdown_event = threading.Event()
+        self.throw_manual_sc_event = threading.Event()
         self.skip_wait_for_green_event = threading.Event()
 
     def _init_state_variables(self):
@@ -74,6 +75,14 @@ class Generator:
             None
         """
         return self.shutdown_event.is_set()
+    
+    def _throw_manual_safety_car(self):
+        """ Returns True if throw_manual_sc_event event was triggered
+        
+        Args:
+            None
+        """
+        return self.throw_manual_sc_event.is_set()
     
     def _skip_waiting_for_green(self):
         """ Returns True if skip_wait_for_green_event event was triggered
@@ -221,6 +230,20 @@ class Generator:
         if len(off_track_cars) >= threshold:
             self._start_safety_car(message)
 
+    def _check_manual_event(self):
+        """Checks for the manual SC button to be pressed and starts the SC if so.
+
+        Args:
+            None
+        """
+        try:
+            if self._throw_manual_safety_car():
+                self._start_safety_car()
+        finally:
+            # we always want to clear the threading flag, so adding in finally clause
+            self.throw_manual_sc_event.clear()
+            
+
     def _get_driver_number(self, id):
         """Get the driver number from the iRacing SDK.
 
@@ -311,6 +334,7 @@ class Generator:
                 self._check_random()
                 self._check_stopped()
                 self._check_off_track()
+                self._check_manual_event()
 
                 # Wait 1 second before checking again
                 time.sleep(1)
@@ -649,3 +673,7 @@ class Generator:
     def stop(self):
         logger.info("Triggering shutdown event to stop generator")
         self.shutdown_event.set()
+
+    def throw_manual_safety_car(self):
+        logger.info("Setting manual SC threading flag")
+        self.throw_manual_sc_event.set()
