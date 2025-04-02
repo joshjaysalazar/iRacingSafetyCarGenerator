@@ -232,15 +232,13 @@ class Generator:
             The scaled threshold value
         """
         multiplier = float(self.master.settings["settings"]["start_multi_val"])
-
-        if multiplier == 0:
-            return threshold
-        
         multi_time = float(self.master.settings["settings"]["start_multi_time"])
         should_adjust = (time.time() - self.start_time) < multi_time
-        return_val = math.ceil(threshold * multiplier) if should_adjust else threshold
 
-        return return_val
+        if (multiplier == 0 or not should_adjust):
+            return threshold
+
+        return math.ceil(threshold * multiplier)
 
     def _get_driver_number(self, id):
         """Get the driver number from the iRacing SDK.
