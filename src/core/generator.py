@@ -184,7 +184,7 @@ class Generator:
             stopped_cars.remove(car)
 
         # Trigger the safety car event if threshold is met
-        if len(stopped_cars) >= self._calc_dynamic_yellow_threshold(self, threshold):
+        if len(stopped_cars) >= self._calc_dynamic_yellow_threshold(threshold):
             self._start_safety_car(message)
 
     def _check_off_track(self):
@@ -219,20 +219,20 @@ class Generator:
             off_track_cars.remove(car)
 
         # Trigger the safety car event if threshold is met
-        if len(off_track_cars) >= self._calc_dynamic_yellow_threshold(self, threshold):
+        if len(off_track_cars) >= self._calc_dynamic_yellow_threshold(threshold):
             self._start_safety_car(message)
 
     # Determine what the number of cars stopped should be based on the settings and threshold times
     def _calc_dynamic_yellow_threshold(self, threshold):
         multiplier = float(self.master.settings["settings"]["start_multi_val"])
 
-        if multiplier == 1:
+        if multiplier == 0:
             return threshold
         
-        multi_time = self.master.settings["settings"]["start_multi_time"]
+        multi_time = float(self.master.settings["settings"]["start_multi_time"])
         should_adjust = (time.time() - self.start_time) < multi_time
         return_val = math.ceil(threshold * multiplier) if should_adjust else threshold
-        
+
         return return_val
 
     def _get_driver_number(self, id):
