@@ -224,6 +224,13 @@ class Generator:
 
     # Determine what the number of cars stopped should be based on the settings and threshold times
     def _calc_dynamic_yellow_threshold(self, threshold):
+        """Scales the threshold based on the configured multiplier time and value.
+        
+        Args:
+            threshold: The unscaled threshold value
+        Returns: 
+            The scaled threshold value
+        """
         multiplier = float(self.master.settings["settings"]["start_multi_val"])
 
         if multiplier == 0:
