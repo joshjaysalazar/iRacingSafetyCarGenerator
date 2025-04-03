@@ -194,11 +194,20 @@ class Settings:
     def laps_before_wave_arounds(self) -> int:
         """Number of laps before wave arounds."""
         return self._config["settings"].getint("laps_before_wave_arounds", fallback=0)
-    
+
     @laps_before_wave_arounds.setter
     def laps_before_wave_arounds(self, value: int) -> None:
         self._config.set("settings", "laps_before_wave_arounds", str(value))
-    
+
+    @property
+    def wave_around_rules_index(self) -> int:
+        """Index for wave around rules selection (0=Wave lapped cars, 1=Wave ahead of class lead)."""
+        return self._config["settings"].getint("wave_around_rules_index", fallback=0)
+
+    @wave_around_rules_index.setter
+    def wave_around_rules_index(self, value: int) -> None:
+        self._config.set("settings", "wave_around_rules_index", str(value))
+
     # Proximity-based yellow flag settings
     @property
     def proximity_filter_enabled(self) -> bool:
