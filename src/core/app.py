@@ -81,6 +81,7 @@ class App(tk.Tk):
         self.columnconfigure(1, weight=1)
         self.rowconfigure(0, weight=1)
         self.rowconfigure(1, weight=1)
+        self.rowconfigure(2, weight=1)
 
         # Create Safety Car Types frame
         logger.debug("Creating Safety Car Types frame")
@@ -88,7 +89,7 @@ class App(tk.Tk):
         self.frm_sc_types.grid(
             row=0,
             column=0,
-            rowspan=2,
+            rowspan=3,
             sticky="nesw",
             padx=5,
             pady=5
@@ -467,8 +468,8 @@ class App(tk.Tk):
         )
 
         # Create General frame
-        logger.debug("Creating General frame")
-        self.frm_general = ttk.LabelFrame(self, text="General")
+        logger.debug("Creating eligibility window frame")
+        self.frm_general = ttk.LabelFrame(self, text="Eligibility Window")
         self.frm_general.grid(row=0, column=1, sticky="nesw", padx=5, pady=5)
 
         # Create variable to hold the current row in the frame
@@ -598,22 +599,28 @@ class App(tk.Tk):
         )
         general_row += 1
 
+
+        # Safety car procedure specifics
+        logger.debug("Creating SC procedure settings frame")
+        self.frm_procedures = ttk.LabelFrame(self, text="Safety Car Procedures")
+        self.frm_procedures.grid(row=1, column=1, sticky="nesw", padx=5, pady=5)
+
         # Create laps under safety car entry
         logger.debug("Creating laps under safety car entry")
         self.lbl_laps_under_sc = ttk.Label(
-            self.frm_general,
+            self.frm_procedures,
             text="Laps under safety car"
         )
         self.lbl_laps_under_sc.grid(
-            row=general_row,
+            row=0,
             column=0,
             sticky="w",
             padx=5,
             pady=5
         )
-        self.ent_laps_under_sc = ttk.Entry(self.frm_general, width=5)
+        self.ent_laps_under_sc = ttk.Entry(self.frm_procedures, width=5)
         self.ent_laps_under_sc.grid(
-            row=general_row,
+            row=0,
             column=1,
             sticky="e",
             padx=5,
@@ -627,47 +634,44 @@ class App(tk.Tk):
             self.ent_laps_under_sc,
             self.tooltips_text.get("laps_under_sc")
         )
-        general_row += 1
 
         # Create wave arounds checkbox
         logger.debug("Creating automatic wave arounds checkbox")
         self.var_wave_arounds = tk.IntVar()
         self.var_wave_arounds.set(1)
         self.chk_wave_arounds = ttk.Checkbutton(
-            self.frm_general,
+            # self.frm_procedures,
             text="Automatic wave arounds",
             variable=self.var_wave_arounds
         )
-        self.chk_wave_arounds.grid(
-            row=general_row,
-            column=0,
-            columnspan=2,
-            sticky="w",
-            padx=5,
-            pady=5
-        )
+        self.var_wave_arounds.trace_add("write", self.toggle_wave_around_config)
+
         tooltip.CreateToolTip(
             self.chk_wave_arounds,
             self.tooltips_text.get("wave_arounds")
         )
-        general_row += 1
+        
+        # Wave arounds config
+        logger.debug("Creating Wave arounds config panel")
+        self.frm_wave_arounds = ttk.LabelFrame(self.frm_procedures, labelwidget=self.chk_wave_arounds)
+        self.frm_wave_arounds.grid(row=1, column=0, columnspan=2, sticky="nesw", padx=5, pady=5)
 
         # Create laps before wave arounds entry
         logger.debug("Creating laps before wave arounds entry")
         self.lbl_laps_before_wave_arounds = ttk.Label(
-            self.frm_general,
+            self.frm_wave_arounds,
             text="Laps before wave arounds"
         )
         self.lbl_laps_before_wave_arounds.grid(
-            row=general_row,
+            row=0,
             column=0,
             sticky="w",
             padx=5,
             pady=5
         )
-        self.ent_laps_before_wave_arounds = ttk.Entry(self.frm_general, width=5)
+        self.ent_laps_before_wave_arounds = ttk.Entry(self.frm_wave_arounds, width=5)
         self.ent_laps_before_wave_arounds.grid(
-            row=general_row,
+            row=0,
             column=1,
             sticky="e",
             padx=5,
@@ -681,6 +685,30 @@ class App(tk.Tk):
             self.ent_laps_before_wave_arounds,
             self.tooltips_text.get("laps_before_wave_arounds")
         )
+
+        logger.debug("Creating wave around rules picker")
+        self.cmb_wave_around_rules = ttk.Combobox(
+            self.frm_wave_arounds,
+            width=24,
+            state="readonly"
+        )
+        self.cmb_wave_around_rules.grid(
+            row=1,
+            column=0,
+            columnspan=2,
+            sticky="we",
+            padx=5,
+            pady=5
+        )
+        self.cmb_wave_around_rules['values'] = (
+            "Wave lapped cars",
+            "Wave ahead of class lead",
+        )
+        tooltip.CreateToolTip(
+            self.cmb_wave_around_rules,
+            self.tooltips_text.get("wave_around_rules")
+        )
+
         general_row += 1
 
         # Create proximity-based yellows checkbox
@@ -745,7 +773,7 @@ class App(tk.Tk):
         # Create Controls frame
         logger.debug("Creating Controls frame")
         self.frm_controls = ttk.Frame(self)
-        self.frm_controls.grid(row=1, column=1, sticky="nesw", padx=5, pady=5)
+        self.frm_controls.grid(row=2, column=1, sticky="nesw", padx=5, pady=5)
         self.frm_controls.columnconfigure(0, weight=1)
 
         # Create variable to hold the current row in the frame
@@ -932,11 +960,14 @@ class App(tk.Tk):
             0,
             self.settings["settings"]["laps_before_wave_arounds"]
         )
+        self.cmb_wave_around_rules.current(self.settings["settings"]["wave_around_rules_index"])
         self.var_proximity_yellows.set(
             self.settings["settings"].getboolean("proximity_yellows")
         )
         self.spn_proximity_dist.delete(0, "end")
         self.spn_proximity_dist.insert(0, self.settings["settings"]["proximity_yellows_distance"])
+
+        # self.ent_laps_before_wave_arounds.config(state="disabled")
 
     def _save_and_run(self):
         """Save the settings to the config file and run the generator.
@@ -982,6 +1013,7 @@ class App(tk.Tk):
         laps_under_sc = self.ent_laps_under_sc.get()
         wave_arounds = self.var_wave_arounds.get()
         laps_before_wave_arounds = self.ent_laps_before_wave_arounds.get()
+        wave_around_rules = self.cmb_wave_around_rules.current()
         proximity_yellows = self.var_proximity_yellows.get()
         proximity_yellows_distance = self.spn_proximity_dist.get()
 
@@ -1004,6 +1036,7 @@ class App(tk.Tk):
         self.settings["settings"]["min_time_between"] = str(min_time_between)
         self.settings["settings"]["laps_under_sc"] = str(laps_under_sc)
         self.settings["settings"]["wave_arounds"] = str(wave_arounds)
+        self.settings["settings"]["wave_around_rules_index"] = str(wave_around_rules)
         self.settings["settings"]["laps_before_wave_arounds"] = str(
             laps_before_wave_arounds
         )
@@ -1042,6 +1075,22 @@ class App(tk.Tk):
         self.btn_run['text'] = self.generator_state_messages[self.generator_state]['btn_run_text']
         self.btn_run['image'] = self.generator_state_messages[self.generator_state]['btn_run_icon']
         self.set_message(self.generator_state_messages[self.generator_state]['message'])
+
+    def toggle_wave_around_config(self, *args):
+        """Toggle the state of the wave arounds config panel.
+
+        Args:
+
+        """
+        logger.debug("Toggling wave arounds config panel")
+        if self.var_wave_arounds.get() == 1:
+            self.lbl_laps_before_wave_arounds.config(state="normal")
+            self.ent_laps_before_wave_arounds.config(state="normal")
+            self.cmb_wave_around_rules.config(state="normal")
+        else:
+            self.lbl_laps_before_wave_arounds.config(state="disabled")
+            self.ent_laps_before_wave_arounds.config(state="disabled")
+            self.cmb_wave_around_rules.config(state="disabled")
 
     def _skip_wait_for_green(self):
         """Move from waiting for green to monitoring session state.
