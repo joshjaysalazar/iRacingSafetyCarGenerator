@@ -8,8 +8,9 @@ import traceback
 import irsdk
 
 from core import drivers
-from core import iracing_window
-from core import mock_window
+from core.interactions import command_sender
+from core.interactions import iracing_window
+from core.interactions import mock_window
 
 from enum import Enum
 
@@ -19,7 +20,6 @@ def WindowFactory(arguments):
     if arguments.disable_window_interactions:
         return mock_window.MockWindow()
     return iracing_window.IRacingWindow()
-
 
 class GeneratorState(Enum):
     STOPPED = 1
@@ -44,10 +44,15 @@ class Generator:
         self.master = master
         self.thread = None
 
+        
+        # Create the iRacing SDK object and command sender
+        logger.debug("Initializing SDK and CommandSender")
+        self.ir = irsdk.IRSDK()
+        iracing_window = WindowFactory(arguments)
+        self.command_sender = command_sender.CommandSender(iracing_window, self.ir)
+
         # Variables to track safety car events
         logger.debug("Initializing safety car variables")
-
-        self.ir_window = WindowFactory(arguments)
         self._init_state_variables()
 
         # Create a shutdown event
@@ -387,10 +392,7 @@ class Generator:
             # If any lead car is at 50%, send the pacelaps command
             if max(lead_dist) >= 0.5:
                 logger.info("Sending pacelaps command")
-                self.ir_window.focus()
-                self.ir.chat_command(1)
-                time.sleep(0.5)
-                self.ir_window.send_message(f"!p {laps_under_sc - 1}{{ENTER}}")
+                self.command_sender.send_command(f"!p {laps_under_sc - 1}")
 
                 # Return True when pace laps are done
                 return True
@@ -490,10 +492,7 @@ class Generator:
         if len(cars_to_wave) > 0:
             for car in cars_to_wave:
                 logger.info(f"Sending wave around command for car {car}")
-                self.ir_window.focus()
-                self.ir.chat_command(1)
-                time.sleep(0.5)
-                self.ir_window.send_message(f"!w {car}{{ENTER}}")
+                self.command_sender.send_command(f"!w {car}")
 
         # Return True when wave arounds are done
         return True
@@ -507,10 +506,7 @@ class Generator:
         logger.info("Deploying safety car")
 
         # Send yellow flag chat command
-        self.ir_window.focus()
-        self.ir.chat_command(1)
-        time.sleep(0.5)
-        self.ir_window.send_message(f"!y {message}{{ENTER}}")
+        self.command_sender.send_command(f"!y {message}")
 
         # Move to SC deployed state
         self.master.generator_state = GeneratorState.SAFETY_CAR_DEPLOYED
@@ -637,14 +633,11 @@ class Generator:
 
         # Reset state variables
         self._init_state_variables()
-        
-        # Create the iRacing SDK object
-        self.ir = irsdk.IRSDK()
 
         # Attempt to connect and tell user if successful
         if self.ir.startup():
-            # Get reference to simulator window if successfulir
-            self.ir_window.connect()
+            # Connect the command sender to the iRacing application window
+            self.command_sender.connect()
             self.master.generator_state = GeneratorState.CONNECTED
         else:
             self.master.generator_state = GeneratorState.ERROR_CONNECTING

@@ -38,13 +38,19 @@
 				"file"
 			]
 		},
-		"core.iracing_window": {
+		"core.interactions.command_sender": {
 			"level": "INFO",
 			"handlers": [
 				"file"
 			]
 		},
-		"core.mock_window": {
+		"core.interactions.iracing_window": {
+			"level": "INFO",
+			"handlers": [
+				"file"
+			]
+		},
+		"core.interactions.mock_window": {
 			"level": "DEBUG",
 			"handlers": [
 				"file"
