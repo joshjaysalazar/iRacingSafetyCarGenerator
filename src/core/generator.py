@@ -1,4 +1,5 @@
 import logging
+import math
 import random
 import threading
 import time
@@ -183,7 +184,7 @@ class Generator:
             stopped_cars.remove(car)
 
         # Trigger the safety car event if threshold is met
-        if len(stopped_cars) >= threshold:
+        if len(stopped_cars) >= self._calc_dynamic_yellow_threshold(threshold):
             self._start_safety_car(message)
 
     def _check_off_track(self):
@@ -218,8 +219,26 @@ class Generator:
             off_track_cars.remove(car)
 
         # Trigger the safety car event if threshold is met
-        if len(off_track_cars) >= threshold:
+        if len(off_track_cars) >= self._calc_dynamic_yellow_threshold(threshold):
             self._start_safety_car(message)
+
+    # Determine what the number of cars stopped should be based on the settings and threshold times
+    def _calc_dynamic_yellow_threshold(self, threshold):
+        """Scales the threshold based on the configured multiplier time and value.
+        
+        Args:
+            threshold: The unscaled threshold value
+        Returns: 
+            The scaled threshold value
+        """
+        multiplier = float(self.master.settings["settings"]["start_multi_val"])
+        multi_time = float(self.master.settings["settings"]["start_multi_time"])
+        should_adjust = (time.time() - self.start_time) < multi_time
+
+        if (multiplier == 0 or not should_adjust):
+            return threshold
+
+        return math.ceil(threshold * multiplier)
 
     def _get_driver_number(self, id):
         """Get the driver number from the iRacing SDK.

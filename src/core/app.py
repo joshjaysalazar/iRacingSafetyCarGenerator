@@ -379,6 +379,91 @@ class App(tk.Tk):
             self.ent_off_message,
             self.tooltips_text.get("message")
         )
+        sc_types_row += 1
+
+        # Create horizontal separator
+        logger.debug("Creating horizontal separator")
+        separator = ttk.Separator(self.frm_sc_types, orient="horizontal")
+        separator.grid(
+            row=sc_types_row,
+            column=0,
+            columnspan=2,
+            sticky="ew",
+            padx=5,
+            pady=5
+        )
+        sc_types_row += 1
+        
+        # Create Race Start Multiplier spinbox
+        logger.debug("Creating race start SC multiplier spinbox")
+        self.lbl_start_multiplier = ttk.Label(
+            self.frm_sc_types,
+            text="SC threshold multiplier"
+        )
+        self.lbl_start_multiplier.grid(
+            row=sc_types_row,
+            column=0,
+            sticky="w",
+            padx=5,
+            pady=5
+        )
+        self.spn_start_multiplier = ttk.Spinbox(
+            self.frm_sc_types,
+            from_=1,
+            to=10,
+            width=5
+        )
+        self.spn_start_multiplier.grid(
+            row=sc_types_row,
+            column=1,
+            sticky="e",
+            padx=5,
+            pady=5
+        )
+        tooltip.CreateToolTip(
+            self.lbl_start_multiplier,
+            self.tooltips_text.get("start_multi_val")
+        )
+        tooltip.CreateToolTip(
+            self.spn_start_multiplier,
+            self.tooltips_text.get("start_multi_val")
+        )
+        sc_types_row += 1
+
+        # Create Race Start Multiplier Time spinbox
+        logger.debug("Creating race start SC multiplier active time spinbox")
+        self.lbl_start_multi_time = ttk.Label(
+            self.frm_sc_types,
+            text="SC multiplier active time"
+        )
+        self.lbl_start_multi_time.grid(
+            row=sc_types_row,
+            column=0,
+            sticky="w",
+            padx=5,
+            pady=5
+        )
+        self.spn_start_multi_time = ttk.Spinbox(
+            self.frm_sc_types,
+            from_=0,
+            to=999,
+            width=5
+        )
+        self.spn_start_multi_time.grid(
+            row=sc_types_row,
+            column=1,
+            sticky="e",
+            padx=5,
+            pady=5
+        )
+        tooltip.CreateToolTip(
+            self.lbl_start_multi_time,
+            self.tooltips_text.get("start_multi_time")
+        )
+        tooltip.CreateToolTip(
+            self.spn_start_multi_time,
+            self.tooltips_text.get("start_multi_time")
+        )
 
         # Create General frame
         logger.debug("Creating General frame")
@@ -719,6 +804,10 @@ class App(tk.Tk):
         self.spn_off_min.insert(0, self.settings["settings"]["off_min"])
         self.ent_off_message.delete(0, "end")
         self.ent_off_message.insert(0, self.settings["settings"]["off_message"])
+        self.spn_start_multi_time.delete(0, "end")
+        self.spn_start_multi_time.insert(0, self.settings["settings"]["start_multi_time"])
+        self.spn_start_multiplier.delete(0, "end")
+        self.spn_start_multiplier.insert(0, self.settings["settings"]["start_multi_val"])
         self.ent_max_safety_cars.delete(0, "end")
         self.ent_max_safety_cars.insert(
             0,
@@ -782,6 +871,8 @@ class App(tk.Tk):
         stopped = self.var_stopped.get()
         stopped_min = self.spn_stopped_min.get()
         stopped_message = self.ent_stopped_message.get()
+        start_multi_val = self.spn_start_multiplier.get()
+        start_multi_time = self.spn_start_multi_time.get()
         off = self.var_off.get()
         off_min = self.spn_off_min.get()
         off_message = self.ent_off_message.get()
@@ -801,6 +892,8 @@ class App(tk.Tk):
         self.settings["settings"]["stopped"] = str(stopped)
         self.settings["settings"]["stopped_min"] = str(stopped_min)
         self.settings["settings"]["stopped_message"] = str(stopped_message)
+        self.settings["settings"]["start_multi_val"] = str(start_multi_val)
+        self.settings["settings"]["start_multi_time"] = str(start_multi_time)
         self.settings["settings"]["off"] = str(off)
         self.settings["settings"]["off_min"] = str(off_min)
         self.settings["settings"]["off_message"] = str(off_message)

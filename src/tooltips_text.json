@@ -4,6 +4,8 @@
     "random_prob": "The probability of a single safety car deployment, irrespective of the maximum random occurrences. A value of 0.1 indicates a 10% chance of a safety car being deployed.",
     "stopped": "Check this box to enable safety car events when cars are stopped on the track.",
     "stopped_min": "Minimum number of stopped cars on the track required to deploy a safety car.",
+    "start_multi_val": "The value with which the off track and stopped cars thresholds are multiplied at race start. These multipliers are in effect for the time set in the \"SC multiplier active time\" setting. Set to 1 to disable.",
+    "start_multi_time": "Time (in seconds) for the start-of-race safety car threshold multiplier to be in effect",
     "message": "Message to be displayed to the drivers.",
     "off": "Check this box to enable safety car events when cars go off track.",
     "off_min": "Minimum number of off-track cars required to deploy a safety car.",
