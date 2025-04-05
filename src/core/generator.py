@@ -8,6 +8,7 @@ from core import drivers
 from core.detection.threshold_checker import ThresholdChecker, ThresholdCheckerSettings, DetectorEventTypes
 from core.detection.detector import Detector, DetectorSettings
 from core.interactions.interaction_factories import CommandSenderFactory
+from core.procedures.wave_arounds import WaveAroundType, wave_around_type_from_selection, wave_arounds_factory
 
 from codetiming import Timer
 from enum import Enum
@@ -318,6 +319,33 @@ class Generator:
             logger.debug("Haven't reached wave lap, skipping wave arounds")
             return False
         
+        wave_around_type = wave_around_type_from_selection(self.master.settings.wave_around_rules_index)
+        wave_around_func = wave_arounds_factory(wave_around_type)
+        
+        if wave_around_type == WaveAroundType.WAVE_AHEAD_OF_CLASS_LEAD:
+            # TODO: when we move our "legacy" implementation to the wave_arounds file, we do not have to
+            # inject this logic here but can just call it directly
+            logger.info("Sending wave arounds for cars ahead of class lead")
+
+            # Get the commands for the wave arounds
+            laps_completed_list = self.ir["CarIdxLapCompleted"]
+            lap_distance_list = self.ir["CarIdxLapDistPct"]
+            total_distance = [t[0] + t[1] for t in zip(laps_completed_list, lap_distance_list)]
+            commands = wave_around_func(
+                self.ir["DriverInfo"]["Drivers"],
+                total_distance,
+                self.ir["CarIdxOnPitRoad"],
+                self.ir["DriverInfo"]["PaceCarIdx"]
+            )
+
+            # Send the commands in order
+            self.command_sender.send_commands(commands)
+
+            # Return True when wave arounds are done
+            return True
+        
+        logger.info("Sending wave arounds using legacy method")
+
         # Get all class IDs (except safety car)
         class_ids = []
         for driver in self.ir["DriverInfo"]["Drivers"]:
