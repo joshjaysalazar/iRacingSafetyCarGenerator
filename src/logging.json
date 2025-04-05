@@ -61,6 +61,12 @@
 			"handlers": [
 				"file"
 			]
+		},
+		"core.procedures.wave_arounds": {
+			"level": "INFO",
+			"handlers": [
+				"file"
+			]
 		}
 	}
 }
