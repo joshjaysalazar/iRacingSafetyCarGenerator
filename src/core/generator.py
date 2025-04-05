@@ -16,7 +16,7 @@ from enum import Enum
 logger = logging.getLogger(__name__)
 
 def WindowFactory(arguments):
-    if arguments.disable_window_interactions:
+    if arguments and arguments.disable_window_interactions:
         return mock_window.MockWindow()
     return iracing_window.IRacingWindow()
 
