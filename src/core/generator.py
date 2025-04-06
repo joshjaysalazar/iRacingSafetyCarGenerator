@@ -511,7 +511,7 @@ class Generator:
         class_split_setting = self.master.settings["settings"]["class_split"]
         
         if class_split_setting == "0":
-            logger.debug("Class splits disabled, skipping")
+            logger.info("Class splits disabled, skipping")
             return True
         
         # Check if we are one to green
@@ -536,12 +536,7 @@ class Generator:
         commands = get_split_class_commands(drivers, car_positions, on_pit_road, pace_car_idx)
 
         # Send EOL commands from lead through last in-order
-        for eol_command in commands:
-            logger.info(f"Sending EOL command: {eol_command}")
-            self.ir_window.focus()
-            self.ir.chat_command(1)
-            time.sleep(0.5)
-            self.ir_window.send_message(f"{eol_command}{{ENTER}}")
+        self.command_sender.send_commands(commands)
 
         logger.info("Done splitting classes")
         return True
