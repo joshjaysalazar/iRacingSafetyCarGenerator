@@ -11,7 +11,7 @@ from core import drivers
 from core.interactions import command_sender
 from core.interactions import iracing_window
 from core.interactions import mock_window
-from util.generator_utils import get_split_class_commands
+from core.procedures.class_split import get_split_class_commands
 
 from enum import Enum
 
