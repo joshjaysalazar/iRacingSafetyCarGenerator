@@ -11,6 +11,7 @@ from core import drivers
 from core.interactions import command_sender
 from core.interactions import iracing_window
 from core.interactions import mock_window
+from core.procedures.class_split import get_split_class_commands
 
 from enum import Enum
 
@@ -496,6 +497,49 @@ class Generator:
 
         # Return True when wave arounds are done
         return True
+    
+    def _split_classes(self):
+        """Split the classes by sending EOL chat commands for the slower class. 
+            This functionality is experimental, manually triggered and limited to 
+            races with only two classes.
+
+        Args:
+            None
+        """
+
+        # Check if class splitting is enabled
+        class_split_setting = self.master.settings["settings"]["class_split"]
+        
+        if class_split_setting == "0":
+            logger.info("Class splits disabled, skipping")
+            return True
+        
+        # Check if we are one to green
+        laps_under_sc = int(
+            self.master.settings["settings"]["laps_under_sc"]
+        )
+        laps_under_sc = max(laps_under_sc, 3)
+
+        logger.debug(f"Checking if we need to split classes: current_lap_under_sc={self.current_lap_under_sc}, lap_at_sc={self.lap_at_sc}, laps_under_sc={laps_under_sc}, self.current_lap_under_sc - self.lap_at_sc < laps_under_sc={self.current_lap_under_sc - self.lap_at_sc < laps_under_sc}")
+        if self.current_lap_under_sc - self.lap_at_sc < laps_under_sc:
+            # Wait longer 
+            return False
+
+        # Now is the right time to send the commands
+        logger.info("Determining if we need to split classes")
+
+        # Get the commands
+        drivers = self.ir["DriverInfo"]["Drivers"]
+        car_positions = self.ir["CarIdxLapDistPct"]
+        on_pit_road = self.ir["CarIdxOnPitRoad"]
+        pace_car_idx = self.ir["DriverInfo"]["PaceCarIdx"]
+        commands = get_split_class_commands(drivers, car_positions, on_pit_road, pace_car_idx)
+
+        # Send EOL commands from lead through last in-order
+        self.command_sender.send_commands(commands)
+
+        logger.info("Done splitting classes")
+        return True
 
     def _start_safety_car(self, message=""):
         """Send a yellow flag to iRacing.
@@ -521,6 +565,7 @@ class Generator:
         self.lap_at_sc = max(self.ir["CarIdxLap"])
 
         # Manage wave arounds and pace laps
+        logger.info("Waiting to do wave arounds and pace lap signal")
         waves_done = False
         pace_done = False
         while not waves_done or not pace_done:
@@ -540,6 +585,21 @@ class Generator:
                 break
 
             # Wait 1 second before checking again
+            time.sleep(1)
+
+        # Manage splitting classes
+        logger.info("Waiting to split the classes")
+        while True:
+            # Update the current lap behind safety car
+            self._get_current_lap_under_sc()
+
+            if self._split_classes():
+                break
+
+            # Break the loop if we are shutting down the thread
+            if self._is_shutting_down():
+                break
+
             time.sleep(1)
 
         # Wait for the green flag to be displayed

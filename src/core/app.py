@@ -681,6 +681,30 @@ class App(tk.Tk):
             self.ent_laps_before_wave_arounds,
             self.tooltips_text.get("laps_before_wave_arounds")
         )
+        general_row += 1
+
+        # Create class split checkbox
+        logger.debug("Creating class split checkbox")
+        self.var_class_split = tk.IntVar()
+        self.var_class_split.set(1)
+        self.chk_class_split = ttk.Checkbutton(
+            self.frm_general,
+            text="Split classes (Experimental)",
+            variable=self.var_class_split
+        )
+        self.chk_class_split.grid(
+            row=general_row,
+            column=0,
+            columnspan=2,
+            sticky="w",
+            padx=5,
+            pady=5
+        )
+        tooltip.CreateToolTip(
+            self.chk_class_split,
+            self.tooltips_text.get("class_split")
+        )
+        general_row += 1
 
         # Create Controls frame
         logger.debug("Creating Controls frame")
@@ -852,6 +876,9 @@ class App(tk.Tk):
             0,
             self.settings["settings"]["laps_before_wave_arounds"]
         )
+        self.var_class_split.set(
+            self.settings["settings"].getboolean("class_split")
+        )
 
     def _save_and_run(self):
         """Save the settings to the config file and run the generator.
@@ -897,6 +924,7 @@ class App(tk.Tk):
         laps_under_sc = self.ent_laps_under_sc.get()
         wave_arounds = self.var_wave_arounds.get()
         laps_before_wave_arounds = self.ent_laps_before_wave_arounds.get()
+        class_split = self.var_class_split.get()
 
         # Save the settings to the config file
         self.settings["settings"]["random"] = str(random)
@@ -920,6 +948,7 @@ class App(tk.Tk):
         self.settings["settings"]["laps_before_wave_arounds"] = str(
             laps_before_wave_arounds
         )
+        self.settings["settings"]["class_split"] = str(class_split)
 
         with open("settings.ini", "w") as configfile:
             self.settings.write(configfile)
@@ -964,7 +993,7 @@ class App(tk.Tk):
 
     def _copy_sdk_data(self):
         """Copy current SDK data to clipboard
-
+    
         Args:
             None
         """
