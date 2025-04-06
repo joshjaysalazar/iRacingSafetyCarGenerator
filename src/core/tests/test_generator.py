@@ -1,14 +1,14 @@
 import pytest
 import time
 import math
-from unittest.mock import MagicMock
+from unittest.mock import Mock
 from core.generator import Generator
 
 @pytest.fixture
 def generator():
-    mock_arguments = MagicMock()
+    mock_arguments = Mock()
     mock_arguments.disable_window_interactions = True
-    mock_master = MagicMock()
+    mock_master = Mock()
     mock_master.settings = {
         "settings": {
             "start_multi_val": "1.5",

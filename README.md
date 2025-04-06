@@ -43,6 +43,20 @@ python main.py -dev -dwi
 
 ```
 
+### Test the application
+```
+# These are all optional packages to run tests; pytest is really the only one you need to just run tests once
+pip install pytest
+pip install pytest-watch
+
+# To run the tests once
+pytest
+
+# To run tests as you make changes
+ptw
+
+```
+
 ### High level execution
 
 At a high level, the app waits for the race to start, then checks against all conditions as configured in the app, looping approximately every second. "Approximately" because we wait for a second at the end of a loop, but the loop itself obviously also takes some time.
