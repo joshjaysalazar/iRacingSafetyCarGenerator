@@ -61,8 +61,7 @@ def get_split_class_commands(drivers, car_positions, on_pit_road, pace_car_idx):
 
         # remove any drivers we have already seen out of order
         for driver in drivers_out_of_order:
-            current_class_drivers.remove(driver)
-        
+            current_class_drivers.discard(driver)
         # now go through our grid until we have seen all cars in this class
         while len(current_class_drivers) > 0:
             current_car = idx_all_sorted[pos_pointer]
