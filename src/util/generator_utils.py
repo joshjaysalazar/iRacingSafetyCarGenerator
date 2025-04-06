@@ -41,12 +41,14 @@ def get_split_class_commands(drivers, car_positions, on_pit_road, pace_car_idx):
     # If there is only one class, skip
     if len(classes) == 1:
         return []
+    
     # Sort by fastest lap time; this returns a list of (CarClassID, { ... }) tuples 
     classes_sorted = sorted(classes.items(), key=lambda item: item[1]["est_lap_time"])
 
     # Check if we need to split the classes by checking for anyone out of order
     pos_and_idx = zip(pos_from_sc, list(range(len(pos_from_sc))))
-    idx_all_sorted = list(map(lambda tuple: tuple[1], sorted(pos_and_idx, key=lambda item: item[0])))
+    pos_and_idx_filtered = [tuple for tuple in pos_and_idx if tuple[0] != -1]
+    idx_all_sorted = list(map(lambda tuple: tuple[1], sorted(pos_and_idx_filtered, key=lambda item: item[0])))
 
     class_pointer = 0
     pos_pointer = 0
@@ -112,11 +114,14 @@ def positions_from_safety_car(car_positions, pace_car_idx):
         Returns:
             List[float]: The car_positions list, offset by the current position of the safety car.
     """
-    pace_car_pos = car_positions[pace_car_idx]
+    normalize_positions = [n % 1 if n >= 0 else n for n in car_positions]
+    pace_car_pos = normalize_positions[pace_car_idx]
     result = []
-    for pos in car_positions:
-        if pos == pace_car_pos:
+    for idx, pos in enumerate(normalize_positions):
+        if idx == pace_car_idx:
             result.append(0.0)
+        elif pos == -1:
+            result.append(-1)
         elif pos < pace_car_pos:
             result.append(pace_car_pos - pos)
         else:
