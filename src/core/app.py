@@ -46,6 +46,11 @@ class App(tk.Tk):
         # Set handler for closing main window event
         self.protocol('WM_DELETE_WINDOW', self.handle_delete_window)
 
+        # Create and set dry run variable for dev mode prior to creating widgets
+        # Since the variable is checked even when not in dev mode, we declare it here
+        self.var_dry_run = tk.BooleanVar()
+        self.var_dry_run.set(False)
+
         # Create widgets
         self._create_widgets()
 
@@ -68,13 +73,16 @@ class App(tk.Tk):
         self.destroy()
 
     def handle_dry_run_logging(self):
-        """  Event handler for logging the dry run value when it is changed in the UI. 
-             Changing the value is handled by the ttk Checkbutton itself, not this method.
+        """  Event handler for logging the dry run value when it is changed in the UI.
         
         Args:
             None
         """
-        logger.info(f"Dry run value: {self.var_dry_run.get()}")
+        if is_stopped_state(self.generator_state):
+            self.var_dry_run.set(not self.var_dry_run.get())
+            logger.info(f"Dry run value: {self.var_dry_run.get()}")
+        else:
+            logger.info("Cannot change dry run value after starting the generator")
 
     def _create_widgets(self):
         """Create widgets for the main application window.
@@ -796,13 +804,10 @@ class App(tk.Tk):
                 pady=5
             )
 
-            self.var_dry_run = tk.BooleanVar()
-            self.var_dry_run.set(False)
             self.chk_dry_run = ttk.Checkbutton(
                 self.frm_dev_mode,
                 command=self.handle_dry_run_logging,
-                text="Enable Dry Run",
-                variable=self.var_dry_run
+                text="Enable Dry Run"
             )
             self.chk_dry_run.grid(
                 row=2,
