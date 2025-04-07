@@ -67,6 +67,15 @@ class App(tk.Tk):
         self.shutdown_event.set()
         self.destroy()
 
+    def handle_dry_run_logging(self):
+        """  Event handler for logging the dry run value when it is changed in the UI. 
+             Changing the value is handled by the ttk Checkbutton itself, not this method.
+        
+        Args:
+            None
+        """
+        logger.info(f"Dry run value: {self.var_dry_run.get()}")
+
     def _create_widgets(self):
         """Create widgets for the main application window.
 
@@ -787,6 +796,28 @@ class App(tk.Tk):
                 pady=5
             )
 
+            self.var_dry_run = tk.BooleanVar()
+            self.var_dry_run.set(False)
+            self.chk_dry_run = ttk.Checkbutton(
+                self.frm_dev_mode,
+                command=self.handle_dry_run_logging,
+                text="Enable Dry Run",
+                variable=self.var_dry_run
+            )
+            self.chk_dry_run.grid(
+                row=2,
+                column=0,
+                sticky="ew",
+                padx=5,
+                pady=5
+            )
+            tooltip.CreateToolTip(
+                self.chk_dry_run,
+                self.tooltips_text.get("dry_run")
+            )
+
+
+
         # Fill in the widgets with the settings from the config file
         logger.debug("Filling in widgets with settings from config file")
         self.var_random.set(self.settings["settings"].getboolean("random"))
@@ -862,7 +893,7 @@ class App(tk.Tk):
         if is_stopped_state(self.generator_state):
             logger.info('Saving settings and starting the generator')
             self._save_settings()
-            started = self.generator.run()
+            started = self.generator.run(self.var_dry_run.get())
             if not started:
                 logger.info('Could not start generator')
         else:
