@@ -17,6 +17,7 @@ class CommandSender:
         self.iracing_window = iracing_window
         self.irsdk = irsdk
 
+
     def connect(self):
         """ Find the iRacing application window and keep a handle. """
         self.iracing_window.connect()
