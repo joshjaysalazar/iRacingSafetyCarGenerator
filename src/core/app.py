@@ -807,8 +807,6 @@ class App(tk.Tk):
                 self.tooltips_text.get("dry_run")
             )
 
-
-
         # Fill in the widgets with the settings from the config file
         logger.debug("Filling in widgets with settings from config file")
         self.var_random.set(self.settings["settings"].getboolean("random"))
