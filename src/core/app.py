@@ -46,11 +46,6 @@ class App(tk.Tk):
         # Set handler for closing main window event
         self.protocol('WM_DELETE_WINDOW', self.handle_delete_window)
 
-        # Create and set dry run variable for dev mode prior to creating widgets
-        # Since the variable is checked even when not in dev mode, we declare it here
-        self.var_dry_run = tk.BooleanVar()
-        self.var_dry_run.set(False)
-
         # Create widgets
         self._create_widgets()
 
@@ -71,18 +66,6 @@ class App(tk.Tk):
         logger.info("Closing main application window")
         self.shutdown_event.set()
         self.destroy()
-
-    def handle_dry_run_logging(self):
-        """  Event handler for logging the dry run value when it is changed in the UI.
-        
-        Args:
-            None
-        """
-        if is_stopped_state(self.generator_state):
-            self.var_dry_run.set(not self.var_dry_run.get())
-            logger.info(f"Dry run value: {self.var_dry_run.get()}")
-        else:
-            logger.info("Cannot change dry run value after starting the generator")
 
     def _create_widgets(self):
         """Create widgets for the main application window.
@@ -804,10 +787,13 @@ class App(tk.Tk):
                 pady=5
             )
 
+            # Create dry run variable and Checkbutton
+            self.var_dry_run = tk.BooleanVar()
+            self.var_dry_run.set(False)
             self.chk_dry_run = ttk.Checkbutton(
                 self.frm_dev_mode,
-                command=self.handle_dry_run_logging,
-                text="Enable Dry Run"
+                text="Enable Dry Run",
+                variable=self.var_dry_run
             )
             self.chk_dry_run.grid(
                 row=2,
@@ -888,6 +874,7 @@ class App(tk.Tk):
             0,
             self.settings["settings"]["laps_before_wave_arounds"]
         )
+        self.var_dry_run.set(self.settings["settings"].getboolean("dry_run"))
 
     def _save_and_run(self):
         """Save the settings to the config file and run the generator.
@@ -898,7 +885,7 @@ class App(tk.Tk):
         if is_stopped_state(self.generator_state):
             logger.info('Saving settings and starting the generator')
             self._save_settings()
-            started = self.generator.run(self.var_dry_run.get())
+            started = self.generator.run()
             if not started:
                 logger.info('Could not start generator')
         else:
@@ -933,6 +920,7 @@ class App(tk.Tk):
         laps_under_sc = self.ent_laps_under_sc.get()
         wave_arounds = self.var_wave_arounds.get()
         laps_before_wave_arounds = self.ent_laps_before_wave_arounds.get()
+        dry_run = self.var_dry_run.get()
 
         # Save the settings to the config file
         self.settings["settings"]["random"] = str(random)
@@ -956,6 +944,7 @@ class App(tk.Tk):
         self.settings["settings"]["laps_before_wave_arounds"] = str(
             laps_before_wave_arounds
         )
+        self.settings["settings"]["dry_run"] = str(dry_run)
 
         with open("settings.ini", "w") as configfile:
             self.settings.write(configfile)

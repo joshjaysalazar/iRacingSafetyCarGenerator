@@ -1,5 +1,6 @@
 import logging
 import time
+import configparser
 
 logger = logging.getLogger(__name__)
 
@@ -17,6 +18,9 @@ class CommandSender:
         self.iracing_window = iracing_window
         self.irsdk = irsdk
 
+        self.settings = configparser.ConfigParser()
+        self.settings.read("settings.ini")
+        self.var_dry_run=bool(self.settings["settings"].getboolean("dry_run"))
 
     def connect(self):
         """ Find the iRacing application window and keep a handle. """
@@ -30,6 +34,9 @@ class CommandSender:
             command: The command to send. Should NOT include the {ENTER} character!
         """
         logger.info(f"Sending command: {command}")
+
+        if self.var_dry_run:
+            return
 
         self.iracing_window.focus()
         self.irsdk.chat_command(1)
@@ -45,6 +52,9 @@ class CommandSender:
             commands: List of commands to send. Should NOT include the {ENTER} character!
             delay: How much delay to add (in seconds) between each command
         """
+        if self.var_dry_run:
+            return
+    
         for command in commands:
             self.send_command(command, delay)
 

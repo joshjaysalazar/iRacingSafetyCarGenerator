@@ -392,8 +392,7 @@ class Generator:
             # If any lead car is at 50%, send the pacelaps command
             if max(lead_dist) >= 0.5:
                 logger.info("Sending pacelaps command")
-                if not self.dry_run:
-                    self.command_sender.send_command(f"!p {laps_under_sc - 1}")
+                self.command_sender.send_command(f"!p {laps_under_sc - 1}")
 
                 # Return True when pace laps are done
                 return True
@@ -493,8 +492,7 @@ class Generator:
         if len(cars_to_wave) > 0:
             for car in cars_to_wave:
                 logger.info(f"Sending wave around command for car {car}")
-                if not self.dry_run:
-                    self.command_sender.send_command(f"!w {car}")
+                self.command_sender.send_command(f"!w {car}")
 
         # Return True when wave arounds are done
         return True
@@ -508,8 +506,7 @@ class Generator:
         logger.info("Deploying safety car")
 
         # Send yellow flag chat command
-        if not self.dry_run:
-            self.command_sender.send_command(f"!y {message}")
+        self.command_sender.send_command(f"!y {message}")
 
         # Move to SC deployed state
         self.master.generator_state = GeneratorState.SAFETY_CAR_DEPLOYED
@@ -625,7 +622,7 @@ class Generator:
     def generator_thread_excepthook(self, args):
         logger.critical("Uncaught exception:", exc_info=args)
 
-    def run(self, var_dry_run):
+    def run(self):
         """Run the safety car generator.
 
         Args:
@@ -636,10 +633,6 @@ class Generator:
 
         # Reset state variables
         self._init_state_variables()
-
-        # Set dry run from the value passed by app.py
-        # If true, this will stop the app from sending commands to the iRacing window
-        self.dry_run = var_dry_run
 
         # Attempt to connect and tell user if successful
         if self.ir.startup():
