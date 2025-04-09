@@ -37,11 +37,6 @@ class App(tk.Tk):
 
         # Trace state variables
         self._generator_state = GeneratorState.STOPPED
-        
-        # Create generator object
-        self.generator = generator.Generator(arguments, self)
-        self.shutdown_event = self.generator.shutdown_event
-        self.skip_wait_for_green_event = self.generator.skip_wait_for_green_event
 
         # Set handler for closing main window event
         self.protocol('WM_DELETE_WINDOW', self.handle_delete_window)
@@ -883,6 +878,12 @@ class App(tk.Tk):
         if is_stopped_state(self.generator_state):
             logger.info('Saving settings and starting the generator')
             self._save_settings()
+
+            # Create generator object
+            self.generator = generator.Generator(self.arguments, self)
+            self.shutdown_event = self.generator.shutdown_event
+            self.skip_wait_for_green_event = self.generator.skip_wait_for_green_event
+
             started = self.generator.run()
             if not started:
                 logger.info('Could not start generator')

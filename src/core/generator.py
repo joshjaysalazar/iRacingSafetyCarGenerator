@@ -24,7 +24,7 @@ def WindowFactory(arguments):
 
 def CommandSenderFactory(arguments, dry_run, iracing_window, ir):
     if arguments and arguments.developer_mode and dry_run:
-        return mock_sender.MockSender()
+        return mock_sender.MockSender(iracing_window)
     return command_sender.CommandSender(iracing_window, ir)
 
 class GeneratorState(Enum):
@@ -55,7 +55,7 @@ class Generator:
         logger.debug("Initializing SDK and CommandSender")
         self.ir = irsdk.IRSDK()
         iracing_window = WindowFactory(arguments)
-        dry_run = self.master.settings["settings"].getboolean("random")
+        dry_run = self.master.settings["settings"].getboolean("dry_run")
         self.command_sender = CommandSenderFactory(arguments, dry_run, iracing_window, self.ir)
 
         # Variables to track safety car events
