@@ -39,7 +39,7 @@ class App(tk.Tk):
         self._generator_state = GeneratorState.STOPPED
 
         # Create generator object
-        self.generator = generator.Generator(self.arguments, self)
+        self.generator = generator.Generator(arguments, self)
         self.shutdown_event = self.generator.shutdown_event
         self.skip_wait_for_green_event = self.generator.skip_wait_for_green_event
 
@@ -882,7 +882,6 @@ class App(tk.Tk):
         if is_stopped_state(self.generator_state):
             logger.info('Saving settings and starting the generator')
             self._save_settings()
-
             started = self.generator.run()
             if not started:
                 logger.info('Could not start generator')
