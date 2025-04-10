@@ -38,6 +38,11 @@ class App(tk.Tk):
         # Trace state variables
         self._generator_state = GeneratorState.STOPPED
 
+        # Create generator object
+        self.generator = generator.Generator(self.arguments, self)
+        self.shutdown_event = self.generator.shutdown_event
+        self.skip_wait_for_green_event = self.generator.skip_wait_for_green_event
+
         # Set handler for closing main window event
         self.protocol('WM_DELETE_WINDOW', self.handle_delete_window)
 
@@ -702,6 +707,26 @@ class App(tk.Tk):
         )
         controls_row += 1
 
+        ### put visual warning here about dev mode if in dev mode
+        if self.arguments.dry_run:
+            logger.debug("Creating dry mode warning due to starting in dry mode")
+            dry_run_style = ttk.Style()
+            dry_run_style.configure("Dry.TLabel", foreground="red", font="bold")
+            self.lbl_dry_run = ttk.Label(
+                self.frm_controls,
+                text="irSCG is in Dry Run mode!",
+                style="Dry.TLabel",
+                anchor=tk.CENTER
+            )
+            self.lbl_dry_run.grid(
+                row=controls_row,
+                column=0,
+                sticky="ew",
+                padx=5,
+                pady=5
+            )
+            controls_row += 1
+
         # Create run button
         logger.debug("Creating run button")
 
@@ -782,26 +807,6 @@ class App(tk.Tk):
                 pady=5
             )
 
-            # Create dry run variable and Checkbutton
-            self.var_dry_run = tk.BooleanVar()
-            self.var_dry_run.set(False)
-            self.chk_dry_run = ttk.Checkbutton(
-                self.frm_dev_mode,
-                text="Enable Dry Run",
-                variable=self.var_dry_run
-            )
-            self.chk_dry_run.grid(
-                row=2,
-                column=0,
-                sticky="ew",
-                padx=5,
-                pady=5
-            )
-            tooltip.CreateToolTip(
-                self.chk_dry_run,
-                self.tooltips_text.get("dry_run")
-            )
-
         # Fill in the widgets with the settings from the config file
         logger.debug("Filling in widgets with settings from config file")
         self.var_random.set(self.settings["settings"].getboolean("random"))
@@ -867,7 +872,6 @@ class App(tk.Tk):
             0,
             self.settings["settings"]["laps_before_wave_arounds"]
         )
-        self.var_dry_run.set(self.settings["settings"].getboolean("dry_run"))
 
     def _save_and_run(self):
         """Save the settings to the config file and run the generator.
@@ -878,11 +882,6 @@ class App(tk.Tk):
         if is_stopped_state(self.generator_state):
             logger.info('Saving settings and starting the generator')
             self._save_settings()
-
-            # Create generator object
-            self.generator = generator.Generator(self.arguments, self)
-            self.shutdown_event = self.generator.shutdown_event
-            self.skip_wait_for_green_event = self.generator.skip_wait_for_green_event
 
             started = self.generator.run()
             if not started:
@@ -919,7 +918,6 @@ class App(tk.Tk):
         laps_under_sc = self.ent_laps_under_sc.get()
         wave_arounds = self.var_wave_arounds.get()
         laps_before_wave_arounds = self.ent_laps_before_wave_arounds.get()
-        dry_run = self.var_dry_run.get()
 
         # Save the settings to the config file
         self.settings["settings"]["random"] = str(random)
@@ -943,7 +941,6 @@ class App(tk.Tk):
         self.settings["settings"]["laps_before_wave_arounds"] = str(
             laps_before_wave_arounds
         )
-        self.settings["settings"]["dry_run"] = str(dry_run)
 
         with open("settings.ini", "w") as configfile:
             self.settings.write(configfile)
