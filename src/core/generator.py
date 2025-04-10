@@ -24,7 +24,7 @@ def WindowFactory(arguments):
 
 def CommandSenderFactory(arguments, dry_run, iracing_window, ir):
     if arguments and arguments.developer_mode and dry_run:
-        return mock_sender.MockSender(iracing_window)
+        return mock_sender.MockSender()
     return command_sender.CommandSender(iracing_window, ir)
 
 class GeneratorState(Enum):

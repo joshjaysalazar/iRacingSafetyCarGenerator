@@ -6,17 +6,16 @@ logger = logging.getLogger(__name__)
 class MockSender:
     """ Mocks sending commands to the iRacing application. """
 
-    def __init__(self, iracing_window):
+    def __init__(self):
         """Initialize the MockSender object.
 
         Args: None
         """
         logger.debug("Initializing MockSender")
-        self.iracing_window = iracing_window
 
     def connect(self):
         """ Find the iRacing application window and keep a handle. """
-        return self.iracing_window.connect()
+        return
 
     def send_command(self, command, delay = 0.5):
         """ Sends the provided command to the iRacing application window.
