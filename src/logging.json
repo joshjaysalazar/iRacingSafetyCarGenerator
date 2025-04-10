@@ -44,6 +44,12 @@
 				"file"
 			]
 		},
+		"core.interactions.mock_sender": {
+			"level": "DEBUG",
+			"handlers": [
+				"file"
+			]
+		},
 		"core.interactions.iracing_window": {
 			"level": "INFO",
 			"handlers": [

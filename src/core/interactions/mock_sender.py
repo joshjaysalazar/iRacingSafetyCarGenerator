@@ -11,7 +11,7 @@ class MockSender:
 
         Args: None
         """
-        logger.info("Initializing MockSender")
+        logger.debug("Initializing MockSender")
         self.iracing_window = iracing_window
 
     def connect(self):
@@ -24,7 +24,7 @@ class MockSender:
         Args:
             command: The command to send. Should NOT include the {ENTER} character!
         """
-        logger.info(f"Sending command: {command}")
+        logger.debug(f"Sending command: {command}")
 
         if delay > 0:
             logger.debug(f"Adding delay between chat command and send_message of: {delay}")
