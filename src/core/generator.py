@@ -196,6 +196,7 @@ class Generator:
 
         # Trigger the safety car event if threshold is met
         if len(stopped_cars) >= self._calc_dynamic_yellow_threshold(threshold):
+            self._log_driver_info(stopped_cars)
             self._start_safety_car(message)
 
     def _check_off_track(self):
@@ -231,6 +232,7 @@ class Generator:
 
         # Trigger the safety car event if threshold is met
         if len(off_track_cars) >= self._calc_dynamic_yellow_threshold(threshold):
+            self._log_driver_info(off_track_cars)
             self._start_safety_car(message)
 
     # Determine what the number of cars stopped should be based on the settings and threshold times
@@ -250,6 +252,13 @@ class Generator:
             return threshold
 
         return math.ceil(threshold * multiplier)
+    
+    def _log_driver_info(self, car_indexes_array):
+        logger.info(f"Affected cars indexes: {car_indexes_array}")
+        logger.info("Current driver info:")
+        logger.info(self.drivers.current_drivers)
+        logger.info("Previous driver info:")
+        logger.info(self.drivers.previous_drivers)
 
     def _get_driver_number(self, id):
         """Get the driver number from the iRacing SDK.
