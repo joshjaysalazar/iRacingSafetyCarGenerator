@@ -188,6 +188,9 @@ class Generator:
         for car in cars_to_remove:
             stopped_cars.remove(car)
 
+        # For each, check if lap distance is within N percent of another car in the list, remove if not
+        stopped_cars = self._adjust_for_proximity(stopped_cars)
+
         # Trigger the safety car event if threshold is met
         if len(stopped_cars) >= self._calc_dynamic_yellow_threshold(threshold):
             self._start_safety_car(message)
@@ -223,9 +226,37 @@ class Generator:
         for car in cars_to_remove:
             off_track_cars.remove(car)
 
+        # For each, check if lap distance is within N percent of another car in the list, remove if not
+        off_track_cars = self._adjust_for_proximity(off_track_cars)
+
         # Trigger the safety car event if threshold is met
         if len(off_track_cars) >= self._calc_dynamic_yellow_threshold(threshold):
             self._start_safety_car(message)
+
+    def _adjust_for_proximity(self, car_indexes_list):
+        car_lap_distances = []
+        # Get current lap distances; num is not the literal index of the car_indexes_list, it is the index position of the current_drivers array
+        for num in car_indexes_list:
+            car_lap_distances.append(self.drivers.current_drivers[num]["lap_distance"])
+        
+        # use a set so no that there are no duplicates
+        cars_to_maintain_in_original_list = {}
+        # Check current lap distances to see if they are within N percent
+        for num in car_indexes_list:
+            added = False
+            for distance in car_lap_distances:
+                # if the index in cars array matches index of lap distance array, then that is the same
+                # car and we don't want to compare that
+                # Or if added is true, it has already been added to the set and we can skip the rest of the iterations for this car
+                if (car_indexes_list.index(num) == car_lap_distances.index(distance)) or added:
+                    continue
+                # if the distance of the current car is within 5% of another car, it should not be removed from the array
+                # future improvement: use a lookup file to adjust the % on a per-track basis
+                if math.fabs(self.drivers.current_drivers[num]["lap_distance"] - distance) < 0.05:
+                    cars_to_maintain_in_original_list.add(num)
+                    added = True
+        
+        return cars_to_maintain_in_original_list
 
     # Determine what the number of cars stopped should be based on the settings and threshold times
     def _calc_dynamic_yellow_threshold(self, threshold):
