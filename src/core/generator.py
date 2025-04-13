@@ -240,7 +240,7 @@ class Generator:
             car_lap_distances.append(self.drivers.current_drivers[num]["lap_distance"])
         
         # use a set so no that there are no duplicates
-        cars_to_maintain_in_original_list = {}
+        cars_to_maintain_in_original_list = set()
         # Check current lap distances to see if they are within N percent
         for num in car_indexes_list:
             added = False
