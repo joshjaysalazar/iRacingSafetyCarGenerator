@@ -234,6 +234,11 @@ class Generator:
             self._start_safety_car(message)
 
     def _adjust_for_proximity(self, car_indexes_list):
+        proximity_yellows_enabled = bool(self.master.settings["settings"]["proximity_yellows"])
+        
+        if not proximity_yellows_enabled:
+            return car_indexes_list
+        
         car_lap_distances = []
         # Get current lap distances; num is not the literal index of the car_indexes_list, it is the index position of the current_drivers array
         for num in car_indexes_list:
