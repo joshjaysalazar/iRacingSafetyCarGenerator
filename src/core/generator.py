@@ -248,18 +248,16 @@ class Generator:
         cars_to_maintain_in_original_list = set()
         # Check current lap distances to see if they are within N percent
         for num in car_indexes_list:
-            added = False
             for distance in car_lap_distances:
                 # if the index in cars array matches index of lap distance array, then that is the same
                 # car and we don't want to compare that
-                # Or if added is true, it has already been added to the set and we can skip the rest of the iterations for this car
-                if (car_indexes_list.index(num) == car_lap_distances.index(distance)) or added:
+                if (car_indexes_list.index(num) == car_lap_distances.index(distance)):
                     continue
+
                 # if the distance of the current car is within 5% of another car, it should not be removed from the array
-                # future improvement: use a lookup file to adjust the % on a per-track basis
+                # future improvement: use a lookup file to adjust the % on a per-track basis or an adjustable value
                 if math.fabs(self.drivers.current_drivers[num]["lap_distance"] - distance) < 0.05:
                     cars_to_maintain_in_original_list.add(num)
-                    added = True
         
         return cars_to_maintain_in_original_list
 
