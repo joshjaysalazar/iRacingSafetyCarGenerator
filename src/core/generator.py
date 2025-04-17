@@ -244,6 +244,7 @@ class Generator:
             The number of cars stopped/off-track which are within N percent of a lap_distance of each other
         """
         proximity_yellows_enabled = bool(self.master.settings["settings"]["proximity_yellows"])
+        proximity_yellows_distance = float(self.master.settings["settings"]["proximity_yellows_distance"])
         
         # If we are not using proximity-based yellows, return the length of the original list
         if not proximity_yellows_enabled:
@@ -269,7 +270,7 @@ class Generator:
                 if car_lap_distances.index(distance) == car_lap_distances.index(distance2):
                     continue
 
-                if math.fabs(distance - distance2) <= 0.05:
+                if math.fabs(distance - distance2) <= proximity_yellows_distance:
                     distance_dict[car_count] += 1
             
             car_count += 1

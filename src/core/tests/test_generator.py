@@ -13,7 +13,8 @@ def generator():
         "settings": {
             "start_multi_val": "1.5",
             "start_multi_time": "300",
-            "proximity_yellows": 0
+            "proximity_yellows": 0,
+            "proximity_yellows_distance": 0.05
         }
     }
     gen = Generator(arguments=mock_arguments, master=mock_master)
@@ -92,6 +93,34 @@ def test_adjust_for_proximity_single_outlier(generator):
 
     result = generator._adjust_for_proximity(car_indexes_list)
     assert result == 3
+
+def test_adjust_for_proximity_distance_adjustment_down(generator):
+    """Test adjustment method when the proximity distance is lowered"""
+    generator.master.settings["settings"]["proximity_yellows"] = 1
+    generator.master.settings["settings"]["proximity_yellows_distance"] = 0.01
+    car_indexes_list = [2, 4, 6, 8]
+    car_distances_list = [0.1, 0.11, 0.14, 0.2]
+    num = 0
+    for idx in car_indexes_list:
+        generator.drivers.current_drivers[idx]["lap_distance"] = car_distances_list[num]
+        num += 1
+
+    result = generator._adjust_for_proximity(car_indexes_list)
+    assert result == 2
+
+def test_adjust_for_proximity_distance_adjustment_up(generator):
+    """Test adjustment method when the proximity distance is raised"""
+    generator.master.settings["settings"]["proximity_yellows"] = 1
+    generator.master.settings["settings"]["proximity_yellows_distance"] = 0.10
+    car_indexes_list = [2, 4, 6, 8, 10]
+    car_distances_list = [0.1, 0.11, 0.14, 0.2, 0.5]
+    num = 0
+    for idx in car_indexes_list:
+        generator.drivers.current_drivers[idx]["lap_distance"] = car_distances_list[num]
+        num += 1
+
+    result = generator._adjust_for_proximity(car_indexes_list)
+    assert result == 4
 
 def test_adjust_for_proximity_multiple_outliers(generator):
     """Test adjustment method when multiple outliers exist"""
