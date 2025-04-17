@@ -261,15 +261,15 @@ class Generator:
         car_count = 0
 
         for distance in car_lap_distances:
-            # initialize the value for the key
-            distance_dict[car_count] = 0
+            # initialize the value for the key; set to 1 to account for the current car
+            distance_dict[car_count] = 1
 
             for distance2 in car_lap_distances:
                 # skip comparing with itself
                 if car_lap_distances.index(distance) == car_lap_distances.index(distance2):
                     continue
 
-                if math.fabs(distance - distance2) < 0.05:
+                if math.fabs(distance - distance2) <= 0.05:
                     distance_dict[car_count] += 1
             
             car_count += 1
