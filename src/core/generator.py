@@ -188,8 +188,10 @@ class Generator:
         for car in cars_to_remove:
             stopped_cars.remove(car)
 
+        stopped_cars_count = self._adjust_for_proximity(stopped_cars)
+
         # Trigger the safety car event if threshold is met
-        if len(stopped_cars) >= self._calc_dynamic_yellow_threshold(threshold):
+        if stopped_cars_count >= self._calc_dynamic_yellow_threshold(threshold):
             self._start_safety_car(message)
 
     def _check_off_track(self):
@@ -223,9 +225,57 @@ class Generator:
         for car in cars_to_remove:
             off_track_cars.remove(car)
 
+        off_track_cars_count= self._adjust_for_proximity(off_track_cars)
+
         # Trigger the safety car event if threshold is met
-        if len(off_track_cars) >= self._calc_dynamic_yellow_threshold(threshold):
+        if off_track_cars_count >= self._calc_dynamic_yellow_threshold(threshold):
             self._start_safety_car(message)
+
+    def _adjust_for_proximity(self, car_indexes_list):
+        """ Check each car in the car_indexes_list to see if it is within N percent of a lap_distance
+            of another car. This will stop a spurious yellow from being thrown if individual cars meet
+            the criteria for a yellow but are not in the same area of the track. If proximity yellows are
+            not enabled, no adjustment will be made and the length of the car_indexes_list will be returned.
+
+        Args:
+            car_indexes_list: A list of the index positions in the drivers list for cars which are off track
+                              or stopped, which needs to be adjusted for proximity to other cars in the list
+        Returns:
+            The number of cars stopped/off-track which are within N percent of a lap_distance of each other
+        """
+        proximity_yellows_enabled = bool(self.master.settings["settings"]["proximity_yellows"])
+        proximity_yellows_distance = float(self.master.settings["settings"]["proximity_yellows_distance"])
+        
+        # If we are not using proximity-based yellows, return the length of the original list
+        if not proximity_yellows_enabled:
+            return len(car_indexes_list)
+        
+        car_lap_distances = []
+        # Get current lap distances; num is not the literal index of the car_indexes_list, it is the index position of the current_drivers array
+        for num in car_indexes_list:
+            car_lap_distances.append(self.drivers.current_drivers[num]["lap_distance"])
+        
+        # A dictionary which will contain a key:value pair for each car in the car_indexes_list
+        # key -> index number, value -> count of other cars in the list that are within N percent of the lap_distance
+        distance_dict = {}
+        # increment this in the outer loop below to guarantee unique keys for the dict
+        car_count = 0
+
+        for distance in car_lap_distances:
+            # initialize the value for the key; set to 1 to account for the current car
+            distance_dict[car_count] = 1
+
+            for distance2 in car_lap_distances:
+                # skip comparing with itself
+                if car_lap_distances.index(distance) == car_lap_distances.index(distance2):
+                    continue
+
+                if math.fabs(distance - distance2) <= proximity_yellows_distance:
+                    distance_dict[car_count] += 1
+            
+            car_count += 1
+        
+        return max(distance_dict.values())
 
     # Determine what the number of cars stopped should be based on the settings and threshold times
     def _calc_dynamic_yellow_threshold(self, threshold):

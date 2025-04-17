@@ -26,6 +26,7 @@ def copy_sdk_data_to_clipboard():
             "CarIdxLapDistPct": ir["CarIdxLapDistPct"],
             "CarIdxClass": ir["CarIdxClass"],
             "CarIdxOnPitRoad": ir["CarIdxOnPitRoad"],
+            "CarIdxTrackSurface": ir["CarIdxTrackSurface"],
         }
         
         pyperclip.copy(json.dumps(data, indent=4))
