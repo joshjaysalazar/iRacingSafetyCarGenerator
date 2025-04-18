@@ -36,6 +36,7 @@ def parse_arguments():
         description='Trigger automated safety car events in iRacing')
     parser.add_argument('-dwi', '--disable-window-interactions', action='store_true')
     parser.add_argument('-dev', '--developer-mode', action='store_true')
+    parser.add_argument('-dry', '--dry-run', action='store_true')
     args = parser.parse_args()
     
     return args
