@@ -260,10 +260,8 @@ class Generator:
             return len(car_indexes_list)
         
         logger.debug(f"Current proximity threshold: {proximity_yellows_distance}")
-        car_lap_distances = []
         # Get current lap distances; num is not the literal index of the car_indexes_list, it is the index position of the current_drivers array
-        for num in car_indexes_list:
-            car_lap_distances.append(self.drivers.current_drivers[num]["lap_distance"])
+        car_lap_distances = [self.drivers.current_drivers[num]["lap_distance"] for num in car_indexes_list]
         
         # A dictionary which will contain a key:value pair for each car in the car_indexes_list
         # key -> index number, value -> count of other cars in the list that are within N percent of the lap_distance
