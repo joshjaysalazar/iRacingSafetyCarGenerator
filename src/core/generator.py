@@ -262,6 +262,9 @@ class Generator:
         logger.debug(f"Current proximity threshold: {proximity_yellows_distance}")
         # Get current lap distances; num is not the literal index of the car_indexes_list, it is the index position of the current_drivers array
         car_lap_distances = [self.drivers.current_drivers[num]["lap_distance"] for num in car_indexes_list]
+        # This set of log statements helps to map the indexes list to the distances list to help with the debug statements later in this function
+        logger.debug(f"Car indexes list:             {car_indexes_list}")
+        logger.debug(f"Corresponding distances list: {car_lap_distances}")
         
         # A dictionary which will contain a key:value pair for each car in the car_indexes_list
         # key -> index number, value -> count of other cars in the list that are within N percent of the lap_distance
@@ -281,9 +284,10 @@ class Generator:
                 if math.fabs(distance - distance2) <= proximity_yellows_distance:
                     logger.debug(f"{car_lap_distances.index(distance)} is in proximity of {car_lap_distances.index(distance2)}, incrementing car_count")
                     distance_dict[car_count] += 1
-                # else:
+                else:
                     logger.debug(f"{car_lap_distances.index(distance)} is out of proximity of {car_lap_distances.index(distance2)}, skipping")
 
+            logger.debug(f"Total cars (including self) in proximity of {car_lap_distances.index(distance)}: {distance_dict[car_count]}")
             car_count += 1
         
         final_count = max(distance_dict.values())
