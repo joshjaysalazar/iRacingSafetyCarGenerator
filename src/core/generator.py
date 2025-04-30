@@ -256,8 +256,10 @@ class Generator:
         
         # If we are not using proximity-based yellows, return the length of the original list
         if not proximity_yellows_enabled:
+            logger.info("Proximity-based yellows disabled, returning length of car indexes list")
             return len(car_indexes_list)
         
+        logger.debug(f"Current proximity threshold: {proximity_yellows_distance}")
         car_lap_distances = []
         # Get current lap distances; num is not the literal index of the car_indexes_list, it is the index position of the current_drivers array
         for num in car_indexes_list:
@@ -279,11 +281,16 @@ class Generator:
                     continue
 
                 if math.fabs(distance - distance2) <= proximity_yellows_distance:
+                    logger.debug(f"{car_lap_distances.index(distance)} is in proximity of {car_lap_distances.index(distance2)}, incrementing car_count")
                     distance_dict[car_count] += 1
-            
+                # else:
+                    logger.debug(f"{car_lap_distances.index(distance)} is out of proximity of {car_lap_distances.index(distance2)}, skipping")
+
             car_count += 1
         
-        return max(distance_dict.values())
+        final_count = max(distance_dict.values())
+        logger.debug(f"Car count adjusted for proximity: {final_count}")
+        return final_count
 
     # Determine what the number of cars stopped should be based on the settings and threshold times
     def _calc_dynamic_yellow_threshold(self, threshold):
