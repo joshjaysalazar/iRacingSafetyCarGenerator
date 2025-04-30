@@ -68,6 +68,14 @@ def test_adjust_for_proximity_disabled(generator):
     result = generator._adjust_for_proximity(car_indexes_list)
     assert result == 5
 
+def test_adjust_for_proximity_empty_list_arg(generator):
+    """Test adjustment method when the passed list is empty"""
+    generator.master.settings["settings"]["proximity_yellows"] = 1
+    car_indexes_list = []
+
+    result = generator._adjust_for_proximity(car_indexes_list)
+    assert result == 0
+
 def test_adjust_for_proximity_no_cars_in_range(generator):
     """Test adjustment method when no cars are within range of each other"""
     generator.master.settings["settings"]["proximity_yellows"] = 1

@@ -232,7 +232,7 @@ class Generator:
         for car in cars_to_remove:
             off_track_cars.remove(car)
 
-        off_track_cars_count= self._adjust_for_proximity(off_track_cars)
+        off_track_cars_count = self._adjust_for_proximity(off_track_cars)
 
         # Trigger the safety car event if threshold is met
         if off_track_cars_count >= self._calc_dynamic_yellow_threshold(threshold):
@@ -258,10 +258,15 @@ class Generator:
         if not proximity_yellows_enabled:
             logger.info("Proximity-based yellows disabled, returning length of car indexes list")
             return len(car_indexes_list)
+
+        if len(car_indexes_list) == 0:
+            return 0
         
         logger.debug(f"Current proximity threshold: {proximity_yellows_distance}")
+        car_lap_distances = []
         # Get current lap distances; num is not the literal index of the car_indexes_list, it is the index position of the current_drivers array
-        car_lap_distances = [self.drivers.current_drivers[num]["lap_distance"] for num in car_indexes_list]
+        for num in car_indexes_list:
+            car_lap_distances.append(self.drivers.current_drivers[num]["lap_distance"])
         # This set of log statements helps to map the indexes list to the distances list to help with the debug statements later in this function
         logger.debug(f"Car indexes list:             {car_indexes_list}")
         logger.debug(f"Corresponding distances list: {car_lap_distances}")
@@ -289,7 +294,7 @@ class Generator:
 
             logger.debug(f"Total cars (including self) in proximity of {car_lap_distances.index(distance)}: {distance_dict[car_count]}")
             car_count += 1
-        
+        logger.debug
         final_count = max(distance_dict.values())
         logger.debug(f"Car count adjusted for proximity: {final_count}")
         return final_count
