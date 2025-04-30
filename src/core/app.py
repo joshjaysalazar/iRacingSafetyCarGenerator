@@ -37,7 +37,7 @@ class App(tk.Tk):
 
         # Trace state variables
         self._generator_state = GeneratorState.STOPPED
-        
+
         # Create generator object
         self.generator = generator.Generator(arguments, self)
         self.shutdown_event = self.generator.shutdown_event
@@ -766,6 +766,26 @@ class App(tk.Tk):
             pady=5
         )
         controls_row += 1
+
+        ### put visual warning here about dev mode if in dev mode
+        if self.arguments.dry_run:
+            logger.debug("Creating dry mode warning due to starting in dry mode")
+            dry_run_style = ttk.Style()
+            dry_run_style.configure("Dry.TLabel", foreground="red", font="bold")
+            self.lbl_dry_run = ttk.Label(
+                self.frm_controls,
+                text="irSCG is in Dry Run mode!",
+                style="Dry.TLabel",
+                anchor=tk.CENTER
+            )
+            self.lbl_dry_run.grid(
+                row=controls_row,
+                column=0,
+                sticky="ew",
+                padx=5,
+                pady=5
+            )
+            controls_row += 1
 
         # Create run button
         logger.debug("Creating run button")
