@@ -681,6 +681,66 @@ class App(tk.Tk):
             self.ent_laps_before_wave_arounds,
             self.tooltips_text.get("laps_before_wave_arounds")
         )
+        general_row += 1
+
+        # Create proximity-based yellows checkbox
+        logger.debug("Creating proximity-based yellows checkbox")
+        self.var_proximity_yellows = tk.IntVar()
+        self.var_proximity_yellows.set(1)
+        self.chk_proximity_yellows = ttk.Checkbutton(
+            self.frm_general,
+            text="Proximity-based yellows",
+            variable=self.var_proximity_yellows
+        )
+        self.chk_proximity_yellows.grid(
+            row=general_row,
+            column=0,
+            columnspan=2,
+            sticky="w",
+            padx=5,
+            pady=5
+        )
+        tooltip.CreateToolTip(
+            self.chk_proximity_yellows,
+            self.tooltips_text.get("proximity_yellows")
+        )
+        general_row += 1
+
+        # Create proximity yellows distance setting spinbox
+        logger.debug("Creating proximity yellows distance spinbox")
+        self.lbl_proximity_dist = ttk.Label(
+            self.frm_general,
+            text="Proximity distance"
+        )
+        self.lbl_proximity_dist.grid(
+            row=general_row,
+            column=0,
+            sticky="w",
+            padx=5,
+            pady=5
+        )
+        self.spn_proximity_dist = ttk.Spinbox(
+            self.frm_general,
+            increment=0.01,
+            from_=0,
+            to=1,
+            width=5
+        )
+        self.spn_proximity_dist.grid(
+            row=general_row,
+            column=1,
+            sticky="e",
+            padx=5,
+            pady=5
+        )
+        tooltip.CreateToolTip(
+            self.lbl_proximity_dist,
+            self.tooltips_text.get("proximity_yellows_distance")
+        )
+        tooltip.CreateToolTip(
+            self.spn_proximity_dist,
+            self.tooltips_text.get("proximity_yellows_distance")
+        )
 
         # Create Controls frame
         logger.debug("Creating Controls frame")
@@ -872,6 +932,11 @@ class App(tk.Tk):
             0,
             self.settings["settings"]["laps_before_wave_arounds"]
         )
+        self.var_proximity_yellows.set(
+            self.settings["settings"].getboolean("proximity_yellows")
+        )
+        self.spn_proximity_dist.delete(0, "end")
+        self.spn_proximity_dist.insert(0, self.settings["settings"]["proximity_yellows_distance"])
 
     def _save_and_run(self):
         """Save the settings to the config file and run the generator.
@@ -917,6 +982,8 @@ class App(tk.Tk):
         laps_under_sc = self.ent_laps_under_sc.get()
         wave_arounds = self.var_wave_arounds.get()
         laps_before_wave_arounds = self.ent_laps_before_wave_arounds.get()
+        proximity_yellows = self.var_proximity_yellows.get()
+        proximity_yellows_distance = self.spn_proximity_dist.get()
 
         # Save the settings to the config file
         self.settings["settings"]["random"] = str(random)
@@ -940,6 +1007,8 @@ class App(tk.Tk):
         self.settings["settings"]["laps_before_wave_arounds"] = str(
             laps_before_wave_arounds
         )
+        self.settings["settings"]["proximity_yellows"] = str(proximity_yellows)
+        self.settings["settings"]["proximity_yellows_distance"] = str(proximity_yellows_distance)
 
         with open("settings.ini", "w") as configfile:
             self.settings.write(configfile)
