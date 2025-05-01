@@ -256,7 +256,7 @@ class Generator:
         
         # If we are not using proximity-based yellows, return the length of the original list
         if not proximity_yellows_enabled:
-            logger.info("Proximity-based yellows disabled, returning length of car indexes list")
+            logger.debug("Proximity-based yellows disabled, returning length of car indexes list")
             return len(car_indexes_list)
 
         if len(car_indexes_list) == 0:
@@ -294,7 +294,7 @@ class Generator:
 
             logger.debug(f"Total cars (including self) in proximity of {car_lap_distances.index(distance)}: {distance_dict[car_count]}")
             car_count += 1
-        logger.debug
+        
         final_count = max(distance_dict.values())
         logger.debug(f"Car count adjusted for proximity: {final_count}")
         return final_count
