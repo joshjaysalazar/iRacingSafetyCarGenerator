@@ -57,8 +57,6 @@ ptw
 
 ```
 
-<<<<<<< Updated upstream
-=======
 # Building for distribution
 
 ## Local Building
@@ -115,7 +113,6 @@ The workflow will:
 
 You can download the built artifacts from the completed workflow run, or from the GitHub release if one was created.
 
->>>>>>> Stashed changes
 ### High level execution
 
 At a high level, the app waits for the race to start, then checks against all conditions as configured in the app, looping approximately every second. "Approximately" because we wait for a second at the end of a loop, but the loop itself obviously also takes some time.
