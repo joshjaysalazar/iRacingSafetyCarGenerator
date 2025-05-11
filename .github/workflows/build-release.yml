@@ -1,0 +1,99 @@
+name: Build Windows Executable
+
+on:
+  workflow_dispatch:
+    inputs:
+      branch:
+        description: "Branch to build"
+        required: true
+        default: "main"
+      version:
+        description: "Version number (leave empty for auto-versioning)"
+        required: false
+      create_release:
+        description: "Create GitHub Release"
+        required: true
+        type: boolean
+        default: false
+      release_name:
+        description: "Release name (required if creating a release)"
+        required: false
+      prerelease:
+        description: "Mark as pre-release"
+        required: false
+        type: boolean
+        default: false
+
+jobs:
+  build:
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+        with:
+          ref: ${{ github.event.inputs.branch }}
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: "3.10"
+          cache: "pip"
+
+      - name: Determine version
+        id: get_version
+        run: |
+          if [[ -n "${{ github.event.inputs.version }}" ]]; then
+            echo "VERSION=${{ github.event.inputs.version }}" >> $GITHUB_ENV
+            echo "USER_VERSION=${{ github.event.inputs.version }}" >> $GITHUB_ENV
+          else
+            VERSION=$(date +"%Y.%m.%d")
+            echo "VERSION=${VERSION}" >> $GITHUB_ENV
+            echo "AUTO_VERSION=${VERSION}" >> $GITHUB_ENV
+          fi
+          echo "BUILD_DATE=$(date +'%Y-%m-%d')" >> $GITHUB_ENV
+        shell: bash
+
+      - name: Build executable
+        run: |
+          python build.py --version "${{ env.VERSION }}"
+
+      - name: List build artifacts
+        run: |
+          ls -la dist
+        shell: bash
+
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: iRacingSafetyCarGenerator-${{ env.VERSION }}
+          path: dist/**
+
+      - name: Create Release
+        id: create_release
+        if: ${{ github.event.inputs.create_release == 'true' }}
+        uses: softprops/action-gh-release@v1
+        with:
+          name: ${{ github.event.inputs.release_name || format('iRacingSafetyCarGenerator v{0}', env.VERSION) }}
+          tag_name: v${{ env.VERSION }}
+          files: |
+            iRacingSafetyCarGenerator-${{ env.VERSION }}.zip
+          draft: false
+          prerelease: ${{ github.event.inputs.prerelease }}
+          generate_release_notes: true
+          body: |
+            ## iRacing Safety Car Generator v${{ env.VERSION }}
+
+            This is an automated build from the ${{ github.event.inputs.branch }} branch.
+
+            ### Release Details
+            - Branch: ${{ github.event.inputs.branch }}
+            - Version: ${{ env.USER_VERSION || env.AUTO_VERSION }}
+            - Build Date: ${{ env.BUILD_DATE }}
+
+            ### Installation
+            1. Download the zip file
+            2. Extract to a folder of your choice
+            3. Run the `iRSCG.exe` executable
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

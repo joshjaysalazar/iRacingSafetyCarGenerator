@@ -57,6 +57,65 @@ ptw
 
 ```
 
+<<<<<<< Updated upstream
+=======
+# Building for distribution
+
+## Local Building
+
+To build a self-contained Windows executable for distribution locally:
+
+```
+# Using the Python script directly
+python build.py
+```
+
+Build options:
+
+```
+# Build with a specific version number (default is current date in YYYY.MM.DD format)
+python build.py --version 1.2.3
+
+# Create a ZIP archive of the distribution
+python build.py --zip
+
+# Clean build directories without building
+python build.py --clean-only
+
+# Force building on non-Windows platforms (for testing)
+python build.py --force
+```
+
+The executable and all required files will be placed in the `dist` directory. You can distribute this to users who can run the application without needing to install Python or any dependencies.
+
+## GitHub Actions Workflow
+
+This repository includes a GitHub Actions workflow that can build the application on-demand from any branch. This is useful for testing builds from feature branches or creating official releases.
+
+### Running the Workflow
+
+1. Navigate to the "Actions" tab in the GitHub repository
+2. Select the "Build Windows Executable" workflow from the sidebar
+3. Click the "Run workflow" dropdown button
+4. Configure the workflow parameters:
+   - **Branch to build**: Select the branch to build (default: 'main')
+   - **Version number**: Optionally specify a version number (e.g., '1.2.3'); leave empty for auto-versioning based on date
+   - **Create GitHub Release**: Check this to create a GitHub release with the built artifacts
+   - **Release name**: Optionally specify a custom release name (if creating a release)
+   - **Mark as pre-release**: Check this to mark the release as a pre-release
+5. Click "Run workflow" to start the build
+
+### Workflow Outputs
+
+The workflow will:
+1. Build the executable for Windows
+2. Create a ZIP archive of the distribution
+3. Upload build artifacts to the workflow run
+4. (Optional) Create a GitHub release with the ZIP file attached
+
+You can download the built artifacts from the completed workflow run, or from the GitHub release if one was created.
+
+>>>>>>> Stashed changes
 ### High level execution
 
 At a high level, the app waits for the race to start, then checks against all conditions as configured in the app, looping approximately every second. "Approximately" because we wait for a second at the end of a loop, but the loop itself obviously also takes some time.
