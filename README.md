@@ -57,9 +57,9 @@ ptw
 
 ```
 
-# Building for distribution
+## Building for distribution
 
-## Local Building
+### Local Building
 
 To build a self-contained Windows executable for distribution locally:
 
@@ -86,7 +86,7 @@ python build.py --force
 
 The executable and all required files will be placed in the `dist` directory. You can distribute this to users who can run the application without needing to install Python or any dependencies.
 
-## GitHub Actions Workflow
+### GitHub Actions Workflow
 
 This repository includes a GitHub Actions workflow that can build the application on-demand from any branch. This is useful for testing builds from feature branches or creating official releases.
 
