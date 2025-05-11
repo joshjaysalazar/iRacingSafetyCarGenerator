@@ -209,8 +209,8 @@ class Builder:
             shutil.make_archive(
                 base_name=str(self.script_dir / archive_name),
                 format="zip",
-                root_dir=self.script_dir,
-                base_dir="dist",
+                root_dir=str(self.dist_dir),  # Use dist_dir as the root directory
+                base_dir=".",  # Use current directory relative to root_dir
             )
             print(f"ZIP archive created: {archive_name}.zip")
         except Exception as e:
