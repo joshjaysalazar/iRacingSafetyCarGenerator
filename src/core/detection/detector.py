@@ -1,0 +1,119 @@
+"""This module contains the Detector class, which is responsible for detecting safety car events
+based on various criteria."""
+
+import logging
+import time
+
+from collections import deque
+from dataclasses import dataclass
+from enum import Enum
+
+logger = logging.getLogger(__name__)
+
+class DetectorEventTypes(Enum):
+    """The different events we are tracking."""
+    OFF_TRACK = "off_track"
+    STOPPED = "stopped"
+
+@dataclass
+class DetectorSettings:
+    """These settings determine when the Detector will signal a safety car event.
+
+    Args:
+        time_range (int): Time range in seconds to consider for recent events.
+        accumulative_threshold (int): This threshold considers the weighted sum of all events to
+            trigger a safety car.
+        accumulative_weights (dict): Weights for different event types.
+        event_type_threshold (dict): The thresholds used to trigger a safety car for individual
+            event types.
+    """
+    time_range: float #= 10.0
+    accumulative_threshold: int #= 10
+    accumulative_weights: dict #= {DetectorEventTypes.OFF_TRACK: 1, DetectorEventTypes.STOPPED: 2}
+    event_type_threshold: dict #= {DetectorEventTypes.OFF_TRACK: 4, DetectorEventTypes.STOPPED: 2}
+
+
+class Detector:
+    """The Detector class is responsible to provide a signal for when a safety car event needs to
+        be triggered.
+    In order to do so, we track per event type which drivers have triggered that event and when.
+
+    The overall design is to:
+    * clean up any events outside the time range specified
+    * register any new events occurred in the current generator loop
+    * check if the accumulative or specific event type thresholds are met
+
+    Because we do not want to count the same event multiple times, we will only count the most
+    recent event for each driver. We therefore keep a dict per event type with the driver ID as key
+    and the number of times the event was registered as value. We use the number of unique keys per
+    event type to calculate if a threshold has been met.
+
+    A queue is used to track the events in a FIFO manner, allowing us to efficiently update the
+    dicts when events drop off outside of the time range. When the count for a driver reaches 0, we
+    know we need to remove them from the dict.
+
+    Args:
+        settings (DetectorSettings): Settings for the detector.
+    """
+
+    def __init__(self, settings: DetectorSettings = None):
+        self._settings = settings if settings else DetectorSettings()
+        self._events_dict = {det: {} for det in DetectorEventTypes} # Initialize dicts for each event type
+        self._events_queue = deque()
+    
+    def clean_up_events(self):
+        """Clean up events that are outside the time range.
+        
+        We keep popping events from our queue until we find one that is within the time range.
+        For each event we pop, we update the count of events for the driver in the dict so that
+        we can clear the entry once they fall completely out of the time range.
+        """
+        current_time = time.time()
+        while (
+            len(self._events_queue) > 0 and
+            current_time - self._events_queue[0][0] >= self._settings.time_range
+        ):
+            _, event_type, driver_id = self._events_queue.popleft()
+            if driver_id in self._events_dict[event_type]:
+                count = self._events_dict[event_type][driver_id]
+                if count == 1:
+                    del self._events_dict[event_type][driver_id]
+                else:
+                    self._events_dict[event_type][driver_id] = count - 1
+            else:
+                logger.warning(
+                    "Driver %s not found in events_dict for event type %s", driver_id, event_type
+                )
+
+    def register_event(self, event_type: DetectorEventTypes, driver_id: int, event_time: float = time.time()):
+        """Register a new event observation.
+
+        Args:
+            event_type (DetectorEventTypes): The event type observed.
+            driver_id (int): The driver involved.
+            event_time (float, optional): The time at which the event was observed. Defaults to current time.
+        """
+        count = self._events_dict[event_type].get(driver_id, 0)
+        self._events_dict[event_type][driver_id] = count + 1
+        self._events_queue.append((event_time, event_type, driver_id))
+
+    def threshold_met(self):
+        """ Check if the event threshold is met.
+
+        Returns:
+            bool: True if either an individual event type threshold is met or if 
+             the weighted sum of event types is over the accumulative threshold.
+        """
+        # Loop through the event types, checking the per-event thresholds
+        # and calculating the weighted sum
+        acc = 0
+        for det in DetectorEventTypes:
+            event_type_count = len(self._events_dict[det])
+
+            # If the specific event threshold is met, return immediately
+            if event_type_count >= self._settings.event_type_threshold[det]:
+                return True
+            
+            acc += event_type_count * self._settings.accumulative_weights[det]
+
+        return acc >= self._settings.accumulative_threshold
