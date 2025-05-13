@@ -506,7 +506,7 @@ class Generator:
             logger.debug("Haven't reached wave lap, skipping wave arounds")
             return False
         
-        wave_around_type = wave_around_type_from_selection(self.master.settings["settings"]["wave_around_rules_index"])
+        wave_around_type = wave_around_type_from_selection(int(self.master.settings["settings"]["wave_around_rules_index"]))
         wave_around_func = wave_arounds_factory(wave_around_type)
         
         if wave_around_type == WaveAroundType.WAVE_AHEAD_OF_CLASS_LEAD:
@@ -515,9 +515,9 @@ class Generator:
             logger.info("Sending wave arounds for cars ahead of class lead")
 
             # Get the commands for the wave arounds
-            laps_completed_list = self.ir["CarIdxLapCompleted"]
+            lap_list = self.ir["CarIdxLap"]
             lap_distance_list = self.ir["CarIdxLapDistPct"]
-            total_distance = [t[0] + t[1] for t in zip(laps_completed_list, lap_distance_list)]
+            total_distance = [t[0] + t[1] for t in zip(lap_list, lap_distance_list)]
             commands = wave_around_func(
                 self.ir["DriverInfo"]["Drivers"],
                 total_distance,
@@ -526,12 +526,7 @@ class Generator:
             )
 
             # Send the commands in order
-            for command in commands:
-                logger.info(f"Sending wave around command: {command}")
-                self.ir_window.focus()
-                self.ir.chat_command(1)
-                time.sleep(0.5)
-                self.ir_window.send_message(f"{command}{{ENTER}}")
+            self.command_sender.send_commands(commands)
 
             # Return True when wave arounds are done
             return True
