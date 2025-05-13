@@ -1,4 +1,8 @@
+import importlib
+import json
 import pytest
+
+from . import resources
 
 from core.procedures.wave_arounds import (
     WaveAroundType,
@@ -226,5 +230,20 @@ def test_wave_ahead_of_class_lead_slower_classes_but_pitted(setup_data):
     assert drivers[6]["CarClassID"] == 3
     on_pit_road[6] = True  # car 6 is on pit road
     expected = []
+    result = wave_ahead_of_class_lead(drivers, car_positions, on_pit_road, pace_car_idx)
+    assert result == expected
+
+def test_wave_ahead_of_class_real_world_example():
+    setup_data = None
+    with importlib.resources.path(resources, "real_world_data.json") as file_name:
+        with open(file_name) as f:
+            setup_data = json.load(f)
+
+    assert setup_data is not None, "Failed to load real world data"
+    drivers = setup_data["drivers"]
+    car_positions = setup_data["car_positions"]
+    on_pit_road = setup_data["on_pit_road"]
+    pace_car_idx = setup_data["pace_car_idx"]
+    expected = setup_data["expected_wave_around_commands"]
     result = wave_ahead_of_class_lead(drivers, car_positions, on_pit_road, pace_car_idx)
     assert result == expected
