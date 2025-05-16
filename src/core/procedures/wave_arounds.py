@@ -101,7 +101,15 @@ def wave_ahead_of_class_lead(
 
     logger.debug(f"Class leads: {class_leads}")
 
-    # Identify cars ahead of their class leader and behind the pace car
+    # Get positions relative to overall lead
+    lead_idx = 0
+    lead_position = 0
+    for idx, position in enumerate(car_positions):
+        if position > lead_position:
+            lead_idx = idx
+            lead_position = position
+
+    # Identify cars ahead of their class leader and behind the overall lead
     for idx, driver in enumerate(drivers):
         if idx == pace_car_idx or on_pit_road[idx]:
             continue
@@ -109,7 +117,10 @@ def wave_ahead_of_class_lead(
         car_class = driver['CarClassID']
         class_lead_idx, class_lead_position = class_leads.get(car_class)
 
-        if class_lead_idx is not None and relative_to_sc[idx] < class_lead_position:
+        if (class_lead_idx is not None # Should always be true
+            and relative_to_sc[idx] < class_lead_position # They are ahead of their class lead
+            and relative_to_sc[idx] > relative_to_sc[lead_idx] # and behind the overall lead
+            ):
             car_number = driver['CarNumber']
             commands.append(f"!w {car_number}")
 
