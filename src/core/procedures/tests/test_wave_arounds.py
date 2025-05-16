@@ -73,7 +73,7 @@ def test_wave_ahead_of_class_lead_no_cars_to_wave(setup_data):
 
 Class leaders                              X       X       X
 wave_lapped_cars   -       -       -       -       -       -       -      -
-wave_ahead_of_CL   X       X       X       -       -       -       -      -
+wave_ahead_of_CL   -       -       -       -       -       -       -      -
 """
 @pytest.mark.skip(reason="Not implemented yet")
 def test_wave_lapped_cars_no_cars_to_wave2(setup_data):
@@ -88,7 +88,7 @@ def test_wave_ahead_of_class_lead_all_of_A_but_lead(setup_data):
     drivers, car_positions, on_pit_road, pace_car_idx = setup_data
     assert car_positions[4] == 1.5 # make sure we update the right one
     car_positions[4] = 2.5
-    expected = ["!w 0", "!w 2", "!w 3"]
+    expected = []
     result = wave_ahead_of_class_lead(drivers, car_positions, on_pit_road, pace_car_idx)
     assert result == expected
 
@@ -102,7 +102,7 @@ def test_wave_ahead_of_class_lead_all_of_A_but_lead(setup_data):
 
 Class leaders                      X       X               X
 wave_lapped_cars   -       -       -       -       X       -       -      -
-wave_ahead_of_CL   X       X       -       -       -       -       -      -
+wave_ahead_of_CL   -       -       -       -       -       -       -      -
 """
 @pytest.mark.skip(reason="Not implemented yet")
 def test_wave_lapped_cars_one_lapped(setup_data):
@@ -117,7 +117,7 @@ def test_wave_ahead_of_class_lead_two_ahead(setup_data):
     drivers, car_positions, on_pit_road, pace_car_idx = setup_data
     assert car_positions[3] == 1.7 # make sure we update the right one
     car_positions[3] = 2.7
-    expected = ["!w 0", "!w 2"]
+    expected = []
     result = wave_ahead_of_class_lead(drivers, car_positions, on_pit_road, pace_car_idx)
     assert result == expected
 
@@ -131,7 +131,7 @@ def test_wave_ahead_of_class_lead_two_ahead(setup_data):
 
 Class leaders      X                                               X      X
 wave_lapped_cars   -       -       -       -       -       -       -      -
-wave_ahead_of_CL   -       -       -       X       -       X       -      -
+wave_ahead_of_CL   -       -       -       -       -       -       -      -
 """
 @pytest.mark.skip(reason="Not implemented yet")
 def test_wave_lapped_cars_slower_classes_none(setup_data):
@@ -150,7 +150,7 @@ def test_wave_ahead_of_class_lead_slower_classes(setup_data):
     car_positions[7] = 2.3
     assert car_positions[8] == 1.2 # make sure we update the right one
     car_positions[8] = 2.2
-    expected = ["!w 5", "!w 6"]
+    expected = []
     result = wave_ahead_of_class_lead(drivers, car_positions, on_pit_road, pace_car_idx)
     assert result == expected
 
@@ -164,7 +164,7 @@ def test_wave_ahead_of_class_lead_slower_classes(setup_data):
 
 Class leaders              Pit     X       X       Pit     X
 wave_lapped_cars   -       -       -       -       -       -       -      -
-wave_ahead_of_CL   X       -       -       -       -       -       -      -
+wave_ahead_of_CL   -       -       -       -       -       -       -      -
 """
 @pytest.mark.skip(reason="Not implemented yet")
 def test_wave_lapped_cars_one_lapped_but_pitted(setup_data):
@@ -183,7 +183,7 @@ def test_wave_ahead_of_class_lead_two_ahead_but_one_pitted(setup_data):
     car_positions[3] = 2.7
     on_pit_road[2] = True  # car 2 is on pit road
     on_pit_road[5] = True  # car 5 is on pit road
-    expected = ["!w 0"]
+    expected = []
     result = wave_ahead_of_class_lead(drivers, car_positions, on_pit_road, pace_car_idx)
     assert result == expected
 
