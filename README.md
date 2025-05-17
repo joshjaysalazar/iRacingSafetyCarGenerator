@@ -48,6 +48,7 @@ python main.py -dev -dwi
 # These are all optional packages to run tests; pytest is really the only one you need to just run tests once
 pip install pytest
 pip install pytest-watch
+pip install pytest-mock
 
 # To run the tests once
 pytest

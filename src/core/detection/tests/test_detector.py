@@ -123,3 +123,17 @@ def test_cleanup(detector, mocker):
     detector.clean_up_events() # should clean up second event
     assert not detector.threshold_met() # now there's only one off track in last second
     
+def test_detector_settings_from_settings():
+    settings = {
+        "settings": {
+            "off_min": "5",
+            "stopped_min": "3",
+        }
+    }
+    detector_settings = DetectorSettings.from_settings(settings)
+    assert detector_settings.time_range == 10.0
+    assert detector_settings.event_type_threshold[OFF_TRACK] == 5
+    assert detector_settings.event_type_threshold[STOPPED] == 3
+    assert detector_settings.accumulative_threshold == 10
+    assert detector_settings.accumulative_weights[OFF_TRACK] == 1.0
+    assert detector_settings.accumulative_weights[STOPPED] == 2.0
