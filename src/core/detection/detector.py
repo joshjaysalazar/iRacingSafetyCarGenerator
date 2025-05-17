@@ -5,7 +5,7 @@ import logging
 import time
 
 from collections import deque
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from enum import Enum
 
 logger = logging.getLogger(__name__)
@@ -27,11 +27,23 @@ class DetectorSettings:
         event_type_threshold (dict): The thresholds used to trigger a safety car for individual
             event types.
     """
-    time_range: float #= 10.0
-    accumulative_threshold: int #= 10
-    accumulative_weights: dict #= {DetectorEventTypes.OFF_TRACK: 1, DetectorEventTypes.STOPPED: 2}
-    event_type_threshold: dict #= {DetectorEventTypes.OFF_TRACK: 4, DetectorEventTypes.STOPPED: 2}
+    time_range: float = 10.0
+    accumulative_threshold: float = 10.0
+    accumulative_weights: dict = field(
+        default_factory=lambda: {DetectorEventTypes.OFF_TRACK: 1.0, DetectorEventTypes.STOPPED: 2.0}
+    ) 
+    event_type_threshold: dict = field(
+        default_factory=lambda: {DetectorEventTypes.OFF_TRACK: 4, DetectorEventTypes.STOPPED: 2}
+    ) 
 
+    def from_settings(settings):
+        return DetectorSettings(
+            time_range=10.0,
+            event_type_threshold={
+                DetectorEventTypes.OFF_TRACK: float(settings["settings"]["off_min"]),
+                DetectorEventTypes.STOPPED: float(settings["settings"]["stopped_min"]),
+            },
+        )
 
 class Detector:
     """The Detector class is responsible to provide a signal for when a safety car event needs to
@@ -73,7 +85,8 @@ class Detector:
             len(self._events_queue) > 0 and
             current_time - self._events_queue[0][0] >= self._settings.time_range
         ):
-            _, event_type, driver_id = self._events_queue.popleft()
+            event_time, event_type, driver_id = self._events_queue.popleft()
+            logger.info(f"Cleaning up event {event_type} for driver {driver_id} registered at {event_time}")
             if driver_id in self._events_dict[event_type]:
                 count = self._events_dict[event_type][driver_id]
                 if count == 1:
@@ -93,9 +106,22 @@ class Detector:
             driver_id (int): The driver involved.
             event_time (float, optional): The time at which the event was observed. Defaults to current time.
         """
+        logger.info(f"Registering event {event_type} for driver {driver_id} at {event_time}")
         count = self._events_dict[event_type].get(driver_id, 0)
         self._events_dict[event_type][driver_id] = count + 1
         self._events_queue.append((event_time, event_type, driver_id))
+
+    def register_events(self, event_type: DetectorEventTypes, driver_ids: list[int], event_time: float = time.time()):
+        """Like register_event, but now report a list of drivers at once all on the same event_time.
+
+        Args:
+            event_type (DetectorEventTypes): The event type observed.
+            driver_ids (list[int]): The list of driver indexes to register the event for.
+            event_time (float, optional): The time at which the events were observed. Defaults to current time.
+        """
+        for driver_id in driver_ids:
+            self.register_event(event_type, driver_id, event_time)
+
 
     def threshold_met(self):
         """ Check if the event threshold is met.
@@ -106,14 +132,19 @@ class Detector:
         """
         # Loop through the event types, checking the per-event thresholds
         # and calculating the weighted sum
+        logger.debug(f"Checking threshold, events_dict={self._events_dict}, ")
+
         acc = 0
         for det in DetectorEventTypes:
             event_type_count = len(self._events_dict[det])
 
             # If the specific event threshold is met, return immediately
             if event_type_count >= self._settings.event_type_threshold[det]:
+                logger.info(f"Threshold met for event type={det} with event_type_count={event_type_count} and threshold={self._settings.event_type_threshold[det]}")
                 return True
             
             acc += event_type_count * self._settings.accumulative_weights[det]
 
-        return acc >= self._settings.accumulative_threshold
+        result = acc >= self._settings.accumulative_threshold
+        logger.debug(f"Accumulative result={result} with acc={acc}")
+        return result

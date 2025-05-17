@@ -26,6 +26,12 @@
 				"file"
 			]
 		},
+		"core.detection.detector": {
+			"level": "DEBUG",
+			"handlers": [
+				"file"
+			]
+		},
 		"core.drivers": {
 			"level": "INFO",
 			"handlers": [
