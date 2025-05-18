@@ -1033,7 +1033,7 @@ class App(tk.Tk):
 
         self.btn_start_sc = ttk.Button(
             self.frm_controls,
-            text="Throw double yellows",
+            text="Throw Double Yellows",
             command=self._start_safety_car
         )
         self.btn_start_sc.grid(
