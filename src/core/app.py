@@ -49,6 +49,19 @@ class App(tk.Tk):
         # Create widgets
         self._create_widgets()
 
+    # Advanced features toggle
+    def _toggle_advanced_features(self):
+        if self.var_advanced_features.get():
+            self.btn_start_sc.grid(
+                row=self._throw_yellow_row,
+                column=0,
+                sticky="ew",
+                padx=5,
+                pady=5
+            )
+        else:
+            self.btn_start_sc.grid_remove()
+
     def load_tooltips_text(self):
         logger.info("Loading tooltips text")
         try:
@@ -74,6 +87,10 @@ class App(tk.Tk):
             None
         """
         logger.info("Creating widgets for main application window")
+
+        # Checkbox for advanced features
+        self.var_advanced_features = tk.IntVar()
+        self.var_advanced_features.set(0)
 
         # Configure
         logger.debug("Configuring main application window")
@@ -1031,20 +1048,34 @@ class App(tk.Tk):
         )
         controls_row += 1
 
-        self.btn_start_sc = ttk.Button(
+    
+
+        self.chk_advanced_features = ttk.Checkbutton(
             self.frm_controls,
-            text="Throw Double Yellows",
-            command=self._start_safety_car
+            text="Advanced Features",
+            variable=self.var_advanced_features,
+            command=self._toggle_advanced_features
         )
-        self.btn_start_sc.grid(
+        self.chk_advanced_features.grid(
             row=controls_row,
             column=0,
-            sticky="ew",
+            sticky="w",
             padx=5,
             pady=5
         )
         controls_row += 1
 
+        self._throw_yellow_row = controls_row
+        controls_row += 1
+
+
+        #Throw Double Yellows
+        self.btn_start_sc = ttk.Button(
+            self.frm_controls,
+            text="Throw Double Yellows",
+            command=self._start_safety_car,
+        )
+        
         # Create status label
         logger.debug("Creating status label")
         self.lbl_status = ttk.Label(
