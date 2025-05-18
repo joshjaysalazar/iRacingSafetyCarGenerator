@@ -1,3 +1,4 @@
+from collections import deque
 import logging
 import math
 import random
@@ -261,43 +262,41 @@ class Generator:
 
         if len(car_indexes_list) == 0:
             return 0
-        
+
         logger.debug(f"Current proximity threshold: {proximity_yellows_distance}")
         car_lap_distances = []
         # Get current lap distances; num is not the literal index of the car_indexes_list, it is the index position of the current_drivers array
         for num in car_indexes_list:
-            car_lap_distances.append(self.drivers.current_drivers[num]["lap_distance"])
-        # This set of log statements helps to map the indexes list to the distances list to help with the debug statements later in this function
+            lap_distance = self.drivers.current_drivers[num]["lap_distance"]
+
+            # Adding this check in case we pass the wrong data (including lap count)
+            if lap_distance > 1.0:
+                logger.warning(f"Lap distance for car idx {num} is > 1.0 ({lap_distance}), normalizing")
+                lap_distance = lap_distance % 1
+
+            car_lap_distances.append(lap_distance)
+
+        # sort in place
+        car_lap_distances.sort()
+
+        # because we need to account for cars being in range of each other across the finish line, we add another copy of all the distances+1 to the list
+        car_lap_distances.extend([d+1 for d in car_lap_distances])
         logger.debug(f"Car indexes list:             {car_indexes_list}")
-        logger.debug(f"Corresponding distances list: {car_lap_distances}")
-        
-        # A dictionary which will contain a key:value pair for each car in the car_indexes_list
-        # key -> index number, value -> count of other cars in the list that are within N percent of the lap_distance
-        distance_dict = {}
-        # increment this in the outer loop below to guarantee unique keys for the dict
-        car_count = 0
+        logger.debug(f"Distances list (sorted and extended): {car_lap_distances}")
 
-        for distance in car_lap_distances:
-            # initialize the value for the key; set to 1 to account for the current car
-            distance_dict[car_count] = 1
+        current_window = deque()
+        max_size = 0
+        for d in car_lap_distances:
+            # pop elements from the left side that are not in range of d
+            while len(current_window) > 0 and current_window[0] < d - proximity_yellows_distance:
+                current_window.popleft()
+            
+            # now append our new value and check how many cars are in range
+            current_window.append(d)
+            max_size = max(max_size, len(current_window))
+            logger.debug(f"after processing {d}, current_window={current_window}, max_size={max_size}")
 
-            for distance2 in car_lap_distances:
-                # skip comparing with itself
-                if car_lap_distances.index(distance) == car_lap_distances.index(distance2):
-                    continue
-
-                if math.fabs(distance - distance2) <= proximity_yellows_distance:
-                    logger.debug(f"{car_lap_distances.index(distance)} is in proximity of {car_lap_distances.index(distance2)}, incrementing car_count")
-                    distance_dict[car_count] += 1
-                else:
-                    logger.debug(f"{car_lap_distances.index(distance)} is out of proximity of {car_lap_distances.index(distance2)}, skipping")
-
-            logger.debug(f"Total cars (including self) in proximity of {car_lap_distances.index(distance)}: {distance_dict[car_count]}")
-            car_count += 1
-        
-        final_count = max(distance_dict.values())
-        logger.debug(f"Car count adjusted for proximity: {final_count}")
-        return final_count
+        return max_size
 
     # Determine what the number of cars stopped should be based on the settings and threshold times
     def _calc_dynamic_yellow_threshold(self, threshold):
