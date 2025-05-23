@@ -194,12 +194,17 @@ class Generator:
         for car in cars_to_remove:
             stopped_cars.remove(car)
 
-        stopped_cars_count = self._adjust_for_proximity(stopped_cars)
+        adjusted_stopped_cars = self._adjust_for_proximity(stopped_cars)
+
+        final_count = max(adjusted_stopped_cars.values())
+        logger.debug(f"Car count adjusted for proximity: {final_count}")
 
         # Trigger the safety car event if threshold is met
-        if stopped_cars_count >= self._calc_dynamic_yellow_threshold(threshold):
+        if final_count >= self._calc_dynamic_yellow_threshold(threshold):
             self._log_driver_info(stopped_cars)
             self._start_safety_car(message)
+
+        return adjusted_stopped_cars
 
     def _check_off_track(self):
         """Check to see if an off track safety car event should be triggered.
@@ -232,11 +237,55 @@ class Generator:
         for car in cars_to_remove:
             off_track_cars.remove(car)
 
-        off_track_cars_count = self._adjust_for_proximity(off_track_cars)
+        adjusted_off_cars = self._adjust_for_proximity(off_track_cars)
+
+        final_count = max(adjusted_off_cars.values())
+        logger.debug(f"Car count adjusted for proximity: {final_count}")
 
         # Trigger the safety car event if threshold is met
-        if off_track_cars_count >= self._calc_dynamic_yellow_threshold(threshold):
+        if final_count >= self._calc_dynamic_yellow_threshold(threshold):
             self._log_driver_info(off_track_cars)
+            self._start_safety_car(message)
+
+        return adjusted_off_cars
+
+    def _check_weighted(self, stopped_cars, off_track_cars):
+        """Check to see if the combination of stopped and off track cars is high enough that
+           a safety car should be deployed. The values are multiplied by their weight value for
+           more granular control
+
+        Args:
+            stopped_cars: Dict of stopped cars and how many cars are stopped in proximity
+            off_track_cars: Dict of off track cars and how many off track cars are in proximity      
+        """
+        logger.debug("Checking weighted safety car event")
+
+        enabled = self.master.settings["settings"]["weighted"]
+        threshold = self.master.settings["settings"]["weighted_min"]
+        message = self.master.settings["settings"]["weighted_message"]
+        
+        if enabled == "0":
+            return
+
+        # get highest value from each list
+        stopped_count = max(stopped_cars.values())
+        logger.debug(f"Stopped car count adjusted for proximity: {stopped_count}")
+
+        off_track_count = max(off_track_cars.values())
+        logger.debug(f"Off track car count adjusted for proximity: {off_track_count}")
+
+        # adjust values for their weights and add them
+        stopped_weight = self.master.settings["settings"]["stopped_weight"]
+        weighted_stopped_count = stopped_count * stopped_weight
+        
+        off_track_weight = self.master.settings["settings"]["off_weight"]
+        weighted_off_track_count = off_track_count * off_track_weight
+
+        total_weighted_count = weighted_stopped_count + weighted_off_track_count
+
+        # check combined weight against the new combined weight setting (dynamic adjustment included)
+        if total_weighted_count >= self._calc_dynamic_yellow_threshold(threshold):
+            self._log_driver_info(stopped_cars.keys().extend(off_track_cars.keys()))
             self._start_safety_car(message)
 
     def _adjust_for_proximity(self, car_indexes_list):
@@ -249,7 +298,8 @@ class Generator:
             car_indexes_list: A list of the index positions in the drivers list for cars which are off track
                               or stopped, which needs to be adjusted for proximity to other cars in the list
         Returns:
-            The number of cars stopped/off-track which are within N percent of a lap_distance of each other
+            A Dictionary with a key/value pair for each car in the car_indexes_list, where the value is the
+            number of cars within proximity of the key
         """
         proximity_yellows_enabled = bool(self.master.settings["settings"]["proximity_yellows"])
         proximity_yellows_distance = float(self.master.settings["settings"]["proximity_yellows_distance"])
@@ -295,9 +345,7 @@ class Generator:
             logger.debug(f"Total cars (including self) in proximity of {car_lap_distances.index(distance)}: {distance_dict[car_count]}")
             car_count += 1
         
-        final_count = max(distance_dict.values())
-        logger.debug(f"Car count adjusted for proximity: {final_count}")
-        return final_count
+        return distance_dict
 
     # Determine what the number of cars stopped should be based on the settings and threshold times
     def _calc_dynamic_yellow_threshold(self, threshold):
@@ -412,8 +460,9 @@ class Generator:
 
                 # If all checks are passed, check for events
                 self._check_random()
-                self._check_stopped()
-                self._check_off_track()
+                stopped_cars = self._check_stopped()
+                off_track_cars = self._check_off_track()
+                self._check_weighted(stopped_cars, off_track_cars)
 
                 # Wait 1 second before checking again
                 time.sleep(1)
