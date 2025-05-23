@@ -79,6 +79,7 @@ class App(tk.Tk):
         logger.debug("Configuring main application window")
         self.columnconfigure(0, weight=1)
         self.columnconfigure(1, weight=1)
+        self.columnconfigure(2, weight=1)
         self.rowconfigure(0, weight=1)
         self.rowconfigure(1, weight=1)
 
@@ -379,43 +380,35 @@ class App(tk.Tk):
         tooltip.CreateToolTip(
             self.ent_off_message,
             self.tooltips_text.get("message")
-        )
-        sc_types_row += 1
+        )        
 
-        # Create horizontal separator
-        logger.debug("Creating horizontal separator")
-        separator = ttk.Separator(self.frm_sc_types, orient="horizontal")
-        separator.grid(
-            row=sc_types_row,
-            column=0,
-            columnspan=2,
-            sticky="ew",
-            padx=5,
-            pady=5
-        )
-        sc_types_row += 1
+        # Create Safety Car Settings frame
+        logger.debug("Creating Safety Car Settings frame")
+        self.frm_sc_settings = ttk.LabelFrame(self, text="Safety Car Settings")
+        self.frm_sc_settings.grid(row=0, column=1, sticky="nesw", padx=5, pady=5)
+        settings_row = 0
         
         # Create Race Start Multiplier spinbox
         logger.debug("Creating race start SC multiplier spinbox")
         self.lbl_start_multiplier = ttk.Label(
-            self.frm_sc_types,
+            self.frm_sc_settings,
             text="SC threshold multiplier"
         )
         self.lbl_start_multiplier.grid(
-            row=sc_types_row,
+            row=settings_row,
             column=0,
             sticky="w",
             padx=5,
             pady=5
         )
         self.spn_start_multiplier = ttk.Spinbox(
-            self.frm_sc_types,
+            self.frm_sc_settings,
             from_=1,
             to=10,
             width=5
         )
         self.spn_start_multiplier.grid(
-            row=sc_types_row,
+            row=settings_row,
             column=1,
             sticky="e",
             padx=5,
@@ -429,29 +422,29 @@ class App(tk.Tk):
             self.spn_start_multiplier,
             self.tooltips_text.get("start_multi_val")
         )
-        sc_types_row += 1
+        settings_row += 1
 
         # Create Race Start Multiplier Time spinbox
         logger.debug("Creating race start SC multiplier active time spinbox")
         self.lbl_start_multi_time = ttk.Label(
-            self.frm_sc_types,
+            self.frm_sc_settings,
             text="SC multiplier active time"
         )
         self.lbl_start_multi_time.grid(
-            row=sc_types_row,
+            row=settings_row,
             column=0,
             sticky="w",
             padx=5,
             pady=5
         )
         self.spn_start_multi_time = ttk.Spinbox(
-            self.frm_sc_types,
+            self.frm_sc_settings,
             from_=0,
             to=999,
             width=5
         )
         self.spn_start_multi_time.grid(
-            row=sc_types_row,
+            row=settings_row,
             column=1,
             sticky="e",
             padx=5,
@@ -465,11 +458,84 @@ class App(tk.Tk):
             self.spn_start_multi_time,
             self.tooltips_text.get("start_multi_time")
         )
+        settings_row += 1
+
+        # Create horizontal separator
+        logger.debug("Creating horizontal separator")
+        separator = ttk.Separator(self.frm_sc_settings, orient="horizontal")
+        separator.grid(
+            row=settings_row,
+            column=0,
+            columnspan=2,
+            sticky="ew",
+            padx=5,
+            pady=5
+        )
+        settings_row += 1
+        
+        # Create proximity-based yellows checkbox
+        logger.debug("Creating proximity-based yellows checkbox")
+        self.var_proximity_yellows = tk.IntVar()
+        self.var_proximity_yellows.set(1)
+        self.chk_proximity_yellows = ttk.Checkbutton(
+            self.frm_sc_settings,
+            text="Proximity-based yellows",
+            variable=self.var_proximity_yellows
+        )
+        self.chk_proximity_yellows.grid(
+            row=settings_row,
+            column=0,
+            columnspan=2,
+            sticky="w",
+            padx=5,
+            pady=5
+        )
+        tooltip.CreateToolTip(
+            self.chk_proximity_yellows,
+            self.tooltips_text.get("proximity_yellows")
+        )
+        settings_row += 1
+
+        # Create proximity yellows distance setting spinbox
+        logger.debug("Creating proximity yellows distance spinbox")
+        self.lbl_proximity_dist = ttk.Label(
+            self.frm_sc_settings,
+            text="Proximity distance"
+        )
+        self.lbl_proximity_dist.grid(
+            row=settings_row,
+            column=0,
+            sticky="w",
+            padx=5,
+            pady=5
+        )
+        self.spn_proximity_dist = ttk.Spinbox(
+            self.frm_sc_settings,
+            increment=0.01,
+            from_=0,
+            to=1,
+            width=5
+        )
+        self.spn_proximity_dist.grid(
+            row=settings_row,
+            column=1,
+            sticky="e",
+            padx=5,
+            pady=5
+        )
+        tooltip.CreateToolTip(
+            self.lbl_proximity_dist,
+            self.tooltips_text.get("proximity_yellows_distance")
+        )
+        tooltip.CreateToolTip(
+            self.spn_proximity_dist,
+            self.tooltips_text.get("proximity_yellows_distance")
+        )
 
         # Create General frame
         logger.debug("Creating General frame")
         self.frm_general = ttk.LabelFrame(self, text="General")
-        self.frm_general.grid(row=0, column=1, sticky="nesw", padx=5, pady=5)
+        self.frm_general.grid(row=0, column=2, sticky="nesw", padx=5, pady=5)
 
         # Create variable to hold the current row in the frame
         general_row = 0
@@ -681,71 +747,11 @@ class App(tk.Tk):
             self.ent_laps_before_wave_arounds,
             self.tooltips_text.get("laps_before_wave_arounds")
         )
-        general_row += 1
-
-        # Create proximity-based yellows checkbox
-        logger.debug("Creating proximity-based yellows checkbox")
-        self.var_proximity_yellows = tk.IntVar()
-        self.var_proximity_yellows.set(1)
-        self.chk_proximity_yellows = ttk.Checkbutton(
-            self.frm_general,
-            text="Proximity-based yellows",
-            variable=self.var_proximity_yellows
-        )
-        self.chk_proximity_yellows.grid(
-            row=general_row,
-            column=0,
-            columnspan=2,
-            sticky="w",
-            padx=5,
-            pady=5
-        )
-        tooltip.CreateToolTip(
-            self.chk_proximity_yellows,
-            self.tooltips_text.get("proximity_yellows")
-        )
-        general_row += 1
-
-        # Create proximity yellows distance setting spinbox
-        logger.debug("Creating proximity yellows distance spinbox")
-        self.lbl_proximity_dist = ttk.Label(
-            self.frm_general,
-            text="Proximity distance"
-        )
-        self.lbl_proximity_dist.grid(
-            row=general_row,
-            column=0,
-            sticky="w",
-            padx=5,
-            pady=5
-        )
-        self.spn_proximity_dist = ttk.Spinbox(
-            self.frm_general,
-            increment=0.01,
-            from_=0,
-            to=1,
-            width=5
-        )
-        self.spn_proximity_dist.grid(
-            row=general_row,
-            column=1,
-            sticky="e",
-            padx=5,
-            pady=5
-        )
-        tooltip.CreateToolTip(
-            self.lbl_proximity_dist,
-            self.tooltips_text.get("proximity_yellows_distance")
-        )
-        tooltip.CreateToolTip(
-            self.spn_proximity_dist,
-            self.tooltips_text.get("proximity_yellows_distance")
-        )
 
         # Create Controls frame
         logger.debug("Creating Controls frame")
         self.frm_controls = ttk.Frame(self)
-        self.frm_controls.grid(row=1, column=1, sticky="nesw", padx=5, pady=5)
+        self.frm_controls.grid(row=1, column=2, sticky="nesw", padx=5, pady=5)
         self.frm_controls.columnconfigure(0, weight=1)
 
         # Create variable to hold the current row in the frame
