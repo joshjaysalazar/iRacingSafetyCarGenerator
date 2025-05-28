@@ -382,6 +382,8 @@ class App(tk.Tk):
             self.tooltips_text.get("message")
         )        
 
+        # Create 
+
         # Create Safety Car Settings frame
         logger.debug("Creating Safety Car Settings frame")
         self.frm_sc_settings = ttk.LabelFrame(self, text="Safety Car Settings")
@@ -392,7 +394,7 @@ class App(tk.Tk):
         logger.debug("Creating race start SC multiplier spinbox")
         self.lbl_start_multiplier = ttk.Label(
             self.frm_sc_settings,
-            text="SC threshold multiplier"
+            text="Race Start multiplier"
         )
         self.lbl_start_multiplier.grid(
             row=settings_row,
@@ -428,7 +430,7 @@ class App(tk.Tk):
         logger.debug("Creating race start SC multiplier active time spinbox")
         self.lbl_start_multi_time = ttk.Label(
             self.frm_sc_settings,
-            text="SC multiplier active time"
+            text="Multiplier active time"
         )
         self.lbl_start_multi_time.grid(
             row=settings_row,
@@ -530,6 +532,149 @@ class App(tk.Tk):
         tooltip.CreateToolTip(
             self.spn_proximity_dist,
             self.tooltips_text.get("proximity_yellows_distance")
+        )
+        settings_row += 1
+
+        # Create horizontal separator
+        logger.debug("Creating horizontal separator")
+        separator = ttk.Separator(self.frm_sc_settings, orient="horizontal")
+        separator.grid(
+            row=settings_row,
+            column=0,
+            columnspan=2,
+            sticky="ew",
+            padx=5,
+            pady=5
+        )
+        settings_row += 1
+
+        logger.debug("Creating combined yellows checkbox")
+        self.var_combined = tk.IntVar()
+        self.var_combined.set(1)
+        self.chk_combined_yellows = ttk.Checkbutton(
+            self.frm_sc_settings,
+            text="Combined/Weighted Yellows",
+            variable=self.var_combined
+        )
+        self.chk_combined_yellows.grid(
+            row=settings_row,
+            column=0,
+            columnspan=2,
+            sticky="w",
+            padx=5,
+            pady=5
+        )
+        tooltip.CreateToolTip(
+            self.chk_combined_yellows,
+            self.tooltips_text.get("combined_yellows")
+        )
+        settings_row += 1
+
+        logger.debug("Creating combined threshold spinbox")
+        self.lbl_combined_min = ttk.Label(
+            self.frm_sc_settings,
+            text="Combined threshold"
+        )
+        self.lbl_combined_min.grid(
+            row=settings_row,
+            column=0,
+            sticky="w",
+            padx=5,
+            pady=5
+        )
+        self.spn_combined_min = ttk.Spinbox(
+            self.frm_sc_settings,
+            increment=1,
+            from_=1,
+            to=100,
+            width=5
+        )
+        self.spn_combined_min.grid(
+            row=settings_row,
+            column=1,
+            sticky="e",
+            padx=5,
+            pady=5
+        )
+        tooltip.CreateToolTip(
+            self.lbl_combined_min,
+            self.tooltips_text.get("combined_min")
+        )
+        tooltip.CreateToolTip(
+            self.spn_combined_min,
+            self.tooltips_text.get("combined_min")
+        )
+        settings_row += 1
+
+        logger.debug("Creating off-track weight spinbox")
+        self.lbl_off_weight = ttk.Label(
+            self.frm_sc_settings,
+            text="Off-track weight"
+        )
+        self.lbl_off_weight.grid(
+            row=settings_row,
+            column=0,
+            sticky="w",
+            padx=5,
+            pady=5
+        )
+        self.spn_off_weight = ttk.Spinbox(
+            self.frm_sc_settings,
+            increment=1,
+            from_=1,
+            to=10,
+            width=5
+        )
+        self.spn_off_weight.grid(
+            row=settings_row,
+            column=1,
+            sticky="e",
+            padx=5,
+            pady=5
+        )
+        tooltip.CreateToolTip(
+            self.lbl_off_weight,
+            self.tooltips_text.get("off_weight")
+        )
+        tooltip.CreateToolTip(
+            self.spn_off_weight,
+            self.tooltips_text.get("off_weight")
+        )
+        settings_row += 1
+
+        logger.debug("Creating stopped weight spinbox")
+        self.lbl_stopped_weight = ttk.Label(
+            self.frm_sc_settings,
+            text="Stopped weight"
+        )
+        self.lbl_stopped_weight.grid(
+            row=settings_row,
+            column=0,
+            sticky="w",
+            padx=5,
+            pady=5
+        )
+        self.spn_stopped_weight = ttk.Spinbox(
+            self.frm_sc_settings,
+            increment=1,
+            from_=1,
+            to=10,
+            width=5
+        )
+        self.spn_stopped_weight.grid(
+            row=settings_row,
+            column=1,
+            sticky="e",
+            padx=5,
+            pady=5
+        )
+        tooltip.CreateToolTip(
+            self.lbl_stopped_weight,
+            self.tooltips_text.get("stopped_weight")
+        )
+        tooltip.CreateToolTip(
+            self.spn_stopped_weight,
+            self.tooltips_text.get("stopped_weight")
         )
 
         # Create General frame
@@ -943,6 +1088,13 @@ class App(tk.Tk):
         )
         self.spn_proximity_dist.delete(0, "end")
         self.spn_proximity_dist.insert(0, self.settings["settings"]["proximity_yellows_distance"])
+        self.var_combined.set(self.settings["settings"].getboolean("combined"))
+        self.spn_combined_min.delete(0, "end")
+        self.spn_combined_min.insert(0, self.settings["settings"]["combined_min"])
+        self.spn_stopped_weight.delete(0, "end")
+        self.spn_stopped_weight.insert(0, self.settings["settings"]["stopped_weight"])
+        self.spn_off_weight.delete(0, "end")
+        self.spn_off_weight.insert(0, self.settings["settings"]["off_weight"])
 
     def _save_and_run(self):
         """Save the settings to the config file and run the generator.
@@ -990,6 +1142,10 @@ class App(tk.Tk):
         laps_before_wave_arounds = self.ent_laps_before_wave_arounds.get()
         proximity_yellows = self.var_proximity_yellows.get()
         proximity_yellows_distance = self.spn_proximity_dist.get()
+        combined = self.var_combined.get()
+        combined_min = self.spn_combined_min.get()
+        stopped_weight = self.spn_stopped_weight.get()
+        off_weight = self.spn_off_weight.get()
 
         # Save the settings to the config file
         self.settings["settings"]["random"] = str(random)
@@ -1015,6 +1171,10 @@ class App(tk.Tk):
         )
         self.settings["settings"]["proximity_yellows"] = str(proximity_yellows)
         self.settings["settings"]["proximity_yellows_distance"] = str(proximity_yellows_distance)
+        self.settings["settings"]["combined"] = str(combined)
+        self.settings["settings"]["combined_min"] = str(combined_min)
+        self.settings["settings"]["stopped_weight"] = str(stopped_weight)
+        self.settings["settings"]["off_weight"] = str(off_weight)
 
         with open("settings.ini", "w") as configfile:
             self.settings.write(configfile)
