@@ -78,6 +78,8 @@ def test_adjust_for_proximity_empty_list_arg(generator):
 
 def test_adjust_for_proximity_no_cars_in_range(generator):
     """Test adjustment method when no cars are within range of each other"""
+    # The test data is written assuming a distance setting of 0.05
+    generator.master.settings["settings"]["proximity_yellows_distance"] = 0.05
     generator.master.settings["settings"]["proximity_yellows"] = 1
     car_indexes_list = [2, 4, 6, 8, 10]
     car_distances_list = [0.1, 0.2, 0.3, 0.4, 0.5]
@@ -87,10 +89,12 @@ def test_adjust_for_proximity_no_cars_in_range(generator):
         num += 1
 
     result = generator._adjust_for_proximity(car_indexes_list)
-    assert result == 1
+    assert result == {2: 1, 4: 1, 6: 1, 8: 1, 10: 1}
 
 def test_adjust_for_proximity_single_outlier(generator):
     """Test adjustment method when a single outlier exists"""
+    # The test data is written assuming a distance setting of 0.05
+    generator.master.settings["settings"]["proximity_yellows_distance"] = 0.05
     generator.master.settings["settings"]["proximity_yellows"] = 1
     car_indexes_list = [2, 4, 6, 8]
     car_distances_list = [0.1, 0.11, 0.12, 0.2]
@@ -100,7 +104,7 @@ def test_adjust_for_proximity_single_outlier(generator):
         num += 1
 
     result = generator._adjust_for_proximity(car_indexes_list)
-    assert result == 3
+    assert result == {2: 3, 4: 3, 6: 3, 8: 1}
 
 def test_adjust_for_proximity_distance_adjustment_down(generator):
     """Test adjustment method when the proximity distance is lowered"""
@@ -114,7 +118,7 @@ def test_adjust_for_proximity_distance_adjustment_down(generator):
         num += 1
 
     result = generator._adjust_for_proximity(car_indexes_list)
-    assert result == 2
+    assert result == {2: 2, 4: 2, 6: 1, 8: 1}
 
 def test_adjust_for_proximity_distance_adjustment_up(generator):
     """Test adjustment method when the proximity distance is raised"""
@@ -128,10 +132,12 @@ def test_adjust_for_proximity_distance_adjustment_up(generator):
         num += 1
 
     result = generator._adjust_for_proximity(car_indexes_list)
-    assert result == 4
+    assert result == {2: 4, 4: 4, 6: 4, 8: 4, 10: 1}
 
 def test_adjust_for_proximity_multiple_outliers(generator):
     """Test adjustment method when multiple outliers exist"""
+    # The test data is written assuming a distance setting of 0.05
+    generator.master.settings["settings"]["proximity_yellows_distance"] = 0.05
     generator.master.settings["settings"]["proximity_yellows"] = 1
     car_indexes_list = [2, 4, 6, 8, 10]
     car_distances_list = [0.1, 0.11, 0.12, 0.2, 0.8]
@@ -141,10 +147,12 @@ def test_adjust_for_proximity_multiple_outliers(generator):
         num += 1
 
     result = generator._adjust_for_proximity(car_indexes_list)
-    assert result == 3
+    assert result == {2: 3, 4: 3, 6: 3, 8: 1, 10: 1}
 
 def test_adjust_for_proximity_multiple_clusters(generator):
     """Test adjustment method when multiple clusters exist"""
+        # The test data is written assuming a distance setting of 0.05
+    generator.master.settings["settings"]["proximity_yellows_distance"] = 0.05
     generator.master.settings["settings"]["proximity_yellows"] = 1
     car_indexes_list = [2, 4, 6, 8, 10]
     car_distances_list = [0.1, 0.11, 0.12, 0.2, 0.22]
@@ -154,10 +162,12 @@ def test_adjust_for_proximity_multiple_clusters(generator):
         num += 1
 
     result = generator._adjust_for_proximity(car_indexes_list)
-    assert result == 3
+    assert result == {2: 3, 4: 3, 6: 3, 8: 2, 10: 2}
 
 def test_adjust_for_proximity_equidistant_cars(generator):
     """Test adjustment method when cars are equidistant at the threshold"""
+        # The test data is written assuming a distance setting of 0.05
+    generator.master.settings["settings"]["proximity_yellows_distance"] = 0.05
     generator.master.settings["settings"]["proximity_yellows"] = 1
     car_indexes_list = [2, 4, 6, 8, 10, 12, 14]
     car_distances_list = [0.1, 0.15, 0.2, 0.25, 0.3, 0.35, 0.4]
@@ -169,4 +179,4 @@ def test_adjust_for_proximity_equidistant_cars(generator):
     result = generator._adjust_for_proximity(car_indexes_list)
     # This should return 3 because each car (except the ends of the list) is within range of
     # the car before and after it in the list
-    assert result == 3
+    assert result == {2: 2, 4: 3, 6: 3, 8: 3, 10: 3, 12: 3, 14: 2}

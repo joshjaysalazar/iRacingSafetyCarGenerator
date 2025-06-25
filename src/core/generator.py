@@ -328,21 +328,22 @@ class Generator:
         car_count = 0
 
         for distance in car_lap_distances:
+            curr_drivers_idx_num = car_indexes_list[car_count]
             # initialize the value for the key; set to 1 to account for the current car
-            distance_dict[car_count] = 1
+            distance_dict[curr_drivers_idx_num] = 1
 
             for distance2 in car_lap_distances:
                 # skip comparing with itself
                 if car_lap_distances.index(distance) == car_lap_distances.index(distance2):
                     continue
 
-                if math.fabs(distance - distance2) <= proximity_yellows_distance:
+                if round(math.fabs(distance - distance2), 10) <= proximity_yellows_distance:
                     logger.debug(f"{car_lap_distances.index(distance)} is in proximity of {car_lap_distances.index(distance2)}, incrementing car_count")
-                    distance_dict[car_count] += 1
+                    distance_dict[curr_drivers_idx_num] += 1
                 else:
                     logger.debug(f"{car_lap_distances.index(distance)} is out of proximity of {car_lap_distances.index(distance2)}, skipping")
 
-            logger.debug(f"Total cars (including self) in proximity of {car_lap_distances.index(distance)}: {distance_dict[car_count]}")
+            logger.debug(f"Total cars (including self) in proximity of {car_lap_distances.index(distance)}: {distance_dict[curr_drivers_idx_num]}")
             car_count += 1
         
         return distance_dict
