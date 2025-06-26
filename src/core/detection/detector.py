@@ -15,7 +15,7 @@ class DetectorEventTypes(Enum):
     OFF_TRACK = "off_track"
     STOPPED = "stopped"
 
-@dataclass
+@dataclass(frozen=True)
 class DetectorSettings:
     """These settings determine when the Detector will signal a safety car event.
 
@@ -36,6 +36,7 @@ class DetectorSettings:
         default_factory=lambda: {DetectorEventTypes.OFF_TRACK: 4, DetectorEventTypes.STOPPED: 2}
     ) 
 
+    @staticmethod
     def from_settings(settings):
         return DetectorSettings(
             time_range=10.0,
@@ -132,7 +133,7 @@ class Detector:
         """
         # Loop through the event types, checking the per-event thresholds
         # and calculating the weighted sum
-        logger.debug(f"Checking threshold, events_dict={self._events_dict}, ")
+        logger.debug(f"Checking threshold, events_dict={self._events_dict}, settings={self._settings}")
 
         acc = 0
         for det in DetectorEventTypes:
