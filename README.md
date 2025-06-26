@@ -57,9 +57,9 @@ ptw
 
 ```
 
-## Building for distribution
+### Building for distribution
 
-### Local Building
+#### Local Building
 
 To build a self-contained Windows executable for distribution locally:
 
@@ -86,11 +86,11 @@ python build.py --force
 
 The executable and all required files will be placed in the `dist` directory. You can distribute this to users who can run the application without needing to install Python or any dependencies.
 
-### GitHub Actions Workflow
+#### GitHub Actions Workflow
 
 This repository includes a GitHub Actions workflow that can build the application on-demand from any branch. This is useful for testing builds from feature branches or creating official releases.
 
-### Running the Workflow
+#### Running the Workflow
 
 1. Navigate to the "Actions" tab in the GitHub repository
 2. Select the "Build Windows Executable" workflow from the sidebar
@@ -103,7 +103,7 @@ This repository includes a GitHub Actions workflow that can build the applicatio
    - **Mark as pre-release**: Check this to mark the release as a pre-release
 5. Click "Run workflow" to start the build
 
-### Workflow Outputs
+#### Workflow Outputs
 
 The workflow will:
 1. Build the executable for Windows
@@ -124,13 +124,13 @@ Steps:
 * If any of the thresholds are met, start the Safety Car procedure
 * After the procedure, start looping again
 
-### Waiting for green
+#### Waiting for green
 
 * Waits for the race session to begin
 * Waits for the green flag to be thrown
 * Note that in its current iteration, the app will not work when started _after_ the green flag is shown. In the developer tools a "Skip wait for green" button was added to make testing easier.
 
-### Driver updates
+#### Driver updates
 
 * On each iteration, we update all of the info we track of all drivers
 * Before doing so, we keep a copy of the current information so that we can look at the delta
@@ -139,7 +139,7 @@ Steps:
     * The current lap distance (as a fraction of the total lap)
     * The surface the car is on (on or off track, pit, etc.)
 
-### Eligible Safety Car window
+#### Eligible Safety Car window
 
 **Start and end time**: The start time of the race is recorded when the green flag is shown. Safety cars will only be thrown between the start ("Earliest possible minute") and end ("Latest possible minute") time.
 
@@ -147,11 +147,11 @@ Steps:
 
 **Max Safety Car events**: When the "Maximum safety cars" has been reached, the app stops monitoring for Safety Car events.
 
-### Random events
+#### Random events
 
 We generate a random number and check if that number is smaller than the odds of the event occurring at any second. Takes into account the overall window length.
 
-### Stopped cars events
+#### Stopped cars events
 
 * For each driver, we check their laps completed and current lap distance to calculated their total distance. Note: current lap distance is represented as a fraction of the total lap rather than the actual distance.
 * We compare this to their total distance from the previous loop iteration. If it is the same, the car is stopped.
@@ -163,13 +163,13 @@ We account for:
 * Cars not currently active
 * Cars with negative lap progress (possibly caused by an SDK glitch?)
 
-### Off track events
+#### Off track events
 
 * For each driver, we check their track location which indicates whether they're off track.
 * We account for any negative lap progress, which may indicate an SDK glitch(?).
 * When the threshold of off-track cars is met, we throw a Safety Car event.
 
-### Safety Car procedure
+#### Safety Car procedure
 
 When a Safety Car event is thrown, the following happens:
 
@@ -178,7 +178,7 @@ When a Safety Car event is thrown, the following happens:
 * Based on the "Laps under safety car" setting, we will signal how many laps are left before green.
 * We wait for the green flag to be shown before starting to monitor for events again.
 
-#### Wave arounds
+##### Wave arounds
 
 * First off, this is skipped if "Automatic Wave arounds" is unchecked.
 * We noted earlier when the Safety Car event started, which is used to determine when the wave around signals should be sent, based on the "Laps before wave arounds" setting.
@@ -189,7 +189,7 @@ When a Safety Car event is thrown, the following happens:
     * A car is a lap down AND are behind their class lead on the current lap.
 * We send the wave commands for all cars who qualify for a wave-around with 0.5 second delay between each command.
 
-### Developer mode
+#### Developer mode
 
 The `-dev` argument can be used to start the application in a dev mode, which will add a panel to the GUI with some developer tools (like "Skip wait for green" to make testing easier) and is your place to add any experimental features.
 
