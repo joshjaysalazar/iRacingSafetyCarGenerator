@@ -17,6 +17,10 @@ def copy_sdk_data_to_clipboard():
         
         connected = True
         
+        lap_list = ir["CarIdxLap"]
+        lap_distance_list = ir["CarIdxLapDistPct"]
+        total_distance = [t[0] + t[1] for t in zip(lap_list, lap_distance_list)]
+        
         data = {
             "SessionNum": ir["SessionNum"],
             "SessionInfo": ir["SessionInfo"],
@@ -27,6 +31,7 @@ def copy_sdk_data_to_clipboard():
             "CarIdxClass": ir["CarIdxClass"],
             "CarIdxOnPitRoad": ir["CarIdxOnPitRoad"],
             "CarIdxTrackSurface": ir["CarIdxTrackSurface"],
+            "total_distance_computed": total_distance,
         }
         
         pyperclip.copy(json.dumps(data, indent=4))
