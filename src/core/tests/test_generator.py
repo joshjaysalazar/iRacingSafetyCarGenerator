@@ -180,3 +180,164 @@ def test_adjust_for_proximity_equidistant_cars(generator):
     # This should return 3 because each car (except the ends of the list) is within range of
     # the car before and after it in the list
     assert result == {2: 2, 4: 3, 6: 3, 8: 3, 10: 3, 12: 3, 14: 2}
+
+def test_check_combined_when_turned_off(generator):
+    generator.master.settings["settings"]["combined"] = 0
+    generator.master.settings["settings"]["combined_min"] = 7
+    generator.master.settings["settings"]["combined_message"] = "Cars stopped and off track."
+
+    stopped_cars = {}
+    off_track_cars = {}
+
+    result = generator._check_combined(stopped_cars, off_track_cars)
+    assert result == "Combined yellows disabled"
+
+def test_check_combined_no_stopped_no_off(generator):
+    generator._start_safety_car = Mock()
+
+    generator.master.settings["settings"]["combined"] = 1
+    generator.master.settings["settings"]["combined_min"] = 7
+    generator.master.settings["settings"]["combined_message"] = "Cars stopped and off track."
+    generator.master.settings["settings"]["stopped_weight"] = 1
+    generator.master.settings["settings"]["off_weight"] = 1
+
+    stopped_cars = {}
+    off_track_cars = {}
+
+    result = generator._check_combined(stopped_cars, off_track_cars)
+    generator._start_safety_car.assert_not_called()
+
+def test_check_combined_yes_stopped_no_off_under_threshold(generator):
+    generator._start_safety_car = Mock()
+
+    generator.master.settings["settings"]["combined"] = 1
+    generator.master.settings["settings"]["combined_min"] = 7
+    generator.master.settings["settings"]["combined_message"] = "Cars stopped and off track."
+    generator.master.settings["settings"]["stopped_weight"] = 1
+    generator.master.settings["settings"]["off_weight"] = 1
+
+    stopped_cars = {2: 3, 4: 3, 6: 3}
+    off_track_cars = {}
+
+    result = generator._check_combined(stopped_cars, off_track_cars)
+    generator._start_safety_car.assert_not_called()
+
+def test_check_combined_no_stopped_yes_off_under_threshold(generator):
+    generator._start_safety_car = Mock()
+
+    generator.master.settings["settings"]["combined"] = 1
+    generator.master.settings["settings"]["combined_min"] = 7
+    generator.master.settings["settings"]["combined_message"] = "Cars stopped and off track."
+    generator.master.settings["settings"]["stopped_weight"] = 1
+    generator.master.settings["settings"]["off_weight"] = 1
+
+    stopped_cars = {}
+    off_track_cars = {2: 3, 4: 3, 6: 3}
+
+    result = generator._check_combined(stopped_cars, off_track_cars)
+    generator._start_safety_car.assert_not_called()
+
+def test_check_combined_yes_stopped_yes_off_under_threshold(generator):
+    generator._start_safety_car = Mock()
+
+    generator.master.settings["settings"]["combined"] = 1
+    generator.master.settings["settings"]["combined_min"] = 7
+    generator.master.settings["settings"]["combined_message"] = "Cars stopped and off track."
+    generator.master.settings["settings"]["stopped_weight"] = 1
+    generator.master.settings["settings"]["off_weight"] = 1
+
+    stopped_cars = {1: 3, 3: 3, 5: 3}
+    off_track_cars = {2: 3, 4: 3, 6: 3}
+
+    result = generator._check_combined(stopped_cars, off_track_cars)
+    generator._start_safety_car.assert_not_called()
+
+def test_check_combined_yes_stopped_no_off_over_threshold(generator):
+    generator._start_safety_car = Mock()
+
+    generator.master.settings["settings"]["combined"] = 1
+    generator.master.settings["settings"]["combined_min"] = 4
+    generator.master.settings["settings"]["combined_message"] = "Cars stopped and off track."
+    generator.master.settings["settings"]["stopped_weight"] = 1
+    generator.master.settings["settings"]["off_weight"] = 1
+
+    stopped_cars = {1: 4, 3: 3, 5: 2}
+    off_track_cars = {}
+
+    result = generator._check_combined(stopped_cars, off_track_cars)
+    generator._start_safety_car.assert_called_once()
+
+def test_check_combined_no_stopped_yes_off_over_threshold(generator):
+    generator._start_safety_car = Mock()
+
+    generator.master.settings["settings"]["combined"] = 1
+    generator.master.settings["settings"]["combined_min"] = 4
+    generator.master.settings["settings"]["combined_message"] = "Cars stopped and off track."
+    generator.master.settings["settings"]["stopped_weight"] = 1
+    generator.master.settings["settings"]["off_weight"] = 1
+
+    stopped_cars = {}
+    off_track_cars = {2: 2, 4: 3, 6: 4}
+
+    result = generator._check_combined(stopped_cars, off_track_cars)
+    generator._start_safety_car.assert_called_once()
+
+def test_check_combined_yes_stopped_yes_off_over_threshold(generator):
+    generator._start_safety_car = Mock()
+
+    generator.master.settings["settings"]["combined"] = 1
+    generator.master.settings["settings"]["combined_min"] = 8
+    generator.master.settings["settings"]["combined_message"] = "Cars stopped and off track."
+    generator.master.settings["settings"]["stopped_weight"] = 1
+    generator.master.settings["settings"]["off_weight"] = 1
+
+    stopped_cars = {1: 2, 3: 3, 5: 4}
+    off_track_cars = {2: 2, 4: 3, 6: 4}
+
+    result = generator._check_combined(stopped_cars, off_track_cars)
+    generator._start_safety_car.assert_called_once()
+
+def test_check_combined_with_modified_weights_under_threshold(generator):
+    generator._start_safety_car = Mock()
+
+    generator.master.settings["settings"]["combined"] = 1
+    generator.master.settings["settings"]["combined_min"] = 8
+    generator.master.settings["settings"]["combined_message"] = "Cars stopped and off track."
+    generator.master.settings["settings"]["stopped_weight"] = 2
+    generator.master.settings["settings"]["off_weight"] = 1
+    
+    stopped_cars = {1: 2, 3: 2, 5: 2}
+    off_track_cars = {2: 3, 4: 3, 6: 3}
+
+    result = generator._check_combined(stopped_cars, off_track_cars)
+    generator._start_safety_car.assert_not_called()
+
+def test_check_combined_with_modified_weights_over_threshold(generator):
+    generator._start_safety_car = Mock()
+
+    generator.master.settings["settings"]["combined"] = 1
+    generator.master.settings["settings"]["combined_min"] = 8
+    generator.master.settings["settings"]["combined_message"] = "Cars stopped and off track."
+    generator.master.settings["settings"]["stopped_weight"] = 2
+    generator.master.settings["settings"]["off_weight"] = 1
+    
+    stopped_cars = {1: 3, 3: 3, 5: 3}
+    off_track_cars = {2: 3, 4: 3, 6: 3}
+
+    result = generator._check_combined(stopped_cars, off_track_cars)
+    generator._start_safety_car.assert_called_once()
+
+def test_check_combined_with_modified_weights_not_whole_numbers(generator):
+    generator._start_safety_car = Mock()
+
+    generator.master.settings["settings"]["combined"] = 1
+    generator.master.settings["settings"]["combined_min"] = 8
+    generator.master.settings["settings"]["combined_message"] = "Cars stopped and off track."
+    generator.master.settings["settings"]["stopped_weight"] = 1.5
+    generator.master.settings["settings"]["off_weight"] = 1.5
+    
+    stopped_cars = {1: 3, 3: 3, 5: 3}
+    off_track_cars = {2: 3, 4: 3, 6: 3}
+
+    result = generator._check_combined(stopped_cars, off_track_cars)
+    generator._start_safety_car.assert_called_once()
