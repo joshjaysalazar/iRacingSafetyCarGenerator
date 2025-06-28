@@ -167,6 +167,35 @@ def test_adjust_for_proximity_equidistant_cars(generator):
         num += 1
         
     result = generator._adjust_for_proximity(car_indexes_list)
-    # This should return 3 because each car (except the ends of the list) is within range of
-    # the car before and after it in the list
-    assert result == 3
+    # This should return 2 because the sliding window of length 0.05 will only ever contain two cars
+    assert result == 2
+
+def test_adjust_for_proximity_longer_distance_across_finish(generator):
+    generator.master.settings["settings"]["proximity_yellows"] = 1
+    generator.master.settings["settings"]["proximity_yellows_distance"] = 0.40
+    car_indexes_list = [2, 4, 6, 8, 10, 12]
+    car_distances_list = [0.7, 0.8, 0.9, 1.0, 0.1, 0.2]
+    num = 0
+    for idx in car_indexes_list:
+        generator.drivers.current_drivers[idx]["lap_distance"] = car_distances_list[num]
+        num += 1
+        
+    result = generator._adjust_for_proximity(car_indexes_list)
+    # This should return 5 because only the cars on the ends are not in range
+    assert result == 5
+
+def test_adjust_for_proximity_lapped_cars(generator):
+    """ This situation should not happen but adding in case we mess up in the future """
+    generator.master.settings["settings"]["proximity_yellows"] = 1
+    generator.master.settings["settings"]["proximity_yellows_distance"] = 0.40
+    car_indexes_list = [2, 4, 6, 8, 10, 12]
+    car_distances_list = [1.7, 2.8, 3.9, 4.0, 5.1, 6.2]
+    num = 0
+    for idx in car_indexes_list:
+        generator.drivers.current_drivers[idx]["lap_distance"] = car_distances_list[num]
+        num += 1
+        
+    result = generator._adjust_for_proximity(car_indexes_list)
+    # This should return 5 because only the cars on the ends are not in range
+    # This is an extreme example with cars on different laps, but still at the same spot
+    assert result == 5
