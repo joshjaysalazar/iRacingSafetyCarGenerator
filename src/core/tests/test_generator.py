@@ -14,17 +14,77 @@ def generator():
             "start_multi_val": "1.5",
             "start_multi_time": "300",
             "proximity_yellows": 0,
-            "proximity_yellows_distance": 0.05
+            "proximity_yellows_distance": 0.05,
+            "stopped": 1,
+            "stopped_min": 2,
+            "stopped_message": "Cars stopped on track.",
+            "stopped_weight": 1,
+            "off": 1,
+            "off_min": 3,
+            "off_message": "Multiple cars off track.",
+            "off_weight": 1,
+            "combined": 1,
+            "combined_min": 7,
+            "combined_message": "Cars stopped and off track."
         }
     }
     gen = Generator(arguments=mock_arguments, master=mock_master)
     gen.start_time = 0  # Simulate the start time as 0 for testing
     mock_drivers = Mock()
     mock_drivers.current_drivers = []
+    mock_drivers.previous_drivers = []
     for i in range(0,65):
-        mock_drivers.current_drivers.append({"lap_distance": 0})
+        mock_drivers.current_drivers.append({"laps_completed": 0, "lap_distance": 0, "track_loc": 3})
+        mock_drivers.previous_drivers.append({"laps_completed": 0, "lap_distance": 0, "track_loc": 3})
     setattr(gen, "drivers", mock_drivers)
     return gen
+
+def test_check_stopped_list_entire_field_returns_zero(generator):
+    """Test that the stopped cars list is reset if the entire field is stopped"""
+    result = generator._check_stopped()
+    assert result == 0
+
+def test_check_stopped_disabled_returns_num_stopped_cars(generator):
+    """Test that the stopped check returns the number of stopped cars when disabled"""
+    generator.master.settings["settings"]["stopped"] = 0
+
+    # Set 9 of the cars to not be at the same position
+    for i in range(1,10):
+        generator.drivers.current_drivers[i]["lap_distance"] = i * 0.1
+    
+    result = generator._check_stopped()
+    assert result == 56
+
+def test_check_stopped_disabled_does_not_throw_safety_car(generator):
+    """Test that the stopped check does not throw safety car when disabled"""
+    generator._start_safety_car = Mock()
+    generator.master.settings["settings"]["stopped"] = 0
+
+    # Set 9 of the cars to not be at the same position
+    for i in range(1,10):
+        generator.drivers.current_drivers[i]["lap_distance"] = i * 0.1
+    
+    generator._start_safety_car.assert_not_called()
+
+def test_check_off_track_disabled_returns_num_off_track_cars(generator):
+    """Test that the off track check returns the number of off track cars when disabled"""
+    generator.master.settings["settings"]["off"] = 0
+
+    for i in range(1,10):
+        generator.drivers.current_drivers[i]["track_loc"] = 0
+
+    result = generator._check_off_track()
+    assert result == 9
+
+def test_check_off_track_disabled_returns_num_off_track_cars(generator):
+    """Test that the off track check returns the number of off track cars when disabled"""
+    generator._start_safety_car = Mock()
+    generator.master.settings["settings"]["off"] = 0
+
+    for i in range(1,10):
+        generator.drivers.current_drivers[i]["track_loc"] = 0
+
+    generator._start_safety_car.assert_not_called()
 
 def test_threshold_no_multiplier(generator):
     """Test when multiplier is 0."""
@@ -199,3 +259,96 @@ def test_adjust_for_proximity_lapped_cars(generator):
     # This should return 5 because only the cars on the ends are not in range
     # This is an extreme example with cars on different laps, but still at the same spot
     assert result == 5
+
+def test_check_combined_when_turned_off(generator):
+    generator.master.settings["settings"]["combined"] = 0
+
+    stopped_cars_count = 1
+    off_track_cars_count = 1
+
+    result = generator._check_combined(stopped_cars_count, off_track_cars_count)
+    assert result == "Combined yellows disabled"
+
+def test_check_combined_no_stopped_no_off(generator):
+    generator._start_safety_car = Mock()
+
+    stopped_cars_count = 0
+    off_track_cars_count = 0
+
+    result = generator._check_combined(stopped_cars_count, off_track_cars_count)
+    generator._start_safety_car.assert_not_called()
+
+def test_check_combined_yes_stopped_no_off_under_threshold(generator):
+    generator._start_safety_car = Mock()
+
+    stopped_cars_count = 3
+    off_track_cars_count = 0
+
+    result = generator._check_combined(stopped_cars_count, off_track_cars_count)
+    generator._start_safety_car.assert_not_called()
+
+def test_check_combined_no_stopped_yes_off_under_threshold(generator):
+    generator._start_safety_car = Mock()
+
+    stopped_cars_count = 0
+    off_track_cars_count = 3
+
+    result = generator._check_combined(stopped_cars_count, off_track_cars_count)
+    generator._start_safety_car.assert_not_called()
+
+def test_check_combined_yes_stopped_yes_off_under_threshold(generator):
+    generator._start_safety_car = Mock()
+
+    stopped_cars_count = 3
+    off_track_cars_count = 3
+
+    result = generator._check_combined(stopped_cars_count, off_track_cars_count)
+    generator._start_safety_car.assert_not_called()
+
+def test_check_combined_yes_stopped_yes_off_over_threshold(generator):
+    generator._start_safety_car = Mock()
+
+    generator.master.settings["settings"]["combined_min"] = 8
+
+    stopped_cars_count = 4
+    off_track_cars_count = 4
+
+    result = generator._check_combined(stopped_cars_count, off_track_cars_count)
+    generator._start_safety_car.assert_called_once()
+
+def test_check_combined_with_modified_weights_under_threshold(generator):
+    generator._start_safety_car = Mock()
+
+    generator.master.settings["settings"]["combined_min"] = 8
+    generator.master.settings["settings"]["stopped_weight"] = 2
+
+    stopped_cars_count = 2
+    off_track_cars_count = 3
+
+    result = generator._check_combined(stopped_cars_count, off_track_cars_count)
+    generator._start_safety_car.assert_not_called()
+
+def test_check_combined_with_modified_weights_over_threshold(generator):
+    generator._start_safety_car = Mock()
+
+    generator.master.settings["settings"]["combined_min"] = 8
+    generator.master.settings["settings"]["off_weight"] = 2
+
+    stopped_cars_count = 3
+    off_track_cars_count = 3
+
+    result = generator._check_combined(stopped_cars_count, off_track_cars_count)
+    generator._start_safety_car.assert_called_once()
+
+def test_check_combined_with_modified_weights_not_whole_numbers(generator):
+    generator._start_safety_car = Mock()
+
+    generator.master.settings["settings"]["combined_min"] = 8
+    generator.master.settings["settings"]["stopped_weight"] = 1.5
+    generator.master.settings["settings"]["off_weight"] = 1.5
+
+    stopped_cars_count = 3
+    off_track_cars_count = 3
+
+    result = generator._check_combined(stopped_cars_count, off_track_cars_count)
+    generator._start_safety_car.assert_called_once()
