@@ -136,13 +136,9 @@ class Generator:
         logger.debug("Checking stopped car safety car event")
 
         # Get relevant settings from the settings file
-        enabled = self.master.settings["settings"]["stopped"]
+        enabled = bool(self.master.settings["settings"]["stopped"])
         threshold = float(self.master.settings["settings"]["stopped_min"])
         message = self.master.settings["settings"]["stopped_message"]
-
-        # If stopped car events are disabled, return
-        if enabled == "0":
-            return
 
         # Get the indices of the stopped cars
         stopped_cars = []
@@ -188,8 +184,8 @@ class Generator:
 
         stopped_cars_count = self._adjust_for_proximity(stopped_cars)
 
-        # Trigger the safety car event if threshold is met
-        if stopped_cars_count >= self._calc_dynamic_yellow_threshold(threshold):
+        # Trigger the safety car event if the check is enabled and threshold is met
+        if enabled and stopped_cars_count >= self._calc_dynamic_yellow_threshold(threshold):
             self._log_driver_info(stopped_cars)
             self._start_safety_car(message)
             return 0
@@ -205,13 +201,9 @@ class Generator:
         logger.debug("Checking off track safety car event")
 
         # Get relevant settings from the settings file
-        enabled = self.master.settings["settings"]["off"]
+        enabled = bool(self.master.settings["settings"]["off"])
         threshold = float(self.master.settings["settings"]["off_min"])
         message = self.master.settings["settings"]["off_message"]
-
-        # If off track events are disabled, return
-        if enabled == "0":
-            return
 
         # Get the indices of the off track cars
         off_track_cars = []
@@ -229,8 +221,8 @@ class Generator:
 
         off_track_cars_count = self._adjust_for_proximity(off_track_cars)
 
-        # Trigger the safety car event if threshold is met
-        if off_track_cars_count >= self._calc_dynamic_yellow_threshold(threshold):
+        # Trigger the safety car event if the check is enabled and the threshold is met
+        if enabled and off_track_cars_count >= self._calc_dynamic_yellow_threshold(threshold):
             self._log_driver_info(off_track_cars)
             self._start_safety_car(message)
             return 0
@@ -246,6 +238,8 @@ class Generator:
             off_track_cars_count: Number of stopped cars in proximity
         """
         logger.debug("Checking combined safety car event")
+        logger.debug(f"Stopped cars unweighted: {stopped_cars_count}")
+        logger.debug(f"Off cars unweighted: {off_cars_count }")
 
         enabled = bool(self.master.settings["settings"]["combined"])
         threshold = float(self.master.settings["settings"]["combined_min"])
