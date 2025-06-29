@@ -201,6 +201,9 @@ class Generator:
         if stopped_cars_count >= self._calc_dynamic_yellow_threshold(threshold):
             self._log_driver_info(stopped_cars)
             self._start_safety_car(message)
+            return 0
+
+        return stopped_cars_count
 
     def _check_off_track(self):
         """Check to see if an off track safety car event should be triggered.
@@ -238,6 +241,41 @@ class Generator:
         # Trigger the safety car event if threshold is met
         if off_track_cars_count >= self._calc_dynamic_yellow_threshold(threshold):
             self._log_driver_info(off_track_cars)
+            self._start_safety_car(message)
+            return 0
+
+        return off_track_cars_count
+
+    def _check_combined(self, stopped_cars_count, off_cars_count):
+        """Check to see if the combination of stopped and off track cars is high enough that
+           a safety car should be deployed. The values are multiplied by their weight value for
+           more granular control
+        Args:
+            stopped_cars_count: Number of stopped cars in proximity
+            off_track_cars_count: Number of stopped cars in proximity
+        """
+        logger.debug("Checking combined safety car event")
+
+        enabled = bool(self.master.settings["settings"]["combined"])
+        threshold = float(self.master.settings["settings"]["combined_min"])
+        message = self.master.settings["settings"]["combined_message"]
+
+        if not enabled:
+            return "Combined yellows disabled"
+
+        # adjust values for their weights and add them
+        stopped_weight = float(self.master.settings["settings"]["stopped_weight"])
+        weighted_stopped_count = stopped_cars_count * stopped_weight
+
+        off_track_weight = float(self.master.settings["settings"]["off_weight"])
+        weighted_off_track_count = off_cars_count * off_track_weight
+
+        total_weighted_count = weighted_stopped_count + weighted_off_track_count
+
+        # check combined weight against the new combined weight setting (dynamic adjustment included)
+        if total_weighted_count >= self._calc_dynamic_yellow_threshold(threshold):
+            logger.info(f"Stopped cars by weight: {weighted_stopped_count}")
+            logger.info(f"Off track cars by weight: {weighted_off_track_count}")
             self._start_safety_car(message)
 
     def _adjust_for_proximity(self, car_indexes_list):
@@ -411,8 +449,13 @@ class Generator:
 
                 # If all checks are passed, check for events
                 self._check_random()
-                self._check_stopped()
-                self._check_off_track()
+                stopped_cars_count = self._check_stopped()
+                off_track_cars_count = self._check_off_track()
+
+                # If either of the stopped/off checks return 0 cars, then we don't need to calculate the combined
+                # count because the other function would throw a safety car if its count was high enough
+                if (stopped_cars_count > 0 and off_track_cars_count > 0):
+                    self._check_combined(stopped_cars_count, off_track_cars_count)
 
                 # Wait 1 second before checking again
                 time.sleep(1)
