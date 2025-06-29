@@ -141,6 +141,9 @@ class Generator:
         
         Args:
             None
+        Returns:
+            The number of stopped cars within proximity of each other, OR
+            Zero if this function causes a safety car to be thrown
         """
         logger.debug("Checking stopped car safety car event")
 
@@ -206,6 +209,9 @@ class Generator:
         
         Args:
             None
+        Returns:
+            The number off track cars within proximity of each other, OR
+            Zero if this function causes a safety car to be thrown
         """
         logger.debug("Checking off track safety car event")
 
