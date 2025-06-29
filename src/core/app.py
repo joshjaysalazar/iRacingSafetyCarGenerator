@@ -676,6 +676,23 @@ class App(tk.Tk):
             self.spn_stopped_weight,
             self.tooltips_text.get("stopped_weight")
         )
+        logger.debug("Creating combined message entry")
+        self.ent_combined_message = ttk.Entry(
+            self.frm_sc_settings,
+            width=32
+        )
+        self.ent_combined_message.grid(
+            row=settings_row,
+            column=0,
+            columnspan=2,
+            sticky="w",
+            padx=5,
+            pady=5
+        )
+        tooltip.CreateToolTip(
+            self.ent_combined_message,
+            self.tooltips_text.get("message")
+        )
 
         # Create General frame
         logger.debug("Creating General frame")
@@ -1095,6 +1112,8 @@ class App(tk.Tk):
         self.spn_stopped_weight.insert(0, self.settings["settings"]["stopped_weight"])
         self.spn_off_weight.delete(0, "end")
         self.spn_off_weight.insert(0, self.settings["settings"]["off_weight"])
+        self.ent_combined_message.delete(0,"end")
+        self.ent_combined_message.insert(0, self.settings["settings"]["combined_message"])
 
     def _save_and_run(self):
         """Save the settings to the config file and run the generator.
@@ -1146,6 +1165,7 @@ class App(tk.Tk):
         combined_min = self.spn_combined_min.get()
         stopped_weight = self.spn_stopped_weight.get()
         off_weight = self.spn_off_weight.get()
+        combined_message = self.ent_combined_message.get()
 
         # Save the settings to the config file
         self.settings["settings"]["random"] = str(random)
@@ -1175,6 +1195,7 @@ class App(tk.Tk):
         self.settings["settings"]["combined_min"] = str(combined_min)
         self.settings["settings"]["stopped_weight"] = str(stopped_weight)
         self.settings["settings"]["off_weight"] = str(off_weight)
+        self.settings["settings"]["combined_message"] = str(combined_message)
 
         with open("settings.ini", "w") as configfile:
             self.settings.write(configfile)
