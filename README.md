@@ -170,6 +170,12 @@ We account for:
 * We account for any negative lap progress, which may indicate an SDK glitch(?).
 * When the threshold of off-track cars is met, we throw a Safety Car event.
 
+### Combined events
+
+* The number of stopped cars and off track cars are passed in by the return from the above event functions
+* Each value is multiplied by its respective weight value
+* The values are added, and if the combined threshold is met, we throw a Safety Car event.
+
 #### Safety Car procedure
 
 When a Safety Car event is thrown, the following happens:
