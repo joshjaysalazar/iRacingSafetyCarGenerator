@@ -21,8 +21,10 @@ def generator():
     gen.start_time = 0  # Simulate the start time as 0 for testing
     mock_drivers = Mock()
     mock_drivers.current_drivers = []
+    mock_drivers.previous_drivers = []
     for i in range(0,65):
-        mock_drivers.current_drivers.append({"lap_distance": 0})
+        mock_drivers.current_drivers.append({"lap_distance": 0, "laps_completed": 0, "track_loc": 0})
+        mock_drivers.previous_drivers.append({"lap_distance": 0, "laps_completed": 0, "track_loc": 0})
     setattr(gen, "drivers", mock_drivers)
     return gen
 
@@ -199,3 +201,42 @@ def test_adjust_for_proximity_lapped_cars(generator):
     # This should return 5 because only the cars on the ends are not in range
     # This is an extreme example with cars on different laps, but still at the same spot
     assert result == 5
+
+def test_loop_triggers_safety_car_only_once(generator, mocker):
+    """Test that _check_random triggers _start_safety_car when conditions are met."""
+    mocker.patch.object(generator, '_start_safety_car', side_effect=lambda *args, **kwargs: setattr(generator, 'total_sc_events', generator.total_sc_events + 1))
+    mocker.patch.object(generator, '_wait_for_green_flag')
+    mocker.patch.object(generator.drivers, 'update')
+    mocker.patch('time.sleep')
+
+    # General settings
+    generator.master.settings["settings"]["max_safety_cars"] = "3"
+    generator.master.settings["settings"]["start_minute"] = "0"
+    generator.master.settings["settings"]["end_minute"] = "10"
+    generator.master.settings["settings"]["min_time_between"] = "0"
+
+    # Force a random event to trigger
+    generator.master.settings["settings"]["random"] = "1"
+    generator.master.settings["settings"]["random_prob"] = "0.5"
+    generator.master.settings["settings"]["random_max_occ"] = "3"
+    generator.master.settings["settings"]["random_message"] = "Random Event"
+    mocker.patch('random.random', return_value=0.001)  # Simulate a random value that triggers the random event
+
+    # Force a stopped event to trigger
+    generator.master.settings["settings"]["stopped"] = "1"
+    generator.master.settings["settings"]["stopped_min"] = "0"
+    generator.master.settings["settings"]["stopped_message"] = "Stopped Event"
+
+    # Force an off track event to trigger
+    generator.master.settings["settings"]["off"] = "1"
+    generator.master.settings["settings"]["off_min"] = "0"
+    generator.master.settings["settings"]["off_message"] = "Off Track Event"
+
+    # Simulate a loop cycle
+    generator.start_time = time.time() - 60  # Simulate start time
+    generator._loop()
+
+    assert generator._start_safety_car.call_count == 3
+    generator._start_safety_car.assert_any_call("Random Event")
+    generator._start_safety_car.assert_any_call("Stopped Event")
+    generator._start_safety_car.assert_any_call("Off Track Event")
