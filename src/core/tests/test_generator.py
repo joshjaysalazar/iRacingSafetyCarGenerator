@@ -202,7 +202,11 @@ def test_adjust_for_proximity_lapped_cars(generator):
     # This is an extreme example with cars on different laps, but still at the same spot
     assert result == 5
 
-def test_loop_triggers_safety_car_only_once(generator, mocker):
+@pytest.mark.xfail(
+    reason="Before refactoring, Safety Car events were able to trigger multiple times in a single loop cycle.",
+    strict=True
+)
+def test_loop_triggers_safety_car_three_times(generator, mocker):
     """Test that _check_random triggers _start_safety_car when conditions are met."""
     mocker.patch.object(generator, '_start_safety_car', side_effect=lambda *args, **kwargs: setattr(generator, 'total_sc_events', generator.total_sc_events + 1))
     mocker.patch.object(generator, '_wait_for_green_flag')
@@ -210,7 +214,7 @@ def test_loop_triggers_safety_car_only_once(generator, mocker):
     mocker.patch('time.sleep')
 
     # General settings
-    generator.master.settings["settings"]["max_safety_cars"] = "3"
+    generator.master.settings["settings"]["max_safety_cars"] = "1" # << It is limited to 1, but calls 3 times
     generator.master.settings["settings"]["start_minute"] = "0"
     generator.master.settings["settings"]["end_minute"] = "10"
     generator.master.settings["settings"]["min_time_between"] = "0"
@@ -240,3 +244,40 @@ def test_loop_triggers_safety_car_only_once(generator, mocker):
     generator._start_safety_car.assert_any_call("Random Event")
     generator._start_safety_car.assert_any_call("Stopped Event")
     generator._start_safety_car.assert_any_call("Off Track Event")
+
+def test_loop_triggers_safety_car_only_once(generator, mocker):
+    """Test that _check_random triggers _start_safety_car when conditions are met."""
+    mocker.patch.object(generator, '_start_safety_car', side_effect=lambda *args, **kwargs: setattr(generator, 'total_sc_events', generator.total_sc_events + 1))
+    mocker.patch.object(generator, '_wait_for_green_flag')
+    mocker.patch.object(generator.drivers, 'update')
+    mocker.patch('time.sleep')
+
+    # General settings
+    generator.master.settings["settings"]["max_safety_cars"] = "1"
+    generator.master.settings["settings"]["start_minute"] = "0"
+    generator.master.settings["settings"]["end_minute"] = "10"
+    generator.master.settings["settings"]["min_time_between"] = "0"
+
+    # Force a random event to trigger
+    generator.master.settings["settings"]["random"] = "1"
+    generator.master.settings["settings"]["random_prob"] = "0.5"
+    generator.master.settings["settings"]["random_max_occ"] = "3"
+    generator.master.settings["settings"]["random_message"] = "Random Event"
+    mocker.patch('random.random', return_value=0.001)  # Simulate a random value that triggers the random event
+
+    # Force a stopped event to trigger
+    generator.master.settings["settings"]["stopped"] = "1"
+    generator.master.settings["settings"]["stopped_min"] = "0"
+    generator.master.settings["settings"]["stopped_message"] = "Stopped Event"
+
+    # Force an off track event to trigger
+    generator.master.settings["settings"]["off"] = "1"
+    generator.master.settings["settings"]["off_min"] = "0"
+    generator.master.settings["settings"]["off_message"] = "Off Track Event"
+
+    # Simulate a loop cycle
+    generator.start_time = time.time() - 60  # Simulate start time
+    generator._loop()
+
+    assert generator._start_safety_car.call_count == 1
+    generator._start_safety_car.assert_any_call("Random Event")

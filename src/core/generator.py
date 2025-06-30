@@ -114,15 +114,15 @@ class Generator:
 
         # If random events are disabled, return
         if enabled == "0":
-            return
+            return False
 
         # If the random chance is 0, return
         if chance == 0:
-            return
+            return False
         
         # If the max occurrences is reached, return
         if self.total_random_sc_events >= max_occ:
-            return
+            return False
 
         # Generate a random number between 0 and 1
         rng = random.random()
@@ -134,7 +134,7 @@ class Generator:
         # If the random number is less than or equal to the chance, trigger
         if rng <= chance:
             self.total_random_sc_events += 1
-            self._start_safety_car(message) 
+            return True, message
 
     def _check_stopped(self):
         """Check to see if a stopped car safety car event should be triggered.
@@ -151,7 +151,7 @@ class Generator:
 
         # If stopped car events are disabled, return
         if enabled == "0":
-            return
+            return False
 
         # Get the indices of the stopped cars
         stopped_cars = []
@@ -200,7 +200,7 @@ class Generator:
         # Trigger the safety car event if threshold is met
         if stopped_cars_count >= self._calc_dynamic_yellow_threshold(threshold):
             self._log_driver_info(stopped_cars)
-            self._start_safety_car(message)
+            return True, message
 
     def _check_off_track(self):
         """Check to see if an off track safety car event should be triggered.
@@ -217,7 +217,7 @@ class Generator:
 
         # If off track events are disabled, return
         if enabled == "0":
-            return
+            return False
 
         # Get the indices of the off track cars
         off_track_cars = []
@@ -238,7 +238,7 @@ class Generator:
         # Trigger the safety car event if threshold is met
         if off_track_cars_count >= self._calc_dynamic_yellow_threshold(threshold):
             self._log_driver_info(off_track_cars)
-            self._start_safety_car(message)
+            return True, message
 
     def _adjust_for_proximity(self, car_indexes_list):
         """ Check each car in the car_indexes_list to see if it is within N percent of a lap_distance
@@ -410,9 +410,11 @@ class Generator:
                         continue
 
                 # If all checks are passed, check for events
-                self._check_random()
-                self._check_stopped()
-                self._check_off_track()
+                for check_fn in [self._check_random, self._check_stopped, self._check_off_track]:
+                    result, message = check_fn()
+                    if result:
+                        self._start_safety_car(message)
+                        break
 
                 # Wait 1 second before checking again
                 time.sleep(1)
