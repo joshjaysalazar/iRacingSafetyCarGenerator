@@ -14,17 +14,79 @@ def generator():
             "start_multi_val": "1.5",
             "start_multi_time": "300",
             "proximity_yellows": 0,
-            "proximity_yellows_distance": 0.05
+            "proximity_yellows_distance": 0.05,
+            "stopped": 1,
+            "stopped_min": 2,
+            "stopped_message": "Cars stopped on track.",
+            "stopped_weight": 1,
+            "off": 1,
+            "off_min": 3,
+            "off_message": "Multiple cars off track.",
+            "off_weight": 1,
+            "combined": 1,
+            "combined_min": 7,
+            "combined_message": "Cars stopped and off track."
         }
     }
     gen = Generator(arguments=mock_arguments, master=mock_master)
     gen.start_time = 0  # Simulate the start time as 0 for testing
     mock_drivers = Mock()
     mock_drivers.current_drivers = []
+    mock_drivers.previous_drivers = []
     for i in range(0,65):
-        mock_drivers.current_drivers.append({"lap_distance": 0})
+        mock_drivers.current_drivers.append({"laps_completed": 0, "lap_distance": 0, "track_loc": 3})
+        mock_drivers.previous_drivers.append({"laps_completed": 0, "lap_distance": 0, "track_loc": 3})
     setattr(gen, "drivers", mock_drivers)
+    gen.stopped_cars_indexes = []
+    gen.off_cars_indexes = []
     return gen
+
+def test_check_stopped_list_entire_field_returns_zero(generator):
+    """Test that the stopped cars list is reset if the entire field is stopped"""
+    result = generator._check_stopped()
+    assert result == 0
+
+def test_check_stopped_disabled_returns_num_stopped_cars(generator):
+    """Test that the stopped check returns the number of stopped cars when disabled"""
+    generator.master.settings["settings"]["stopped"] = 0
+
+    # Set 9 of the cars to not be at the same position
+    for i in range(1,10):
+        generator.drivers.current_drivers[i]["lap_distance"] = i * 0.1
+    
+    result = generator._check_stopped()
+    assert result == 56
+
+def test_check_stopped_disabled_does_not_throw_safety_car(generator):
+    """Test that the stopped check does not throw safety car when disabled"""
+    generator._start_safety_car = Mock()
+    generator.master.settings["settings"]["stopped"] = 0
+
+    # Set 9 of the cars to not be at the same position
+    for i in range(1,10):
+        generator.drivers.current_drivers[i]["lap_distance"] = i * 0.1
+    
+    generator._start_safety_car.assert_not_called()
+
+def test_check_off_track_disabled_returns_num_off_track_cars(generator):
+    """Test that the off track check returns the number of off track cars when disabled"""
+    generator.master.settings["settings"]["off"] = 0
+
+    for i in range(1,10):
+        generator.drivers.current_drivers[i]["track_loc"] = 0
+
+    result = generator._check_off_track()
+    assert result == 9
+
+def test_check_off_track_disabled_returns_num_off_track_cars(generator):
+    """Test that the off track check returns the number of off track cars when disabled"""
+    generator._start_safety_car = Mock()
+    generator.master.settings["settings"]["off"] = 0
+
+    for i in range(1,10):
+        generator.drivers.current_drivers[i]["track_loc"] = 0
+
+    generator._start_safety_car.assert_not_called()
 
 def test_threshold_no_multiplier(generator):
     """Test when multiplier is 0."""
@@ -66,7 +128,7 @@ def test_adjust_for_proximity_disabled(generator):
         num += 1
 
     result = generator._adjust_for_proximity(car_indexes_list)
-    assert result == 5
+    assert result == {"count": 5, "ref_dist": 0}
 
 def test_adjust_for_proximity_empty_list_arg(generator):
     """Test adjustment method when the passed list is empty"""
@@ -74,7 +136,7 @@ def test_adjust_for_proximity_empty_list_arg(generator):
     car_indexes_list = []
 
     result = generator._adjust_for_proximity(car_indexes_list)
-    assert result == 0
+    assert {"count": 0, "ref_dist": 0}
 
 def test_adjust_for_proximity_no_cars_in_range(generator):
     """Test adjustment method when no cars are within range of each other"""
@@ -87,7 +149,7 @@ def test_adjust_for_proximity_no_cars_in_range(generator):
         num += 1
 
     result = generator._adjust_for_proximity(car_indexes_list)
-    assert result == 1
+    assert result == {"count": 1, "ref_dist": 1.5}
 
 def test_adjust_for_proximity_single_outlier(generator):
     """Test adjustment method when a single outlier exists"""
@@ -100,7 +162,7 @@ def test_adjust_for_proximity_single_outlier(generator):
         num += 1
 
     result = generator._adjust_for_proximity(car_indexes_list)
-    assert result == 3
+    assert result == {"count": 3, "ref_dist": 1.12}
 
 def test_adjust_for_proximity_distance_adjustment_down(generator):
     """Test adjustment method when the proximity distance is lowered"""
@@ -114,7 +176,7 @@ def test_adjust_for_proximity_distance_adjustment_down(generator):
         num += 1
 
     result = generator._adjust_for_proximity(car_indexes_list)
-    assert result == 2
+    assert result == {"count": 2, "ref_dist": 1.11}
 
 def test_adjust_for_proximity_distance_adjustment_up(generator):
     """Test adjustment method when the proximity distance is raised"""
@@ -128,7 +190,7 @@ def test_adjust_for_proximity_distance_adjustment_up(generator):
         num += 1
 
     result = generator._adjust_for_proximity(car_indexes_list)
-    assert result == 4
+    assert result == {"count": 4, "ref_dist": 1.2}
 
 def test_adjust_for_proximity_multiple_outliers(generator):
     """Test adjustment method when multiple outliers exist"""
@@ -141,7 +203,7 @@ def test_adjust_for_proximity_multiple_outliers(generator):
         num += 1
 
     result = generator._adjust_for_proximity(car_indexes_list)
-    assert result == 3
+    assert result == {"count": 3, "ref_dist": 1.12}
 
 def test_adjust_for_proximity_multiple_clusters(generator):
     """Test adjustment method when multiple clusters exist"""
@@ -154,7 +216,7 @@ def test_adjust_for_proximity_multiple_clusters(generator):
         num += 1
 
     result = generator._adjust_for_proximity(car_indexes_list)
-    assert result == 3
+    assert result == {"count": 3, "ref_dist": 1.12}
 
 def test_adjust_for_proximity_equidistant_cars(generator):
     """Test adjustment method when cars are equidistant at the threshold"""
@@ -168,7 +230,7 @@ def test_adjust_for_proximity_equidistant_cars(generator):
         
     result = generator._adjust_for_proximity(car_indexes_list)
     # This should return 2 because the sliding window of length 0.05 will only ever contain two cars
-    assert result == 2
+    assert result == {"count": 2, "ref_dist": 1.4}
 
 def test_adjust_for_proximity_longer_distance_across_finish(generator):
     generator.master.settings["settings"]["proximity_yellows"] = 1
@@ -182,7 +244,7 @@ def test_adjust_for_proximity_longer_distance_across_finish(generator):
         
     result = generator._adjust_for_proximity(car_indexes_list)
     # This should return 5 because only the cars on the ends are not in range
-    assert result == 5
+    assert result == {"count": 5, "ref_dist": 1.2}
 
 def test_adjust_for_proximity_lapped_cars(generator):
     """ This situation should not happen but adding in case we mess up in the future """
@@ -198,4 +260,85 @@ def test_adjust_for_proximity_lapped_cars(generator):
     result = generator._adjust_for_proximity(car_indexes_list)
     # This should return 5 because only the cars on the ends are not in range
     # This is an extreme example with cars on different laps, but still at the same spot
-    assert result == 5
+    assert result == {"count": 5, "ref_dist": 1.2}
+
+def test_check_combined_when_turned_off(generator):
+    generator.master.settings["settings"]["combined"] = 0
+
+    result = generator._check_combined()
+    assert result == "Combined yellows disabled"
+
+def test_check_combined_no_stopped_no_off(generator):
+    generator._start_safety_car = Mock()
+
+    generator._check_combined()
+    generator._start_safety_car.assert_not_called()
+
+def test_check_combined_yes_stopped_no_off_under_threshold(generator):
+    generator._start_safety_car = Mock()
+
+    generator.stopped_cars_indexes = [1, 3, 5]
+
+    generator._check_combined()
+    generator._start_safety_car.assert_not_called()
+
+def test_check_combined_no_stopped_yes_off_under_threshold(generator):
+    generator._start_safety_car = Mock()
+
+    generator.off_cars_indexes = [2, 4, 6]
+
+    generator._check_combined()
+    generator._start_safety_car.assert_not_called()
+
+def test_check_combined_yes_stopped_yes_off_under_threshold(generator):
+    generator._start_safety_car = Mock()
+
+    generator.stopped_cars_indexes = [1, 3, 5]
+    generator.off_cars_indexes = [2, 4, 6]
+
+    generator._check_combined()
+    generator._start_safety_car.assert_not_called()
+
+def test_check_combined_yes_stopped_yes_off_over_threshold(generator):
+    generator._start_safety_car = Mock()
+
+    generator.master.settings["settings"]["combined_min"] = 8
+    generator.stopped_cars_indexes = [1, 3, 5, 7]
+    generator.off_cars_indexes = [2, 4, 6, 8]
+
+    generator._check_combined()
+    generator._start_safety_car.assert_called_once()
+
+def test_check_combined_with_modified_weights_under_threshold(generator):
+    generator._start_safety_car = Mock()
+
+    generator.master.settings["settings"]["combined_min"] = 8
+    generator.master.settings["settings"]["stopped_weight"] = 2
+    generator.stopped_cars_indexes = [1, 3]
+    generator.off_cars_indexes = [2, 4, 6]
+
+    generator._check_combined()
+    generator._start_safety_car.assert_not_called()
+
+def test_check_combined_with_modified_weights_over_threshold(generator):
+    generator._start_safety_car = Mock()
+
+    generator.master.settings["settings"]["combined_min"] = 8
+    generator.master.settings["settings"]["off_weight"] = 2
+    generator.stopped_cars_indexes = [1, 3, 5]
+    generator.off_cars_indexes = [2, 4, 6]
+
+    generator._check_combined()
+    generator._start_safety_car.assert_called_once()
+
+def test_check_combined_with_modified_weights_not_whole_numbers(generator):
+    generator._start_safety_car = Mock()
+
+    generator.master.settings["settings"]["combined_min"] = 8
+    generator.master.settings["settings"]["stopped_weight"] = 1.5
+    generator.master.settings["settings"]["off_weight"] = 1.5
+    generator.stopped_cars_indexes = [1, 3, 5]
+    generator.off_cars_indexes = [2, 4, 6]
+
+    generator._check_combined()
+    generator._start_safety_car.assert_called_once()
