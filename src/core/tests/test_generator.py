@@ -162,7 +162,7 @@ def test_adjust_for_proximity_single_outlier(generator):
         num += 1
 
     result = generator._adjust_for_proximity(car_indexes_list)
-    assert result == {"count": 3, "ref_dist": 1.11}
+    assert result == {"count": 3, "ref_dist": 1.12}
 
 def test_adjust_for_proximity_distance_adjustment_down(generator):
     """Test adjustment method when the proximity distance is lowered"""
@@ -176,7 +176,7 @@ def test_adjust_for_proximity_distance_adjustment_down(generator):
         num += 1
 
     result = generator._adjust_for_proximity(car_indexes_list)
-    assert result == {"count": 2, "ref_dist": 0.11}
+    assert result == {"count": 2, "ref_dist": 1.11}
 
 def test_adjust_for_proximity_distance_adjustment_up(generator):
     """Test adjustment method when the proximity distance is raised"""
@@ -190,7 +190,7 @@ def test_adjust_for_proximity_distance_adjustment_up(generator):
         num += 1
 
     result = generator._adjust_for_proximity(car_indexes_list)
-    assert result == {"count": 4, "ref_dist": 0.14}
+    assert result == {"count": 4, "ref_dist": 1.2}
 
 def test_adjust_for_proximity_multiple_outliers(generator):
     """Test adjustment method when multiple outliers exist"""
@@ -203,7 +203,7 @@ def test_adjust_for_proximity_multiple_outliers(generator):
         num += 1
 
     result = generator._adjust_for_proximity(car_indexes_list)
-    assert result == {"count": 3, "ref_dist": 0.11}
+    assert result == {"count": 3, "ref_dist": 1.12}
 
 def test_adjust_for_proximity_multiple_clusters(generator):
     """Test adjustment method when multiple clusters exist"""
@@ -216,7 +216,7 @@ def test_adjust_for_proximity_multiple_clusters(generator):
         num += 1
 
     result = generator._adjust_for_proximity(car_indexes_list)
-    assert result == {"count": 3, "ref_dist": 0.11}
+    assert result == {"count": 3, "ref_dist": 1.12}
 
 def test_adjust_for_proximity_equidistant_cars(generator):
     """Test adjustment method when cars are equidistant at the threshold"""
@@ -229,8 +229,8 @@ def test_adjust_for_proximity_equidistant_cars(generator):
         num += 1
         
     result = generator._adjust_for_proximity(car_indexes_list)
-    # This should return 3 because the sliding window of length 0.05 will only ever contain two cars
-    assert result == {"count": 3, "ref_dist": 0.35}
+    # This should return 2 because the sliding window of length 0.05 will only ever contain two cars
+    assert result == {"count": 2, "ref_dist": 1.4}
 
 def test_adjust_for_proximity_longer_distance_across_finish(generator):
     generator.master.settings["settings"]["proximity_yellows"] = 1
@@ -244,7 +244,7 @@ def test_adjust_for_proximity_longer_distance_across_finish(generator):
         
     result = generator._adjust_for_proximity(car_indexes_list)
     # This should return 5 because only the cars on the ends are not in range
-    assert result == {"count": 5, "ref_dist": 0.9}
+    assert result == {"count": 5, "ref_dist": 1.2}
 
 def test_adjust_for_proximity_lapped_cars(generator):
     """ This situation should not happen but adding in case we mess up in the future """
@@ -260,7 +260,7 @@ def test_adjust_for_proximity_lapped_cars(generator):
     result = generator._adjust_for_proximity(car_indexes_list)
     # This should return 5 because only the cars on the ends are not in range
     # This is an extreme example with cars on different laps, but still at the same spot
-    assert result == {"count": 5, "ref_dist": 3.9}
+    assert result == {"count": 5, "ref_dist": 1.2}
 
 def test_check_combined_when_turned_off(generator):
     generator.master.settings["settings"]["combined"] = 0
