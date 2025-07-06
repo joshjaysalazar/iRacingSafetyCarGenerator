@@ -187,20 +187,17 @@ class Generator:
 
         adjustment_data = self._adjust_for_proximity(stopped_cars)
 
-        proximity_distance = float(self.master.settings["settings"]["proximity_yellows_distance"])
-        proximity_car_indexes = []
-        for car in stopped_cars:
-            distance = self.drivers.current_drivers[car]["lap_distance"]
-            if round(adjustment_data["ref_dist"] - distance, 6) <= proximity_distance:
-                proximity_car_indexes.append(car)
-
-        self.stopped_cars_indexes = proximity_car_indexes
-
         # Trigger the safety car event if the check is enabled and threshold is met
         if enabled and adjustment_data["count"] >= self._calc_dynamic_yellow_threshold(threshold):
             self._log_driver_info(stopped_cars)
             self._start_safety_car(message)
             return 0
+
+        proximity_distance = float(self.master.settings["settings"]["proximity_yellows_distance"])
+        for car in stopped_cars:
+            distance = self.drivers.current_drivers[car]["lap_distance"]
+            if round(adjustment_data["ref_dist"] - distance, 6) <= proximity_distance:
+                self.stopped_cars_indexes.append(car)
 
         return adjustment_data["count"]
 
@@ -236,20 +233,17 @@ class Generator:
 
         adjustment_data = self._adjust_for_proximity(off_track_cars)
 
-        proximity_distance = float(self.master.settings["settings"]["proximity_yellows_distance"])
-        proximity_car_indexes = []
-        for car in off_track_cars:
-            distance = self.drivers.current_drivers[car]["lap_distance"]
-            if round(adjustment_data["ref_dist"] - distance, 6) <= proximity_distance:
-                proximity_car_indexes.append(car)
-
-        self.off_cars_indexes = proximity_car_indexes
-
         # Trigger the safety car event if the check is enabled and the threshold is met
         if enabled and adjustment_data["count"] >= self._calc_dynamic_yellow_threshold(threshold):
             self._log_driver_info(off_track_cars)
             self._start_safety_car(message)
             return 0
+
+        proximity_distance = float(self.master.settings["settings"]["proximity_yellows_distance"])
+        for car in off_track_cars:
+            distance = self.drivers.current_drivers[car]["lap_distance"]
+            if round(adjustment_data["ref_dist"] - distance, 6) <= proximity_distance:
+                self.off_cars_indexes.append(car)
 
         return adjustment_data["count"]
 
