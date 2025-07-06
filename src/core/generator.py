@@ -200,7 +200,7 @@ class Generator:
         proximity_car_indexes = []
         for car in stopped_cars:
             distance = self.drivers.current_drivers[car]["lap_distance"]
-            if (adjustment_data["ref_dist"] - proximity_distance) <= distance <= (adjustment_data["ref_dist"] + proximity_distance):
+            if (adjustment_data["ref_dist"] - proximity_distance) <= distance:
                 proximity_car_indexes.append(car)
 
         self.stopped_cars_indexes = proximity_car_indexes
@@ -249,7 +249,7 @@ class Generator:
         proximity_car_indexes = []
         for car in off_track_cars:
             distance = self.drivers.current_drivers[car]["lap_distance"]
-            if (adjustment_data["ref_dist"] - proximity_distance) <= distance <= (adjustment_data["ref_dist"] + proximity_distance):
+            if (adjustment_data["ref_dist"] - proximity_distance) <= distance:
                 proximity_car_indexes.append(car)
 
         self.off_cars_indexes = proximity_car_indexes
