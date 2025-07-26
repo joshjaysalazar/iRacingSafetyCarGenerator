@@ -8,7 +8,7 @@ from core import generator
 from core import tooltip
 from core.generator import GeneratorState
 from util.state_utils import generator_state_messages, is_stopped_state
-from util.dev_utils import copy_sdk_data_to_clipboard
+from util.dev_utils import copy_sdk_data_to_clipboard, send_test_commands
 
 logger = logging.getLogger(__name__)
 
@@ -867,6 +867,19 @@ class App(tk.Tk):
                 pady=5
             )
 
+            self.btn_send_test_commands = ttk.Button(
+                self.frm_dev_mode,
+                text="Send test commands",
+                command=self._send_test_commands
+            )
+            self.btn_send_test_commands.grid(
+                row=2,
+                column=0,
+                sticky="ew",
+                padx=5,
+                pady=5
+            )
+
         # Fill in the widgets with the settings from the config file
         logger.debug("Filling in widgets with settings from config file")
         self.var_random.set(self.settings["settings"].getboolean("random"))
@@ -1058,3 +1071,12 @@ class App(tk.Tk):
             None
         """
         copy_sdk_data_to_clipboard()
+
+    def _send_test_commands(self):
+        """Send test commands to iRacing to understand rate limiting.
+
+        Args:
+            None
+        """
+        send_test_commands()
+        

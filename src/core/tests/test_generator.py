@@ -1,8 +1,11 @@
 import pytest
 import time
 import math
+
 from unittest.mock import Mock
 from core.generator import Generator
+from core.interactions.command_sender import CommandSender
+from core.interactions.mock_sender import MockSender
 
 @pytest.fixture
 def generator():
@@ -25,6 +28,23 @@ def generator():
         mock_drivers.current_drivers.append({"lap_distance": 0})
     setattr(gen, "drivers", mock_drivers)
     return gen
+
+def test_command_sender_init():
+    """Test the initialization of the CommandSender."""
+    mock_arguments = Mock()    
+    # This needs to be True to make tests work on MacOS
+    mock_arguments.disable_window_interactions = True
+    
+    # We need the generator to send actual commands
+    mock_arguments.dry_run = False
+    generator = Generator(arguments=mock_arguments)
+    assert isinstance(generator.command_sender, CommandSender)
+
+    # In this case, we want to avoid sending commands
+    mock_arguments.dry_run = True
+    generator = Generator(arguments=mock_arguments)
+    assert isinstance(generator.command_sender, MockSender)
+
 
 def test_threshold_no_multiplier(generator):
     """Test when multiplier is 0."""

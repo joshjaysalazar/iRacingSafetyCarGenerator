@@ -1,32 +1,18 @@
-from collections import deque
 import logging
 import math
 import random
 import threading
 import time
-import traceback
 
 import irsdk
 
 from core import drivers
-from core.interactions import command_sender
-from core.interactions import iracing_window
-from core.interactions import mock_window
-from core.interactions import mock_sender
+from core.interactions.interaction_factories import CommandSenderFactory
 
+from collections import deque
 from enum import Enum
 
 logger = logging.getLogger(__name__)
-
-def WindowFactory(arguments):
-    if arguments and arguments.disable_window_interactions:
-        return mock_window.MockWindow()
-    return iracing_window.IRacingWindow()
-
-def CommandSenderFactory(arguments, iracing_window, ir):
-    if arguments and arguments.dry_run:
-        return mock_sender.MockSender()
-    return command_sender.CommandSender(iracing_window, ir)
 
 class GeneratorState(Enum):
     STOPPED = 1
@@ -55,8 +41,7 @@ class Generator:
         # Create the iRacing SDK object and command sender
         logger.debug("Initializing SDK and CommandSender")
         self.ir = irsdk.IRSDK()
-        iracing_window = WindowFactory(arguments)
-        self.command_sender = CommandSenderFactory(arguments, iracing_window, self.ir)
+        self.command_sender = CommandSenderFactory(arguments, self.ir)
 
         # Variables to track safety car events
         logger.debug("Initializing safety car variables")
