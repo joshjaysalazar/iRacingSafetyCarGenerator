@@ -26,6 +26,12 @@
 				"file"
 			]
 		},
+		"core.detection.threshold_checker": {
+			"level": "DEBUG",
+			"handlers": [
+				"file"
+			]
+		},
 		"core.drivers": {
 			"level": "INFO",
 			"handlers": [

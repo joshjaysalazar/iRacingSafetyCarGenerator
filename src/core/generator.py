@@ -7,6 +7,7 @@ import time
 import irsdk
 
 from core import drivers
+from core.detection.threshold_checker import ThresholdChecker, ThresholdCheckerSettings, ThresholdCheckerEventTypes
 from core.interactions.interaction_factories import CommandSenderFactory
 
 from collections import deque
@@ -42,6 +43,9 @@ class Generator:
         logger.debug("Initializing SDK and CommandSender")
         self.ir = irsdk.IRSDK()
         self.command_sender = CommandSenderFactory(arguments, self.ir)
+
+        # The threshold_checker will be configured on start
+        self.threshold_checker = None
 
         # Variables to track safety car events
         logger.debug("Initializing safety car variables")
@@ -187,6 +191,8 @@ class Generator:
             self._log_driver_info(stopped_cars)
             self._start_safety_car(message)
 
+        return stopped_cars
+
     def _check_off_track(self):
         """Check to see if an off track safety car event should be triggered.
         
@@ -224,6 +230,8 @@ class Generator:
         if off_track_cars_count >= self._calc_dynamic_yellow_threshold(threshold):
             self._log_driver_info(off_track_cars)
             self._start_safety_car(message)
+        
+        return off_track_cars
 
     def _adjust_for_proximity(self, car_indexes_list):
         """ Check each car in the car_indexes_list to see if it is within N percent of a lap_distance
@@ -396,8 +404,16 @@ class Generator:
 
                 # If all checks are passed, check for events
                 self._check_random()
-                self._check_stopped()
-                self._check_off_track()
+                stopped = self._check_stopped()
+                off_track = self._check_off_track()
+
+                # Update sliding window events
+                self.threshold_checker.clean_up_events()
+                self.threshold_checker.register_events(ThresholdCheckerEventTypes.STOPPED, stopped)
+                self.threshold_checker.register_events(ThresholdCheckerEventTypes.OFF_TRACK, off_track)
+
+                if self.threshold_checker.threshold_met():
+                    logger.info("ThresholdChecker is meeting threshold, would start safety car")
 
                 # Wait 1 second before checking again
                 time.sleep(1)
@@ -708,6 +724,10 @@ class Generator:
     
         # Create the Drivers object
         self.drivers = drivers.Drivers(self)
+
+        # Create the ThresholdChecker
+        threshold_checker_settings = ThresholdCheckerSettings.from_settings(self.master.settings)
+        self.threshold_checker = ThresholdChecker(threshold_checker_settings)
         
         threading.excepthook = self.generator_thread_excepthook
 

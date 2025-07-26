@@ -2,7 +2,8 @@ import pytest
 import time
 import math
 
-from unittest.mock import Mock
+from unittest.mock import Mock, call
+from core.detection.threshold_checker import ThresholdChecker, ThresholdCheckerEventTypes, ThresholdCheckerSettings
 from core.generator import Generator
 from core.interactions.command_sender import CommandSender
 from core.interactions.mock_sender import MockSender
@@ -14,10 +15,19 @@ def generator():
     mock_master = Mock()
     mock_master.settings = {
         "settings": {
+            # Multiplier dependencies
             "start_multi_val": "1.5",
             "start_multi_time": "300",
-            "proximity_yellows": 0,
-            "proximity_yellows_distance": 0.05
+            # Proximity checker dependencies
+            "proximity_yellows": "0",
+            "proximity_yellows_distance": "0.05",
+            # threshold checker dependencies
+            "start_minute": "0",
+            "end_minute": "999",
+            "max_safety_cars": "999",
+            "min_time_between": "0",
+            "off_min": "4",
+            "stopped_min": "2",
         }
     }
     gen = Generator(arguments=mock_arguments, master=mock_master)
@@ -187,6 +197,7 @@ def test_adjust_for_proximity_equidistant_cars(generator):
         num += 1
         
     result = generator._adjust_for_proximity(car_indexes_list)
+
     # This should return 2 because the sliding window of length 0.05 will only ever contain two cars
     assert result == 2
 
@@ -219,3 +230,37 @@ def test_adjust_for_proximity_lapped_cars(generator):
     # This should return 5 because only the cars on the ends are not in range
     # This is an extreme example with cars on different laps, but still at the same spot
     assert result == 5
+
+@pytest.mark.parametrize("stopped,off_track,threshold_met", [
+    [[], [], False], # no events
+    [[0], [0, 1, 2], False], # events just under limit
+    [[0], [0, 1, 2, 3], True], # "off_min": "4",
+    [[0, 1], [0, 1, 2], True], # "stopped_min": "2",
+])
+def test_loop_threshold_checker_threshold_met(generator, mocker, stopped, off_track, threshold_met):
+    """Test the _loop method when the threshold_checker threshold is met."""
+    # Isolate the calls to the TheresholdChecker
+    mocker.patch.object(generator, '_wait_for_green_flag')
+    mocker.patch.object(generator, '_is_shutting_down', side_effect=[False, True])
+    mocker.patch.object(generator.drivers, 'update')
+    mocker.patch.object(generator, '_start_safety_car')
+    mocker.patch('time.sleep', return_value=None)
+
+    # Mock events to register
+    mocker.patch.object(generator, '_check_random')
+    mocker.patch.object(generator, '_check_stopped', return_value=stopped)
+    mocker.patch.object(generator, '_check_off_track', return_value=off_track)
+
+    # Init TheresholdChecker (this happens in generator.run)
+    threshold_checker_settings = ThresholdCheckerSettings.from_settings(generator.master.settings)
+    generator.threshold_checker = ThresholdChecker(threshold_checker_settings)
+
+    # Make sure we can check the behavior of the generator
+    threshold_met_spy = mocker.spy(generator.threshold_checker, "threshold_met")
+
+    # Run the loop
+    generator.start_time = time.time() - 5
+    generator._loop()
+
+    # Assertions
+    assert threshold_met_spy.spy_return == threshold_met
