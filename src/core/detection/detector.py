@@ -70,6 +70,7 @@ class Detector:
     """
 
     def __init__(self, settings: DetectorSettings = None):
+        logger.info(f"Init Detector with settings: {settings}")
         self._settings = settings if settings else DetectorSettings()
         self._events_dict = {det: {} for det in DetectorEventTypes} # Initialize dicts for each event type
         self._events_queue = deque()
@@ -112,7 +113,7 @@ class Detector:
         self._events_dict[event_type][driver_id] = count + 1
         self._events_queue.append((event_time, event_type, driver_id))
 
-    def register_events(self, event_type: DetectorEventTypes, driver_ids: list[int], event_time: float = time.time()):
+    def register_events(self, event_type: DetectorEventTypes, driver_ids: list[int]):
         """Like register_event, but now report a list of drivers at once all on the same event_time.
 
         Args:
@@ -120,6 +121,7 @@ class Detector:
             driver_ids (list[int]): The list of driver indexes to register the event for.
             event_time (float, optional): The time at which the events were observed. Defaults to current time.
         """
+        event_time = time.time()
         for driver_id in driver_ids:
             self.register_event(event_type, driver_id, event_time)
 
