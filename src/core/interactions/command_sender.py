@@ -33,10 +33,11 @@ class CommandSender:
 
         self.iracing_window.focus()
         self.irsdk.chat_command(1)
-        if delay > 0:
-            logger.debug(f"Adding delay between chat command and send_message of: {delay}")
-            time.sleep(delay)
         self.iracing_window.send_message(f"{command}{{ENTER}}")
+        
+        if delay > 0:
+            logger.debug(f"Adding delay after sending chat message: {delay}")
+            time.sleep(delay)
 
     def send_commands(self, commands, delay = 0.5):
         """ Sends the list of commands in order with the provided delay.
