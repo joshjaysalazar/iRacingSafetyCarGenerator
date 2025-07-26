@@ -1,4 +1,4 @@
-"""This module contains the Detector class, which is responsible for detecting safety car events
+"""This module contains the ThresholdChecker class, which is responsible for detecting safety car events
 based on various criteria."""
 
 import logging
@@ -10,14 +10,14 @@ from enum import Enum
 
 logger = logging.getLogger(__name__)
 
-class DetectorEventTypes(Enum):
+class ThresholdCheckerEventTypes(Enum):
     """The different events we are tracking."""
     OFF_TRACK = "off_track"
     STOPPED = "stopped"
 
 @dataclass(frozen=True)
-class DetectorSettings:
-    """These settings determine when the Detector will signal a safety car event.
+class ThresholdCheckerSettings:
+    """These settings determine when the ThresholdChecker will signal a safety car event.
 
     Args:
         time_range (int): Time range in seconds to consider for recent events.
@@ -30,24 +30,24 @@ class DetectorSettings:
     time_range: float = 10.0
     accumulative_threshold: float = 10.0
     accumulative_weights: dict = field(
-        default_factory=lambda: {DetectorEventTypes.OFF_TRACK: 1.0, DetectorEventTypes.STOPPED: 2.0}
+        default_factory=lambda: {ThresholdCheckerEventTypes.OFF_TRACK: 1.0, ThresholdCheckerEventTypes.STOPPED: 2.0}
     ) 
     event_type_threshold: dict = field(
-        default_factory=lambda: {DetectorEventTypes.OFF_TRACK: 4, DetectorEventTypes.STOPPED: 2}
+        default_factory=lambda: {ThresholdCheckerEventTypes.OFF_TRACK: 4, ThresholdCheckerEventTypes.STOPPED: 2}
     ) 
 
     @staticmethod
     def from_settings(settings):
-        return DetectorSettings(
+        return ThresholdCheckerSettings(
             time_range=10.0,
             event_type_threshold={
-                DetectorEventTypes.OFF_TRACK: float(settings["settings"]["off_min"]),
-                DetectorEventTypes.STOPPED: float(settings["settings"]["stopped_min"]),
+                ThresholdCheckerEventTypes.OFF_TRACK: float(settings["settings"]["off_min"]),
+                ThresholdCheckerEventTypes.STOPPED: float(settings["settings"]["stopped_min"]),
             },
         )
 
-class Detector:
-    """The Detector class is responsible to provide a signal for when a safety car event needs to
+class ThresholdChecker:
+    """The ThresholdChecker class is responsible to provide a signal for when a safety car event needs to
         be triggered.
     In order to do so, we track per event type which drivers have triggered that event and when.
 
@@ -66,13 +66,13 @@ class Detector:
     know we need to remove them from the dict.
 
     Args:
-        settings (DetectorSettings): Settings for the detector.
+        settings (ThresholdCheckerSettings): Settings for the ThresholdChecker.
     """
 
-    def __init__(self, settings: DetectorSettings = None):
-        logger.info(f"Init Detector with settings: {settings}")
-        self._settings = settings if settings else DetectorSettings()
-        self._events_dict = {det: {} for det in DetectorEventTypes} # Initialize dicts for each event type
+    def __init__(self, settings: ThresholdCheckerSettings = None):
+        logger.info(f"Init ThresholdChecker with settings: {settings}")
+        self._settings = settings if settings else ThresholdCheckerSettings()
+        self._events_dict = {det: {} for det in ThresholdCheckerEventTypes} # Initialize dicts for each event type
         self._events_queue = deque()
     
     def clean_up_events(self):
@@ -100,11 +100,11 @@ class Detector:
                     "Driver %s not found in events_dict for event type %s", driver_id, event_type
                 )
 
-    def register_event(self, event_type: DetectorEventTypes, driver_id: int, event_time: float = time.time()):
+    def register_event(self, event_type: ThresholdCheckerEventTypes, driver_id: int, event_time: float = time.time()):
         """Register a new event observation.
 
         Args:
-            event_type (DetectorEventTypes): The event type observed.
+            event_type (ThresholdCheckerEventTypes): The event type observed.
             driver_id (int): The driver involved.
             event_time (float, optional): The time at which the event was observed. Defaults to current time.
         """
@@ -113,11 +113,11 @@ class Detector:
         self._events_dict[event_type][driver_id] = count + 1
         self._events_queue.append((event_time, event_type, driver_id))
 
-    def register_events(self, event_type: DetectorEventTypes, driver_ids: list[int]):
+    def register_events(self, event_type: ThresholdCheckerEventTypes, driver_ids: list[int]):
         """Like register_event, but now report a list of drivers at once all on the same event_time.
 
         Args:
-            event_type (DetectorEventTypes): The event type observed.
+            event_type (ThresholdCheckerEventTypes): The event type observed.
             driver_ids (list[int]): The list of driver indexes to register the event for.
             event_time (float, optional): The time at which the events were observed. Defaults to current time.
         """
@@ -138,7 +138,7 @@ class Detector:
         logger.debug(f"Checking threshold, events_dict={self._events_dict}, settings={self._settings}")
 
         acc = 0
-        for det in DetectorEventTypes:
+        for det in ThresholdCheckerEventTypes:
             event_type_count = len(self._events_dict[det])
 
             # If the specific event threshold is met, return immediately

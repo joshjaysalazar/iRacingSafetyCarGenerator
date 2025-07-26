@@ -3,7 +3,7 @@ import time
 import math
 
 from unittest.mock import Mock, call
-from core.detection.detector import Detector, DetectorEventTypes, DetectorSettings
+from core.detection.threshold_checker import ThresholdChecker, ThresholdCheckerEventTypes, ThresholdCheckerSettings
 from core.generator import Generator
 from core.interactions.command_sender import CommandSender
 from core.interactions.mock_sender import MockSender
@@ -21,7 +21,7 @@ def generator():
             # Proximity checker dependencies
             "proximity_yellows": "0",
             "proximity_yellows_distance": "0.05",
-            # Detector dependencies
+            # threshold checker dependencies
             "start_minute": "0",
             "end_minute": "999",
             "max_safety_cars": "999",
@@ -237,9 +237,9 @@ def test_adjust_for_proximity_lapped_cars(generator):
     [[0], [0, 1, 2, 3], True], # "off_min": "4",
     [[0, 1], [0, 1, 2], True], # "stopped_min": "2",
 ])
-def test_loop_detector_threshold_met(generator, mocker, stopped, off_track, threshold_met):
-    """Test the _loop method when the detector threshold is met."""
-    # Isolate the calls to the detector
+def test_loop_threshold_checker_threshold_met(generator, mocker, stopped, off_track, threshold_met):
+    """Test the _loop method when the threshold_checker threshold is met."""
+    # Isolate the calls to the TheresholdChecker
     mocker.patch.object(generator, '_wait_for_green_flag')
     mocker.patch.object(generator, '_is_shutting_down', side_effect=[False, True])
     mocker.patch.object(generator.drivers, 'update')
@@ -251,12 +251,12 @@ def test_loop_detector_threshold_met(generator, mocker, stopped, off_track, thre
     mocker.patch.object(generator, '_check_stopped', return_value=stopped)
     mocker.patch.object(generator, '_check_off_track', return_value=off_track)
 
-    # Init detector (this happens in generator.run)
-    detector_settings = DetectorSettings.from_settings(generator.master.settings)
-    generator.detector = Detector(detector_settings)
+    # Init TheresholdChecker (this happens in generator.run)
+    threshold_checker_settings = ThresholdCheckerSettings.from_settings(generator.master.settings)
+    generator.threshold_checker = ThresholdChecker(threshold_checker_settings)
 
     # Make sure we can check the behavior of the generator
-    threshold_met_spy = mocker.spy(generator.detector, "threshold_met")
+    threshold_met_spy = mocker.spy(generator.threshold_checker, "threshold_met")
 
     # Run the loop
     generator.start_time = time.time() - 5

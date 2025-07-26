@@ -7,7 +7,7 @@ import time
 import irsdk
 
 from core import drivers
-from core.detection.detector import Detector, DetectorSettings, DetectorEventTypes
+from core.detection.threshold_checker import ThresholdChecker, ThresholdCheckerSettings, ThresholdCheckerEventTypes
 from core.interactions.interaction_factories import CommandSenderFactory
 
 from collections import deque
@@ -44,8 +44,8 @@ class Generator:
         self.ir = irsdk.IRSDK()
         self.command_sender = CommandSenderFactory(arguments, self.ir)
 
-        # The detector will be configured on start
-        self.detector = None
+        # The threshold_checker will be configured on start
+        self.threshold_checker = None
 
         # Variables to track safety car events
         logger.debug("Initializing safety car variables")
@@ -408,12 +408,12 @@ class Generator:
                 off_track = self._check_off_track()
 
                 # Update sliding window events
-                self.detector.clean_up_events()
-                self.detector.register_events(DetectorEventTypes.STOPPED, stopped)
-                self.detector.register_events(DetectorEventTypes.OFF_TRACK, off_track)
+                self.threshold_checker.clean_up_events()
+                self.threshold_checker.register_events(ThresholdCheckerEventTypes.STOPPED, stopped)
+                self.threshold_checker.register_events(ThresholdCheckerEventTypes.OFF_TRACK, off_track)
 
-                if self.detector.threshold_met():
-                    logger.info("Detector is meeting threshold, would start safety car")
+                if self.threshold_checker.threshold_met():
+                    logger.info("ThresholdChecker is meeting threshold, would start safety car")
 
                 # Wait 1 second before checking again
                 time.sleep(1)
@@ -725,9 +725,9 @@ class Generator:
         # Create the Drivers object
         self.drivers = drivers.Drivers(self)
 
-        # Create the Detector
-        detector_settings = DetectorSettings.from_settings(self.master.settings)
-        self.detector = Detector(detector_settings)
+        # Create the ThresholdChecker
+        threshold_checker_settings = ThresholdCheckerSettings.from_settings(self.master.settings)
+        self.threshold_checker = ThresholdChecker(threshold_checker_settings)
         
         threading.excepthook = self.generator_thread_excepthook
 

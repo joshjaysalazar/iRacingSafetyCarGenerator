@@ -26,7 +26,7 @@
 				"file"
 			]
 		},
-		"core.detection.detector": {
+		"core.detection.threshold_checker": {
 			"level": "DEBUG",
 			"handlers": [
 				"file"
