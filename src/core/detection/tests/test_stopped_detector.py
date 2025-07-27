@@ -10,8 +10,8 @@ class MockDrivers:
 
         # This is a fix to account for the SC entry in the drivers list
         # Ideally, we filter this out in the Drivers class so we don't have to account for this in all of our logic.
-        self.current_drivers.append({"track_loc": TrkLoc.not_in_world, "laps_completed": 0, "lap_distance": 0.0})
-        self.previous_drivers.append({"track_loc": TrkLoc.not_in_world, "laps_completed": 0, "lap_distance": 0.0})
+        self.current_drivers.append(make_driver(TrkLoc.not_in_world, 0, 0.0))
+        self.previous_drivers.append(make_driver(TrkLoc.not_in_world, 0,  0.0))
 
 def make_driver(track_loc, laps_completed, lap_distance):
     return {
@@ -21,7 +21,6 @@ def make_driver(track_loc, laps_completed, lap_distance):
     }
 
 def test_detect_stopped_driver():
-    detector = StoppedDetector()
     current = [
         make_driver(TrkLoc.on_track, 5, 0.0),  # stopped (same pos)
         make_driver(TrkLoc.on_track, 5, 0.5),  # moving
@@ -31,11 +30,11 @@ def test_detect_stopped_driver():
         make_driver(TrkLoc.on_track, 5, 0.4),
     ]
     drivers = MockDrivers(current, previous)
-    stopped = detector.detect(drivers)
+    detector = StoppedDetector(drivers)
+    stopped = detector.detect()
     assert stopped == [current[0]]
 
 def test_detect_skips_pit_and_not_in_world():
-    detector = StoppedDetector()
     current = [
         make_driver(TrkLoc.aproaching_pits, 5, 0.0),
         make_driver(TrkLoc.in_pit_stall, 5, 0.0),
@@ -47,11 +46,11 @@ def test_detect_skips_pit_and_not_in_world():
         make_driver(TrkLoc.not_in_world, 5, 0.0),
     ]
     drivers = MockDrivers(current, previous)
-    stopped = detector.detect(drivers)
+    detector = StoppedDetector(drivers)
+    stopped = detector.detect()
     assert stopped == []
 
 def test_detect_skips_negative_lap_distance():
-    detector = StoppedDetector()
     current = [
         make_driver(TrkLoc.on_track, 5, -1.0),
         make_driver(TrkLoc.on_track, 5, 0.0),
@@ -61,11 +60,11 @@ def test_detect_skips_negative_lap_distance():
         make_driver(TrkLoc.on_track, 5, 0.0),
     ]
     drivers = MockDrivers(current, previous)
-    stopped = detector.detect(drivers)
+    detector = StoppedDetector(drivers)
+    stopped = detector.detect()
     assert stopped == [current[1]]
 
 def test_detect_lag_fix_clears_list():
-    detector = StoppedDetector()
     current = [
         make_driver(TrkLoc.on_track, 5, 0.0),
         make_driver(TrkLoc.on_track, 5, 0.0),
@@ -77,11 +76,11 @@ def test_detect_lag_fix_clears_list():
         make_driver(TrkLoc.on_track, 5, 0.0),
     ]
     drivers = MockDrivers(current, previous)
-    stopped = detector.detect(drivers)
+    detector = StoppedDetector(drivers)
+    stopped = detector.detect()
     assert stopped == []
 
 def test_detect_multiple_stopped():
-    detector = StoppedDetector()
     current = [
         make_driver(TrkLoc.on_track, 5, 0.0),  # stopped
         make_driver(TrkLoc.on_track, 5, 0.0),  # stopped
@@ -93,5 +92,6 @@ def test_detect_multiple_stopped():
         make_driver(TrkLoc.on_track, 5, 0.4),
     ]
     drivers = MockDrivers(current, previous)
-    stopped = detector.detect(drivers)
+    detector = StoppedDetector(drivers)
+    stopped = detector.detect()
     assert stopped == [current[0], current[1]]

@@ -2,7 +2,15 @@ from irsdk import TrkLoc
 from core.drivers import Drivers
 
 class StoppedDetector:
-    def detect(self, drivers: Drivers):
+    def __init__(self, drivers: Drivers):
+        """Initialize the StoppedDetector.
+
+        Args:
+            drivers (Drivers): The Drivers object containing the current and previous state of drivers.
+        """
+        self.drivers = drivers
+
+    def detect(self):
         """Detect if any driver is stopped.
 
         Args:
@@ -14,7 +22,7 @@ class StoppedDetector:
         
         # Get the indices of the stopped cars
         stopped_cars = []
-        for current, previous in zip(drivers.current_drivers, drivers.previous_drivers):
+        for current, previous in zip(self.drivers.current_drivers, self.drivers.previous_drivers):
             if current["track_loc"] in [TrkLoc.aproaching_pits, 
                                         TrkLoc.in_pit_stall, 
                                         TrkLoc.not_in_world]:
@@ -29,7 +37,7 @@ class StoppedDetector:
                 stopped_cars.append(current)
 
         # If length of stopped cars is entire field, clear list (lag fix)
-        if len(stopped_cars) >= len(drivers.current_drivers) - 1:
+        if len(stopped_cars) >= len(self.drivers.current_drivers) - 1:
             stopped_cars = []
 
         return stopped_cars
