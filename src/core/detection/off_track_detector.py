@@ -1,5 +1,4 @@
 from irsdk import TrkLoc
-
 from core.drivers import Drivers
 
 class OffTrackDetector:
@@ -10,7 +9,7 @@ class OffTrackDetector:
             drivers (Drivers): The Drivers object containing the current state of drivers.
 
         Returns:
-            list: A list of driver indices that are off track.
+            list: A list of drivers that are off track.
         """
         off_track_drivers = []
         for driver in drivers.current_drivers:
@@ -21,3 +20,4 @@ class OffTrackDetector:
                off_track_drivers.append(driver)
         
         return off_track_drivers
+    
