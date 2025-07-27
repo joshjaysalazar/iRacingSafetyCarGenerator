@@ -7,7 +7,7 @@ import time
 import irsdk
 
 from core import drivers
-from core.detection.threshold_checker import ThresholdChecker, ThresholdCheckerSettings, ThresholdCheckerEventTypes
+from core.detection.threshold_checker import ThresholdChecker, ThresholdCheckerSettings, DetectorEventTypes
 from core.interactions.interaction_factories import CommandSenderFactory
 
 from codetiming import Timer
@@ -415,8 +415,8 @@ class Generator:
 
                     # Update sliding window events
                     self.threshold_checker.clean_up_events()
-                    self.threshold_checker.register_events(ThresholdCheckerEventTypes.STOPPED, stopped)
-                    self.threshold_checker.register_events(ThresholdCheckerEventTypes.OFF_TRACK, off_track)
+                    self.threshold_checker.register_events(DetectorEventTypes.STOPPED, stopped)
+                    self.threshold_checker.register_events(DetectorEventTypes.OFF_TRACK, off_track)
 
                     if self.threshold_checker.threshold_met():
                         logger.info("ThresholdChecker is meeting threshold, would start safety car")
@@ -740,6 +740,10 @@ class Generator:
     
         # Create the Drivers object
         self.drivers = drivers.Drivers(self)
+
+        # Create the detectors
+        detector_settings = DetectorSettings.from_settings(self.master.settings)
+        self.detector = Detector(detector_settings, self.drivers)
 
         # Create the ThresholdChecker
         threshold_checker_settings = ThresholdCheckerSettings.from_settings(self.master.settings)

@@ -3,15 +3,13 @@ import pytest
 from core.detection.off_track_detector import OffTrackDetector
 from irsdk import TrkLoc
 
-class MockDrivers:
-    def __init__(self, current_drivers):
-        self.current_drivers = current_drivers
+from core.detection.tests.utils import MockDrivers, make_driver
 
 def test_detect_off_track_driver():
     drivers = MockDrivers([
-        {"track_loc": TrkLoc.off_track, "laps_completed": 1},
-        {"track_loc": TrkLoc.on_track, "laps_completed": 2},
-        {"track_loc": TrkLoc.off_track, "laps_completed": 0},
+        make_driver(TrkLoc.off_track, 1),
+        make_driver(TrkLoc.on_track, 2),
+        make_driver(TrkLoc.off_track, 0),
     ])
     detector = OffTrackDetector(drivers)
     result = detector.detect()
@@ -21,10 +19,11 @@ def test_detect_off_track_driver():
 
 def test_detect_no_off_track_driver():
     drivers = MockDrivers([
-        {"track_loc": TrkLoc.on_track, "laps_completed": 1},
-        {"track_loc": TrkLoc.in_pit_stall, "laps_completed": 2},
-        {"track_loc": TrkLoc.not_in_world, "laps_completed": 3},
-        {"track_loc": TrkLoc.aproaching_pits, "laps_completed": 4},
+        make_driver(TrkLoc.on_track, 1),
+        make_driver(TrkLoc.on_track, 1),
+        make_driver(TrkLoc.in_pit_stall, 2),
+        make_driver(TrkLoc.not_in_world, 3),
+        make_driver(TrkLoc.aproaching_pits, 4),
     ])
     detector = OffTrackDetector(drivers)
     result = detector.detect()
@@ -32,8 +31,8 @@ def test_detect_no_off_track_driver():
 
 def test_detect_off_track_driver_negative_laps():
     drivers = MockDrivers([
-        {"track_loc": TrkLoc.off_track, "laps_completed": -1},
-        {"track_loc": TrkLoc.off_track, "laps_completed": 0},
+        make_driver(TrkLoc.off_track, -1),
+        make_driver(TrkLoc.off_track, 0),
     ])
     detector = OffTrackDetector(drivers)
     result = detector.detect()

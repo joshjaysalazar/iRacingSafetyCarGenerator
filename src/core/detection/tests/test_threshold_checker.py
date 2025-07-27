@@ -1,18 +1,19 @@
 import pytest
 
-from core.detection.threshold_checker import ThresholdChecker, ThresholdCheckerEventTypes, ThresholdCheckerSettings
+from core.detection.threshold_checker import ThresholdChecker, DetectorEventTypes, ThresholdCheckerSettings
 
 # Define a little shorthand
-STOPPED = ThresholdCheckerEventTypes.STOPPED
-OFF_TRACK = ThresholdCheckerEventTypes.OFF_TRACK
+STOPPED = DetectorEventTypes.STOPPED
+RANDOM = DetectorEventTypes.RANDOM
+OFF_TRACK = DetectorEventTypes.OFF_TRACK
 
 @pytest.fixture
 def threshold_checker():
     return ThresholdChecker(ThresholdCheckerSettings(
         time_range=1.0,
         accumulative_threshold=1000,
-        accumulative_weights={OFF_TRACK: 1.0, STOPPED: 1.0},
-        event_type_threshold={OFF_TRACK: 2, STOPPED: 3},
+        accumulative_weights={OFF_TRACK: 1.0, RANDOM: 1.0, STOPPED: 1.0},
+        event_type_threshold={OFF_TRACK: 2, RANDOM: 1, STOPPED: 3},
     ))
 
 def test_off_track_threshold(threshold_checker, mocker):
@@ -51,8 +52,8 @@ def accumulative_threshold_checker():
     return ThresholdChecker(ThresholdCheckerSettings(
         time_range=1.0,
         accumulative_threshold=5,
-        accumulative_weights={OFF_TRACK: 1.0, STOPPED: 2.0},
-        event_type_threshold={OFF_TRACK: 1000, STOPPED: 1000},
+        accumulative_weights={OFF_TRACK: 1.0, RANDOM: 1.0, STOPPED: 2.0},
+        event_type_threshold={OFF_TRACK: 1000, RANDOM: 1, STOPPED: 1000},
     ))
 
 def test_accumulative_threshold_offtracks(accumulative_threshold_checker, mocker):
