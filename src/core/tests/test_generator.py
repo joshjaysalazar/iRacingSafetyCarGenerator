@@ -3,7 +3,7 @@ import time
 import math
 
 from unittest.mock import Mock, call
-from core.detection.threshold_checker import ThresholdChecker, ThresholdCheckerEventTypes, ThresholdCheckerSettings
+from core.detection.threshold_checker import ThresholdChecker, DetectorEventTypes, ThresholdCheckerSettings
 from core.generator import Generator
 from core.interactions.command_sender import CommandSender
 from core.interactions.mock_sender import MockSender
