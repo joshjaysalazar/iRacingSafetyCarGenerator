@@ -2,7 +2,15 @@ from irsdk import TrkLoc
 from core.drivers import Drivers
 
 class OffTrackDetector:
-    def detect(self, drivers: Drivers):
+    def __init__(self, drivers: Drivers):
+        """Initialize the OffTrackDetector.
+
+        Args:
+            drivers (Drivers): The Drivers object containing the current state of drivers.
+        """
+        self.drivers = drivers
+
+    def detect(self):
         """Detect if any driver is off track.
 
         Args:
@@ -12,7 +20,7 @@ class OffTrackDetector:
             list: A list of drivers that are off track.
         """
         off_track_drivers = []
-        for driver in drivers.current_drivers:
+        for driver in self.drivers.current_drivers:
             if driver["track_loc"] == TrkLoc.off_track and \
                driver["laps_completed"] >= 0:
                
