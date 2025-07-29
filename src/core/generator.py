@@ -10,6 +10,7 @@ from core import drivers
 from core.detection.threshold_checker import ThresholdChecker, ThresholdCheckerSettings, ThresholdCheckerEventTypes
 from core.interactions.interaction_factories import CommandSenderFactory
 
+from codetiming import Timer
 from collections import deque
 from enum import Enum
 
@@ -365,7 +366,7 @@ class Generator:
         """
         try:
             logger.debug("Starting safety car loop")
-
+            
             # Get relevant settings from the settings file
             start_minute = float(self.master.settings["settings"]["start_minute"])
             end_minute = float(self.master.settings["settings"]["end_minute"])
@@ -382,41 +383,46 @@ class Generator:
 
             # Loop until the max number of safety car events is reached
             while self.total_sc_events < max_events and not self._is_shutting_down():
-                # Update the drivers object
-                self.drivers.update()
+                
+                # Start the performance timer
+                # We do this in a context manager to ensure it is stopped whatever exit point this loop reaches
+                with Timer(name="GeneratorLoopTimer", text="{name}: {:.4f}s", logger=logger.debug):
+                    
+                    # Update the drivers object
+                    self.drivers.update()
 
-                logger.debug("Checking time")
+                    logger.debug("Checking time")
 
-                # If it hasn't reached the start minute, wait
-                if time.time() - self.start_time < start_minute * 60:
-                    time.sleep(1)
-                    continue
-
-                # If it has reached the end minute, break the loop
-                if time.time() - self.start_time > end_minute * 60:
-                    break
-
-                # If it hasn't been long enough since the last event, wait
-                if self.last_sc_time is not None:
-                    if time.time() - self.last_sc_time < min_time * 60:
+                    # If it hasn't reached the start minute, wait
+                    if time.time() - self.start_time < start_minute * 60:
                         time.sleep(1)
                         continue
 
-                # If all checks are passed, check for events
-                self._check_random()
-                stopped = self._check_stopped()
-                off_track = self._check_off_track()
+                    # If it has reached the end minute, break the loop
+                    if time.time() - self.start_time > end_minute * 60:
+                        break
 
-                # Update sliding window events
-                self.threshold_checker.clean_up_events()
-                self.threshold_checker.register_events(ThresholdCheckerEventTypes.STOPPED, stopped)
-                self.threshold_checker.register_events(ThresholdCheckerEventTypes.OFF_TRACK, off_track)
+                    # If it hasn't been long enough since the last event, wait
+                    if self.last_sc_time is not None:
+                        if time.time() - self.last_sc_time < min_time * 60:
+                            time.sleep(1)
+                            continue
 
-                if self.threshold_checker.threshold_met():
-                    logger.info("ThresholdChecker is meeting threshold, would start safety car")
+                    # If all checks are passed, check for events
+                    self._check_random()
+                    stopped = self._check_stopped()
+                    off_track = self._check_off_track()
 
-                # Wait 1 second before checking again
-                time.sleep(1)
+                    # Update sliding window events
+                    self.threshold_checker.clean_up_events()
+                    self.threshold_checker.register_events(ThresholdCheckerEventTypes.STOPPED, stopped)
+                    self.threshold_checker.register_events(ThresholdCheckerEventTypes.OFF_TRACK, off_track)
+
+                    if self.threshold_checker.threshold_met():
+                        logger.info("ThresholdChecker is meeting threshold, would start safety car")
+                    
+                    # Wait 1 second before checking again
+                    time.sleep(1)
 
             # Move to a stopped state
             self.master.generator_state = GeneratorState.STOPPED
@@ -431,7 +437,17 @@ class Generator:
 
             # Clear thread event to allow for future signals to be passed
             self.shutdown_event.clear()
-
+            
+            # Report timer stats
+            logger.debug("Generator loop completed")
+            logger.debug(f"GeneratorLoopTimer (count): {Timer.timers.count("GeneratorLoopTimer")}")
+            logger.debug(f"GeneratorLoopTimer (total): {Timer.timers.total("GeneratorLoopTimer")}")
+            logger.debug(f"GeneratorLoopTimer (min): {Timer.timers.min("GeneratorLoopTimer")}")
+            logger.debug(f"GeneratorLoopTimer (max): {Timer.timers.max("GeneratorLoopTimer")}")
+            logger.debug(f"GeneratorLoopTimer (mean): {Timer.timers.mean("GeneratorLoopTimer")}")
+            logger.debug(f"GeneratorLoopTimer (median): {Timer.timers.median("GeneratorLoopTimer")}")
+            logger.debug(f"GeneratorLoopTimer (stdev): {Timer.timers.stdev("GeneratorLoopTimer")}")
+            
     def _send_pacelaps(self):
         """Send a pacelaps chat command to iRacing.
         
