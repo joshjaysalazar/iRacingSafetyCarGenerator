@@ -1,0 +1,82 @@
+import pytest
+
+from irsdk import TrkLoc
+from core.detection.stopped_detector import StoppedDetector
+from core.detection.tests.utils import MockDrivers, make_driver
+
+
+def test_detect_stopped_driver():
+    current = [
+        make_driver(TrkLoc.on_track, 5, 0.0),  # stopped (same pos)
+        make_driver(TrkLoc.on_track, 5, 0.5),  # moving
+    ]
+    previous = [
+        make_driver(TrkLoc.on_track, 5, 0.0),
+        make_driver(TrkLoc.on_track, 5, 0.4),
+    ]
+    drivers = MockDrivers(current, previous)
+    detector = StoppedDetector(drivers)
+    stopped = detector.detect()
+    assert stopped == [current[0]]
+
+def test_detect_skips_pit_and_not_in_world():
+    current = [
+        make_driver(TrkLoc.aproaching_pits, 5, 0.0),
+        make_driver(TrkLoc.in_pit_stall, 5, 0.0),
+        make_driver(TrkLoc.not_in_world, 5, 0.0),
+    ]
+    previous = [
+        make_driver(TrkLoc.aproaching_pits, 5, 0.0),
+        make_driver(TrkLoc.in_pit_stall, 5, 0.0),
+        make_driver(TrkLoc.not_in_world, 5, 0.0),
+    ]
+    drivers = MockDrivers(current, previous)
+    detector = StoppedDetector(drivers)
+    stopped = detector.detect()
+    assert stopped == []
+
+def test_detect_skips_negative_lap_distance():
+    current = [
+        make_driver(TrkLoc.on_track, 5, -1.0),
+        make_driver(TrkLoc.on_track, 5, 0.0),
+    ]
+    previous = [
+        make_driver(TrkLoc.on_track, 5, -1.0),
+        make_driver(TrkLoc.on_track, 5, 0.0),
+    ]
+    drivers = MockDrivers(current, previous)
+    detector = StoppedDetector(drivers)
+    stopped = detector.detect()
+    assert stopped == [current[1]]
+
+def test_detect_lag_fix_clears_list():
+    current = [
+        make_driver(TrkLoc.on_track, 5, 0.0),
+        make_driver(TrkLoc.on_track, 5, 0.0),
+        make_driver(TrkLoc.on_track, 5, 0.0),
+    ]
+    previous = [
+        make_driver(TrkLoc.on_track, 5, 0.0),
+        make_driver(TrkLoc.on_track, 5, 0.0),
+        make_driver(TrkLoc.on_track, 5, 0.0),
+    ]
+    drivers = MockDrivers(current, previous)
+    detector = StoppedDetector(drivers)
+    stopped = detector.detect()
+    assert stopped == []
+
+def test_detect_multiple_stopped():
+    current = [
+        make_driver(TrkLoc.on_track, 5, 0.0),  # stopped
+        make_driver(TrkLoc.on_track, 5, 0.0),  # stopped
+        make_driver(TrkLoc.on_track, 5, 0.5),  # moving
+    ]
+    previous = [
+        make_driver(TrkLoc.on_track, 5, 0.0),
+        make_driver(TrkLoc.on_track, 5, 0.0),
+        make_driver(TrkLoc.on_track, 5, 0.4),
+    ]
+    drivers = MockDrivers(current, previous)
+    detector = StoppedDetector(drivers)
+    stopped = detector.detect()
+    assert stopped == [current[0], current[1]]

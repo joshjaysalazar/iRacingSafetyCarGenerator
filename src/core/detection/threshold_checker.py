@@ -8,13 +8,10 @@ from collections import deque
 from dataclasses import dataclass, field
 from enum import Enum
 
+from core.detection.detector import DetectorEventTypes
+from core.drivers import Driver
+
 logger = logging.getLogger(__name__)
-
-class ThresholdCheckerEventTypes(Enum):
-    """The different events we are tracking."""
-    OFF_TRACK = "off_track"
-    STOPPED = "stopped"
-
 @dataclass(frozen=True)
 class ThresholdCheckerSettings:
     """These settings determine when the ThresholdChecker will signal a safety car event.
@@ -30,10 +27,18 @@ class ThresholdCheckerSettings:
     time_range: float = 10.0
     accumulative_threshold: float = 10.0
     accumulative_weights: dict = field(
-        default_factory=lambda: {ThresholdCheckerEventTypes.OFF_TRACK: 1.0, ThresholdCheckerEventTypes.STOPPED: 2.0}
+        default_factory=lambda: {
+            DetectorEventTypes.OFF_TRACK: 1.0, 
+            DetectorEventTypes.RANDOM: 1.0,
+            DetectorEventTypes.STOPPED: 2.0,
+        }
     ) 
     event_type_threshold: dict = field(
-        default_factory=lambda: {ThresholdCheckerEventTypes.OFF_TRACK: 4, ThresholdCheckerEventTypes.STOPPED: 2}
+        default_factory=lambda: {
+            DetectorEventTypes.OFF_TRACK: 4,
+            DetectorEventTypes.RANDOM: 1.0,
+            DetectorEventTypes.STOPPED: 2,
+        }
     ) 
 
     @staticmethod
@@ -41,8 +46,9 @@ class ThresholdCheckerSettings:
         return ThresholdCheckerSettings(
             time_range=10.0,
             event_type_threshold={
-                ThresholdCheckerEventTypes.OFF_TRACK: float(settings["settings"]["off_min"]),
-                ThresholdCheckerEventTypes.STOPPED: float(settings["settings"]["stopped_min"]),
+                DetectorEventTypes.OFF_TRACK: float(settings["settings"]["off_min"]),
+                DetectorEventTypes.RANDOM: 1.0,
+                DetectorEventTypes.STOPPED: float(settings["settings"]["stopped_min"]),
             },
         )
 
@@ -69,11 +75,12 @@ class ThresholdChecker:
         settings (ThresholdCheckerSettings): Settings for the ThresholdChecker.
     """
 
-    def __init__(self, settings: ThresholdCheckerSettings = None):
+    def __init__(self, settings: ThresholdCheckerSettings):
         logger.info(f"Init ThresholdChecker with settings: {settings}")
         self._settings = settings if settings else ThresholdCheckerSettings()
-        self._events_dict = {det: {} for det in ThresholdCheckerEventTypes} # Initialize dicts for each event type
+        self._events_dict = {det: {} for det in DetectorEventTypes if det is not DetectorEventTypes.RANDOM} # Initialize dicts for each event type
         self._events_queue = deque()
+        self._random_event = False  # Special case for random events, which are not tracked in the dicts
     
     def clean_up_events(self):
         """Clean up events that are outside the time range.
@@ -82,6 +89,8 @@ class ThresholdChecker:
         For each event we pop, we update the count of events for the driver in the dict so that
         we can clear the entry once they fall completely out of the time range.
         """
+        # Clear the random event flag
+        self._random_event = False
         current_time = time.time()
         while (
             len(self._events_queue) > 0 and
@@ -100,7 +109,7 @@ class ThresholdChecker:
                     "Driver %s not found in events_dict for event type %s", driver_id, event_type
                 )
 
-    def register_event(self, event_type: ThresholdCheckerEventTypes, driver_id: int, event_time: float = time.time()):
+    def register_event(self, event_type: DetectorEventTypes, driver: Driver, event_time: float = time.time()):
         """Register a new event observation.
 
         Args:
@@ -108,12 +117,13 @@ class ThresholdChecker:
             driver_id (int): The driver involved.
             event_time (float, optional): The time at which the event was observed. Defaults to current time.
         """
+        driver_id = driver["driver_idx"]
         logger.info(f"Registering event {event_type} for driver {driver_id} at {event_time}")
         count = self._events_dict[event_type].get(driver_id, 0)
         self._events_dict[event_type][driver_id] = count + 1
         self._events_queue.append((event_time, event_type, driver_id))
 
-    def register_events(self, event_type: ThresholdCheckerEventTypes, driver_ids: list[int]):
+    def register_events(self, event_type: DetectorEventTypes, drivers: list[Driver] | bool):
         """Like register_event, but now report a list of drivers at once all on the same event_time.
 
         Args:
@@ -122,8 +132,12 @@ class ThresholdChecker:
             event_time (float, optional): The time at which the events were observed. Defaults to current time.
         """
         event_time = time.time()
-        for driver_id in driver_ids:
-            self.register_event(event_type, driver_id, event_time)
+        if not isinstance(drivers, list):
+            # This is special case for random events where we just return a boolean
+            logger.info(f"Registering random event {event_type} at {event_time}")
+            self._random_event = True
+        for driver in drivers:
+            self.register_event(event_type, driver, event_time)
 
 
     def threshold_met(self):
@@ -133,12 +147,17 @@ class ThresholdChecker:
             bool: True if either an individual event type threshold is met or if 
              the weighted sum of event types is over the accumulative threshold.
         """
+        # Cover the special case for random events
+        if self._random_event:
+            logger.info("Random event detected, threshold met")
+            return True
+        
         # Loop through the event types, checking the per-event thresholds
         # and calculating the weighted sum
         logger.debug(f"Checking threshold, events_dict={self._events_dict}, settings={self._settings}")
 
         acc = 0
-        for det in ThresholdCheckerEventTypes:
+        for det in DetectorEventTypes:
             event_type_count = len(self._events_dict[det])
 
             # If the specific event threshold is met, return immediately

@@ -2,8 +2,11 @@ import pytest
 import time
 import math
 
+from irsdk import TrkLoc
+
 from unittest.mock import Mock, call
-from core.detection.threshold_checker import ThresholdChecker, ThresholdCheckerEventTypes, ThresholdCheckerSettings
+from core.detection.tests.utils import make_driver
+from core.detection.threshold_checker import ThresholdChecker, DetectorEventTypes, ThresholdCheckerSettings
 from core.generator import Generator
 from core.interactions.command_sender import CommandSender
 from core.interactions.mock_sender import MockSender
@@ -264,3 +267,38 @@ def test_loop_threshold_checker_threshold_met(generator, mocker, stopped, off_tr
 
     # Assertions
     assert threshold_met_spy.spy_return == threshold_met
+    
+@pytest.mark.parametrize("detected_events, expected_threshold_met", [
+    ({"random": False, "stopped": [], "off_track": []}, False),  # No events
+    ({"random": False, "stopped": [make_driver(TrkLoc.on_track,)], "off_track": []}, False),  # Multiple types below threshold
+    ({"random": False, "stopped": [{"timestamp": 2}], "off_track": [{"timestamp": 3}]}, True),  # Threshold met
+])
+def test_loop_detector_integration(generator, mocker, detected_events, expected_threshold_met):
+    """Test the _loop method for proper integration with the Detector."""
+    # Mock dependencies
+    mocker.patch.object(generator, '_wait_for_green_flag')
+    mocker.patch.object(generator, '_is_shutting_down', side_effect=[False, True])
+    mocker.patch.object(generator.drivers, 'update')
+    mocker.patch.object(generator, '_start_safety_car')
+    mocker.patch('time.sleep', return_value=None)
+
+    # Mock detector behavior
+    mock_detect = mocker.patch.object(generator.detector, 'detect', return_value=Mock(get_events=lambda event_type: detected_events.get(event_type, [])))
+
+    # Mock threshold checker behavior
+    mocker.patch.object(generator.threshold_checker, 'clean_up_events')
+    mock_register_events = mocker.patch.object(generator.threshold_checker, 'register_events')
+    mock_threshold_met = mocker.patch.object(generator.threshold_checker, 'threshold_met', return_value=expected_threshold_met)
+
+    # Run the loop
+    generator.start_time = time.time() - 5
+    generator._loop()
+
+    # Assertions
+    mock_detect.assert_called_once()
+    assert mock_register_events.call_count == 3  # RANDOM, STOPPED, OFF_TRACK
+    assert mock_threshold_met.call_count == 1
+    if expected_threshold_met:
+        generator._start_safety_car.assert_called_once()
+    else:
+        generator._start_safety_car.assert_not_called()
