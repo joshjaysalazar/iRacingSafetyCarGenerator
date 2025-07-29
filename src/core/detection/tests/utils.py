@@ -1,5 +1,7 @@
 from irsdk import TrkLoc
 
+from core.drivers import Driver
+
 class MockDrivers:
     def __init__(self, current = [], previous = []):
         self.current_drivers = current
@@ -10,8 +12,9 @@ class MockDrivers:
         self.current_drivers.append(make_driver(TrkLoc.not_in_world))
         self.previous_drivers.append(make_driver(TrkLoc.not_in_world))
 
-def make_driver(track_loc, laps_completed = 0, lap_distance = 0.0):
+def make_driver(track_loc: TrkLoc, laps_completed: int = 0, lap_distance: float = 0.0) -> Driver:
     return {
+        "driver_idx": 0,
         "track_loc": track_loc,
         "laps_completed": laps_completed,
         "lap_distance": lap_distance

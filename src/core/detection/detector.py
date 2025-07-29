@@ -5,7 +5,7 @@ from enum import Enum
 from core.detection.off_track_detector import OffTrackDetector
 from core.detection.random_detector import RandomDetector
 from core.detection.stopped_detector import StoppedDetector
-from core.drivers import Drivers
+from core.drivers import Driver, Drivers
 from typing import Dict, Protocol
 
 class SupportsDetect(Protocol):
@@ -22,12 +22,16 @@ class DetectorEventTypes(Enum):
 class DetectedEvents:
     """Wrapper for detected events from various detectors."""
     def __init__(self, events):
-        self.events = events
+        self.events: Dict[DetectorEventTypes, list[Driver] | bool] = events
 
     @staticmethod
-    def from_detector_results(events):
+    def from_detector_results(events) -> "DetectedEvents":
         """Create DetectedEvents from the results of detectors."""
         return DetectedEvents(events)
+    
+    def get_events(self, event_type: DetectorEventTypes) -> list[Driver] | bool:
+        """Get events of a specific type."""
+        return self.events.get(event_type, [])
     
 @dataclass(frozen=True)
 class DetectorSettings:
