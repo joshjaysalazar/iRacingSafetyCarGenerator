@@ -1,7 +1,7 @@
 import random
 
 class RandomDetector:
-    def __init__(self, chance: float, start_minute: int, end_minute: int):
+    def __init__(self, chance: float, start_minute: float, end_minute: float):
         """Initialize the RandomDetector.
 
         Args:
