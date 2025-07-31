@@ -2,32 +2,27 @@
 from dataclasses import dataclass
 from enum import Enum
 
+from core.detection.detector_common_types import DetectionResult, DetectorEventTypes, SupportsDetect
 from core.detection.off_track_detector import OffTrackDetector
 from core.detection.random_detector import RandomDetector
 from core.detection.stopped_detector import StoppedDetector
 from core.drivers import Drivers
-from typing import Dict, Protocol
+from typing import Dict
 
-class SupportsDetect(Protocol):
-    """Protocol for detectors that can detect events."""
-    def detect(self) -> list | bool:
-        ...
 
-class DetectorEventTypes(Enum):
-    """The different events we are tracking."""
-    OFF_TRACK = "off_track"
-    RANDOM = "random"
-    STOPPED = "stopped"
-    
-class DetectedEvents:
-    """Wrapper for detected events from various detectors."""
+class BundledDetectedEvents:
+    """Wrapper to bundle up all detected events across different detectors."""
     def __init__(self, events):
-        self.events = events
+        self.events: Dict[DetectorEventTypes, DetectionResult] = events
 
     @staticmethod
-    def from_detector_results(events):
+    def from_detector_results(events: Dict[DetectorEventTypes, DetectionResult]) -> "BundledDetectedEvents":
         """Create DetectedEvents from the results of detectors."""
-        return DetectedEvents(events)
+        return BundledDetectedEvents(events)
+    
+    def get_events(self, event_type: DetectorEventTypes) -> DetectionResult:
+        """Get events of a specific type."""
+        return self.events.get(event_type, [])
     
 @dataclass(frozen=True)
 class DetectorSettings:
@@ -88,11 +83,11 @@ class Detector:
         return Detector(detectors)
     
 
-    def detect(self):
+    def detect(self) -> BundledDetectedEvents:
         """Run all detectors and return their results."""
         events = {}
         for event_type, detector in self.detectors.items():
             results = detector.detect()
             events[event_type] = results
             
-        return DetectedEvents.from_detector_results(events)
+        return BundledDetectedEvents.from_detector_results(events)

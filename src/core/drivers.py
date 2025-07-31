@@ -1,7 +1,15 @@
 from copy import deepcopy
+from typing import TypedDict
+from irsdk import TrkLoc
 import logging
 
 logger = logging.getLogger(__name__)
+
+class Driver(TypedDict):
+    driver_idx: int
+    laps_completed: int
+    lap_distance: float
+    track_loc: TrkLoc
 
 class Drivers:
     """The Drivers class is responsible for tracking the state of the drivers.
@@ -21,8 +29,8 @@ class Drivers:
 
         # Dictionaries to track the state of the drivers
         logger.debug("Creating drivers dictionaries")
-        self.current_drivers = []
-        self.previous_drivers = []
+        self.current_drivers: list[Driver] = []
+        self.previous_drivers: list[Driver] = []
 
         # Do the initial update
         self.update()
@@ -55,6 +63,7 @@ class Drivers:
         for i in range(len(laps_completed)):
             self.current_drivers.append(
                 {
+                "driver_idx": i,
                 "laps_completed": laps_completed[i],
                 "lap_distance": lap_distance[i],
                 "track_loc": track_loc[i],

@@ -1,4 +1,5 @@
 from irsdk import TrkLoc
+from core.detection.detector_common_types import DetectionResult, DetectorEventTypes
 from core.drivers import Drivers
 
 class OffTrackDetector:
@@ -10,7 +11,7 @@ class OffTrackDetector:
         """
         self.drivers = drivers
 
-    def detect(self):
+    def detect(self) -> DetectionResult:
         """Detect if any driver is off track.
 
         Args:
@@ -27,5 +28,5 @@ class OffTrackDetector:
                # driver is off track and is active in the session
                off_track_drivers.append(driver)
         
-        return off_track_drivers
+        return DetectionResult(DetectorEventTypes.OFF_TRACK, drivers=off_track_drivers)
     

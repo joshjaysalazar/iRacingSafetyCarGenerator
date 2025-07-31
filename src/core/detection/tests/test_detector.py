@@ -1,8 +1,9 @@
 import pytest
 
+from core.detection.detector_common_types import DetectionResult
 from src.core.detection.detector import DetectorSettings
 from unittest.mock import MagicMock, patch
-from src.core.detection.detector import Detector, DetectorSettings, DetectorEventTypes, DetectedEvents
+from src.core.detection.detector import Detector, DetectorSettings, DetectorEventTypes, BundledDetectedEvents
 
 class DummyDetector:
     def __init__(self, result):
@@ -96,23 +97,37 @@ def test_build_detector_none_enabled():
         mock_offtrack.assert_not_called()
 
 def test_detector_detect_calls_all_detectors():
-    dummy1 = DummyDetector(result=[1, 2])
-    dummy2 = DummyDetector(result=True)
+    dummy1 = DummyDetector(result=DetectionResult(
+        DetectorEventTypes.STOPPED,
+        drivers=[1, 2]
+        ))
+    dummy2 = DummyDetector(result=DetectionResult(
+        DetectorEventTypes.RANDOM,
+        detected_flag=True,
+        ))
     detectors = {
-        DetectorEventTypes.RANDOM: dummy1,
-        DetectorEventTypes.STOPPED: dummy2,
+        DetectorEventTypes.STOPPED: dummy1,
+        DetectorEventTypes.RANDOM: dummy2,
     }
     detector = Detector(detectors)
     result = detector.detect()
-    assert isinstance(result, DetectedEvents)
-    assert result.events[DetectorEventTypes.RANDOM] == [1, 2]
-    assert result.events[DetectorEventTypes.STOPPED] is True
+    assert isinstance(result, BundledDetectedEvents)
+    assert isinstance(result.events[DetectorEventTypes.STOPPED], DetectionResult)
+    assert not result.events[DetectorEventTypes.STOPPED].has_detected_flag()
+    assert result.events[DetectorEventTypes.STOPPED].has_drivers()
+    assert result.events[DetectorEventTypes.STOPPED].drivers== [1, 2]
+
+    assert isinstance(result.events[DetectorEventTypes.RANDOM], DetectionResult)
+    assert result.events[DetectorEventTypes.RANDOM].has_detected_flag()
+    assert not result.events[DetectorEventTypes.RANDOM].has_drivers()
+    assert result.events[DetectorEventTypes.RANDOM].detected_flag == True
+    
 
 def test_detected_events_from_detector_results():
     events = {
         DetectorEventTypes.RANDOM: [1],
         DetectorEventTypes.STOPPED: False,
     }
-    detected = DetectedEvents.from_detector_results(events)
-    assert isinstance(detected, DetectedEvents)
+    detected = BundledDetectedEvents.from_detector_results(events)
+    assert isinstance(detected, BundledDetectedEvents)
     assert detected.events == events

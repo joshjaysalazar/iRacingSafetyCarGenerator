@@ -1,4 +1,5 @@
 from irsdk import TrkLoc
+from core.detection.detector_common_types import DetectionResult, DetectorEventTypes
 from core.drivers import Drivers
 
 class StoppedDetector:
@@ -40,5 +41,5 @@ class StoppedDetector:
         if len(stopped_cars) >= len(self.drivers.current_drivers) - 1:
             stopped_cars = []
 
-        return stopped_cars
+        return DetectionResult(DetectorEventTypes.OFF_TRACK, drivers=stopped_cars)
     

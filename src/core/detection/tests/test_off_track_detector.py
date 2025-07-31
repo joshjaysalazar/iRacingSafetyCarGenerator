@@ -13,9 +13,10 @@ def test_detect_off_track_driver():
     ])
     detector = OffTrackDetector(drivers)
     result = detector.detect()
-    assert len(result) == 2
-    assert drivers.current_drivers[0] in result
-    assert drivers.current_drivers[2] in result
+    assert result.has_drivers()
+    assert len(result.drivers) == 2
+    assert drivers.current_drivers[0] in result.drivers
+    assert drivers.current_drivers[2] in result.drivers
 
 def test_detect_no_off_track_driver():
     drivers = MockDrivers([
@@ -27,7 +28,8 @@ def test_detect_no_off_track_driver():
     ])
     detector = OffTrackDetector(drivers)
     result = detector.detect()
-    assert result == []
+    assert result.has_drivers()
+    assert result.drivers == []
 
 def test_detect_off_track_driver_negative_laps():
     drivers = MockDrivers([
@@ -36,11 +38,13 @@ def test_detect_off_track_driver_negative_laps():
     ])
     detector = OffTrackDetector(drivers)
     result = detector.detect()
-    assert len(result) == 1
-    assert drivers.current_drivers[1] in result
+    assert result.has_drivers()
+    assert len(result.drivers) == 1
+    assert drivers.current_drivers[1] in result.drivers
 
 def test_detect_empty_drivers():
     drivers = MockDrivers([])
     detector = OffTrackDetector(drivers)
     result = detector.detect()
-    assert result == []
+    assert result.has_drivers()
+    assert result.drivers == []

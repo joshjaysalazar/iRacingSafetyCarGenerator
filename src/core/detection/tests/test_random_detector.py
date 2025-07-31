@@ -13,10 +13,14 @@ def test_random_detector_detect_probability(monkeypatch):
     expected_chance = 1 - ((1 - 0.5) ** (1 / 60))
     # Patch random.random to return a value below expected_chance
     monkeypatch.setattr("random.random", lambda: expected_chance - 0.01)
-    assert detector.detect() is True
+    result = detector.detect()
+    assert result.has_detected_flag()
+    assert result.detected_flag is True
     # Patch random.random to return a value above expected_chance
     monkeypatch.setattr("random.random", lambda: expected_chance + 0.01)
-    assert detector.detect() is False
+    result = detector.detect()
+    assert result.has_detected_flag()
+    assert result.detected_flag is False
 
 def test_random_detector_zero_window():
     # If start_minute == end_minute, window is zero, always return False
@@ -35,7 +39,8 @@ def test_random_distribution():
     for _ in range (nr_repeats):
         checks_count = 0
         for _ in range(nr_checks):
-            if detector.detect():
+            result = detector.detect()
+            if result.has_detected_flag() and result.detected_flag:
                 triggered_count += 1
                 break
             else:

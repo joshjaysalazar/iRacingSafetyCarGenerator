@@ -1,5 +1,8 @@
 import random
 
+from core.detection.detector_common_types import DetectionResult, DetectorEventTypes
+
+
 class RandomDetector:
     def __init__(self, chance: float, start_minute: float, end_minute: float):
         """Initialize the RandomDetector.
@@ -28,4 +31,5 @@ class RandomDetector:
         current_chance = 1 - ((1 - self.chance) ** (1 / self.len_of_window))
 
         # If the random number is less than or equal to the chance, trigger
-        return rng <= current_chance
+        result = rng <= current_chance
+        return DetectionResult(DetectorEventTypes.RANDOM, detected_flag=result)

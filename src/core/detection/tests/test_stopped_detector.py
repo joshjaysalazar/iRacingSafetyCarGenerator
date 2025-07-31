@@ -16,8 +16,9 @@ def test_detect_stopped_driver():
     ]
     drivers = MockDrivers(current, previous)
     detector = StoppedDetector(drivers)
-    stopped = detector.detect()
-    assert stopped == [current[0]]
+    result = detector.detect()
+    assert result.has_drivers()
+    assert result.drivers == [current[0]]
 
 def test_detect_skips_pit_and_not_in_world():
     current = [
@@ -32,8 +33,9 @@ def test_detect_skips_pit_and_not_in_world():
     ]
     drivers = MockDrivers(current, previous)
     detector = StoppedDetector(drivers)
-    stopped = detector.detect()
-    assert stopped == []
+    result = detector.detect()
+    assert result.has_drivers()
+    assert result.drivers == []
 
 def test_detect_skips_negative_lap_distance():
     current = [
@@ -46,8 +48,9 @@ def test_detect_skips_negative_lap_distance():
     ]
     drivers = MockDrivers(current, previous)
     detector = StoppedDetector(drivers)
-    stopped = detector.detect()
-    assert stopped == [current[1]]
+    result = detector.detect()
+    assert result.has_drivers()
+    assert result.drivers == [current[1]]
 
 def test_detect_lag_fix_clears_list():
     current = [
@@ -62,8 +65,9 @@ def test_detect_lag_fix_clears_list():
     ]
     drivers = MockDrivers(current, previous)
     detector = StoppedDetector(drivers)
-    stopped = detector.detect()
-    assert stopped == []
+    result = detector.detect()
+    assert result.has_drivers()
+    assert result.drivers == []
 
 def test_detect_multiple_stopped():
     current = [
@@ -78,5 +82,6 @@ def test_detect_multiple_stopped():
     ]
     drivers = MockDrivers(current, previous)
     detector = StoppedDetector(drivers)
-    stopped = detector.detect()
-    assert stopped == [current[0], current[1]]
+    result = detector.detect()
+    assert result.has_drivers()
+    assert result.drivers == [current[0], current[1]]
