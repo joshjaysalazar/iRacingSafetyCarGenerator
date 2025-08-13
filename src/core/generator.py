@@ -8,6 +8,7 @@ import irsdk
 
 from core import drivers
 from core.detection.threshold_checker import ThresholdChecker, ThresholdCheckerSettings, DetectorEventTypes
+from core.detection.detector import Detector, DetectorSettings
 from core.interactions.interaction_factories import CommandSenderFactory
 
 from codetiming import Timer
@@ -410,13 +411,20 @@ class Generator:
 
                     # If all checks are passed, check for events
                     self._check_random()
-                    stopped = self._check_stopped()
-                    off_track = self._check_off_track()
+                    self._check_stopped()
+                    self._check_off_track()
 
-                    # Update sliding window events
+                    # Use new detector system for threshold checking
+                    detector_results = self.detector.detect()
+                    
+                    # Clean up events outside the sliding window
                     self.threshold_checker.clean_up_events()
-                    self.threshold_checker.register_events(DetectorEventTypes.STOPPED, stopped)
-                    self.threshold_checker.register_events(DetectorEventTypes.OFF_TRACK, off_track)
+                    
+                    # Register events from detector results
+                    for event_type in DetectorEventTypes:
+                        detection_result = detector_results.get_events(event_type)
+                        if detection_result:
+                            self.threshold_checker.register_detection_result(detection_result)
 
                     if self.threshold_checker.threshold_met():
                         logger.info("ThresholdChecker is meeting threshold, would start safety car")
@@ -743,7 +751,7 @@ class Generator:
 
         # Create the detectors
         detector_settings = DetectorSettings.from_settings(self.master.settings)
-        self.detector = Detector(detector_settings, self.drivers)
+        self.detector = Detector.build_detector(detector_settings, self.drivers)
 
         # Create the ThresholdChecker
         threshold_checker_settings = ThresholdCheckerSettings.from_settings(self.master.settings)

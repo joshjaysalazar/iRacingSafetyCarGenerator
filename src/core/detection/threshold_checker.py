@@ -9,6 +9,7 @@ from dataclasses import dataclass, field
 from enum import Enum
 
 from core.detection.detector import DetectorEventTypes
+from core.detection.detector_common_types import DetectionResult
 
 logger = logging.getLogger(__name__)
 @dataclass(frozen=True)
@@ -129,6 +130,22 @@ class ThresholdChecker:
         event_time = time.time()
         for driver_id in driver_ids:
             self.register_event(event_type, driver_id, event_time)
+
+    def register_detection_result(self, detection_result: DetectionResult) -> None:
+        """Register events from a DetectionResult object.
+
+        Args:
+            detection_result: A DetectionResult object containing either drivers or detected_flag.
+        """
+        
+        if detection_result.has_drivers():
+            # Extract driver indices from Driver objects
+            driver_ids = [driver['driver_idx'] for driver in detection_result.drivers]
+            self.register_events(detection_result.event_type, driver_ids)
+        elif detection_result.has_detected_flag() and detection_result.detected_flag:
+            # For events like RANDOM that just have a boolean flag
+            # Use a dummy driver index since we don't have specific drivers
+            self.register_events(detection_result.event_type, [0])
 
 
     def threshold_met(self):
