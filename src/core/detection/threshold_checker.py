@@ -29,15 +29,15 @@ class ThresholdCheckerSettings:
     accumulative_weights: dict = field(
         default_factory=lambda: {
             DetectorEventTypes.OFF_TRACK: 1.0, 
-            DetectorEventTypes.RANDOM: 1.0,
+            DetectorEventTypes.RANDOM: 0.0, # Random events do not contribute to the accumulative threshold
             DetectorEventTypes.STOPPED: 2.0,
         }
     ) 
     event_type_threshold: dict = field(
         default_factory=lambda: {
-            DetectorEventTypes.OFF_TRACK: 4,
-            DetectorEventTypes.RANDOM: 1.0,
-            DetectorEventTypes.STOPPED: 2,
+            DetectorEventTypes.OFF_TRACK: 4.0,
+            DetectorEventTypes.RANDOM: 1.0, 
+            DetectorEventTypes.STOPPED: 2.0,
         }
     ) 
 
@@ -47,7 +47,7 @@ class ThresholdCheckerSettings:
             time_range=10.0,
             event_type_threshold={
                 DetectorEventTypes.OFF_TRACK: float(settings["settings"]["off_min"]),
-                DetectorEventTypes.RANDOM: 1.0,
+                DetectorEventTypes.RANDOM: 1.0, # Random does not have a threshold, it is just a flag
                 DetectorEventTypes.STOPPED: float(settings["settings"]["stopped_min"]),
             },
         )

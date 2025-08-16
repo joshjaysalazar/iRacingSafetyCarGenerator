@@ -1,5 +1,5 @@
 from irsdk import TrkLoc
-from core.detection.detector_common_types import DetectionResult, DetectorEventTypes
+from core.detection.detector_common_types import DetectionResult, DetectorEventTypes, DetectorState
 from core.drivers import Drivers
 
 class StoppedDetector:
@@ -10,6 +10,11 @@ class StoppedDetector:
             drivers (Drivers): The Drivers object containing the current and previous state of drivers.
         """
         self.drivers = drivers
+
+    def should_run(self, state: DetectorState) -> bool:
+        """Check if this detector should run given current state."""
+        # StoppedDetector can always run - no time or occurrence constraints
+        return True
 
     def detect(self):
         """Detect if any driver is stopped.
@@ -41,5 +46,5 @@ class StoppedDetector:
         if len(stopped_cars) >= len(self.drivers.current_drivers) - 1:
             stopped_cars = []
 
-        return DetectionResult(DetectorEventTypes.OFF_TRACK, drivers=stopped_cars)
+        return DetectionResult(DetectorEventTypes.STOPPED, drivers=stopped_cars)
     

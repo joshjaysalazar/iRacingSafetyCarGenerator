@@ -1,5 +1,5 @@
 from irsdk import TrkLoc
-from core.detection.detector_common_types import DetectionResult, DetectorEventTypes
+from core.detection.detector_common_types import DetectionResult, DetectorEventTypes, DetectorState
 from core.drivers import Drivers
 
 class OffTrackDetector:
@@ -10,6 +10,11 @@ class OffTrackDetector:
             drivers (Drivers): The Drivers object containing the current state of drivers.
         """
         self.drivers = drivers
+
+    def should_run(self, state: DetectorState) -> bool:
+        """Check if this detector should run given current state."""
+        # OffTrackDetector can always run - no time or occurrence constraints
+        return True
 
     def detect(self) -> DetectionResult:
         """Detect if any driver is off track.

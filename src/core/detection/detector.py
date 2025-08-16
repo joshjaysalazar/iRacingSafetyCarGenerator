@@ -1,8 +1,9 @@
 
+import time
 from dataclasses import dataclass
 from enum import Enum
 
-from core.detection.detector_common_types import DetectionResult, DetectorEventTypes, SupportsDetect
+from core.detection.detector_common_types import DetectionResult, DetectorEventTypes, DetectorState, SupportsDetect
 from core.detection.off_track_detector import OffTrackDetector
 from core.detection.random_detector import RandomDetector
 from core.detection.stopped_detector import StoppedDetector
@@ -54,7 +55,13 @@ class DetectorSettings:
     
 class Detector:
     def __init__(self, detectors: Dict[DetectorEventTypes, SupportsDetect]):
-        self.detectors = detectors 
+        self.detectors = detectors
+        self.start_time = None
+        self.safety_car_event_counts = {event_type: 0 for event_type in DetectorEventTypes}
+    
+    def race_started(self, start_time: float):
+        """Called when the race starts to set the start time for time-based calculations."""
+        self.start_time = start_time 
 
     @staticmethod
     def build_detector(settings: DetectorSettings, drivers: Drivers):
@@ -72,7 +79,8 @@ class Detector:
             detectors[DetectorEventTypes.RANDOM] = RandomDetector(
                 chance=settings.random_chance,
                 start_minute=settings.random_start_minute,
-                end_minute=settings.random_end_minute
+                end_minute=settings.random_end_minute,
+                max_occurrences=settings.random_max_occ
             )
         if settings.stopped_enabled:
             detectors[DetectorEventTypes.STOPPED] = StoppedDetector(drivers)
@@ -85,9 +93,24 @@ class Detector:
 
     def detect(self) -> BundledDetectedEvents:
         """Run all detectors and return their results."""
+        if self.start_time is None:
+            # Race hasn't started yet, return empty results
+            return BundledDetectedEvents.from_detector_results({})
+            
+        # Create detector state
+        state = DetectorState(
+            current_time_since_start=time.time() - self.start_time,
+            safety_car_event_counts=self.safety_car_event_counts
+        )
+        
         events = {}
         for event_type, detector in self.detectors.items():
-            results = detector.detect()
-            events[event_type] = results
+            # Check if detector should run
+            if hasattr(detector, 'should_run') and not detector.should_run(state):
+                continue
+                
+            # Run detector
+            result = detector.detect()
+            events[event_type] = result
             
         return BundledDetectedEvents.from_detector_results(events)

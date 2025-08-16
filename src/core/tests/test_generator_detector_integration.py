@@ -395,3 +395,65 @@ class TestGeneratorDetectorEndToEndIntegration:
         assert DetectorEventTypes.STOPPED in generator.detector.detectors
         assert DetectorEventTypes.RANDOM not in generator.detector.detectors
         assert DetectorEventTypes.OFF_TRACK not in generator.detector.detectors
+
+
+def test_generator_calls_race_started_when_green_flag_detected(generator_with_mocks, mock_drivers, mocker):
+    """Test that Generator calls race_started() on detector when green flag is detected."""
+    import irsdk
+    
+    generator = generator_with_mocks
+    generator.drivers = mock_drivers
+    
+    # Initialize detector and spy on race_started method
+    detector_settings = DetectorSettings.from_settings(generator.master.settings)
+    generator.detector = Detector.build_detector(detector_settings, mock_drivers)
+    race_started_spy = mocker.spy(generator.detector, 'race_started')
+    
+    # Mock iRacing SDK to simulate green flag
+    generator.ir = {"SessionFlags": irsdk.Flags.green}
+    
+    # Mock other dependencies for _wait_for_green_flag
+    mocker.patch.object(generator, '_is_shutting_down', return_value=False)
+    mocker.patch.object(generator, '_skip_waiting_for_green', return_value=False)
+    mocker.patch('time.sleep', return_value=None)  # Speed up the test
+    
+    # Ensure start_time is None so it gets set
+    generator.start_time = None
+    
+    # Call _wait_for_green_flag directly - this should set start_time and call race_started
+    generator._wait_for_green_flag(require_race_session=False)
+    
+    # Verify that race_started was called
+    race_started_spy.assert_called_once()
+    # Verify that start_time was set
+    assert generator.start_time is not None
+
+
+def test_generator_calls_race_started_when_skipping_green_flag_wait(generator_with_mocks, mock_drivers, mocker):
+    """Test that Generator calls race_started() on detector when skipping green flag wait."""
+    generator = generator_with_mocks
+    generator.drivers = mock_drivers
+    
+    # Initialize detector and spy on race_started method
+    detector_settings = DetectorSettings.from_settings(generator.master.settings)
+    generator.detector = Detector.build_detector(detector_settings, mock_drivers)
+    race_started_spy = mocker.spy(generator.detector, 'race_started')
+    
+    # Mock iRacing SDK - no green flag
+    generator.ir = {"SessionFlags": 0}  # No flags set
+    
+    # Mock to simulate skipping the wait (e.g., user input or shutdown)
+    mocker.patch.object(generator, '_is_shutting_down', return_value=False)
+    mocker.patch.object(generator, '_skip_waiting_for_green', side_effect=[False, True])  # Skip on second call
+    mocker.patch('time.sleep', return_value=None)  # Speed up the test
+    
+    # Ensure start_time is None so it gets set
+    generator.start_time = None
+    
+    # Call _wait_for_green_flag directly - this should set start_time and call race_started
+    generator._wait_for_green_flag(require_race_session=False)
+    
+    # Verify that race_started was called
+    race_started_spy.assert_called_once()
+    # Verify that start_time was set
+    assert generator.start_time is not None

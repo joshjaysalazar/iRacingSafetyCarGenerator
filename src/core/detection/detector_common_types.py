@@ -1,6 +1,7 @@
 
+from dataclasses import dataclass
 from enum import Enum
-from typing import Protocol
+from typing import Dict, Protocol
 
 from core.drivers import Driver
 
@@ -29,7 +30,22 @@ class DetectionResult:
     def has_detected_flag(self) -> bool:
         return self.detected_flag is not None
 
+@dataclass
+class DetectorState:
+    """Encapsulates runtime state needed by detectors for decision making."""
+    current_time_since_start: float
+    safety_car_event_counts: Dict[DetectorEventTypes, int]
+    
+    def increment_safety_car_event(self, event_type: DetectorEventTypes):
+        """Increment the safety car event count for a given event type."""
+        self.safety_car_event_counts[event_type] = self.safety_car_event_counts.get(event_type, 0) + 1
+
+
 class SupportsDetect(Protocol):
     """Protocol for detectors that can detect events."""
     def detect(self) -> DetectionResult:
+        ...
+    
+    def should_run(self, state: DetectorState) -> bool:
+        """Check if this detector should run given current state."""
         ...

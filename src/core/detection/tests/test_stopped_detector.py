@@ -2,6 +2,7 @@ import pytest
 
 from irsdk import TrkLoc
 from core.detection.stopped_detector import StoppedDetector
+from core.detection.detector_common_types import DetectorState, DetectorEventTypes
 from core.detection.tests.utils import MockDrivers, make_driver
 
 
@@ -85,3 +86,19 @@ def test_detect_multiple_stopped():
     result = detector.detect()
     assert result.has_drivers()
     assert result.drivers == [current[0], current[1]]
+
+
+def test_should_run_always_returns_true():
+    """Test that StoppedDetector should_run always returns True."""
+    drivers = MockDrivers([], [])
+    detector = StoppedDetector(drivers)
+    
+    # Create various states to test
+    states = [
+        DetectorState(0, {}),
+        DetectorState(1000, {DetectorEventTypes.STOPPED: 5}),
+        DetectorState(10000, {DetectorEventTypes.STOPPED: 100}),
+    ]
+    
+    for state in states:
+        assert detector.should_run(state) is True

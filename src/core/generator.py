@@ -701,6 +701,7 @@ class Generator:
                 # Set the start time if it hasn't been set yet
                 if self.start_time is None:
                     self.start_time = time.time()
+                    self.detector.race_started(self.start_time)
 
                 # Progress to monitoring for SC state
                 self.master.generator_state = GeneratorState.MONITORING_FOR_INCIDENTS
@@ -713,6 +714,7 @@ class Generator:
                 logger.debug("Skipping wait for green because of a threading event")
                 if self.start_time is None:
                     self.start_time = time.time()
+                    self.detector.race_started(self.start_time)
 
                 # Progress to monitoring for SC state
                 self.master.generator_state = GeneratorState.MONITORING_FOR_INCIDENTS
