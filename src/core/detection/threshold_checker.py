@@ -106,7 +106,7 @@ class ThresholdChecker:
                     "Driver %s not found in events_dict for event type %s", driver_id, event_type
                 )
 
-    def register_event(self, event_type: DetectorEventTypes, driver_id: int, event_time: float = time.time()):
+    def _register_event(self, event_type: DetectorEventTypes, driver_id: int, event_time: float = time.time()):
         """Register a new event observation.
 
         Args:
@@ -119,8 +119,8 @@ class ThresholdChecker:
         self._events_dict[event_type][driver_id] = count + 1
         self._events_queue.append((event_time, event_type, driver_id))
 
-    def register_events(self, event_type: DetectorEventTypes, driver_ids: list[int]):
-        """Like register_event, but now report a list of drivers at once all on the same event_time.
+    def _register_events(self, event_type: DetectorEventTypes, driver_ids: list[int]):
+        """Like _register_event, but now report a list of drivers at once all on the same event_time.
 
         Args:
             event_type (ThresholdCheckerEventTypes): The event type observed.
@@ -129,7 +129,7 @@ class ThresholdChecker:
         """
         event_time = time.time()
         for driver_id in driver_ids:
-            self.register_event(event_type, driver_id, event_time)
+            self._register_event(event_type, driver_id, event_time)
 
     def register_detection_result(self, detection_result: DetectionResult) -> None:
         """Register events from a DetectionResult object.
@@ -141,11 +141,11 @@ class ThresholdChecker:
         if detection_result.has_drivers():
             # Extract driver indices from Driver objects
             driver_ids = [driver['driver_idx'] for driver in detection_result.drivers]
-            self.register_events(detection_result.event_type, driver_ids)
+            self._register_events(detection_result.event_type, driver_ids)
         elif detection_result.has_detected_flag() and detection_result.detected_flag:
             # For events like RANDOM that just have a boolean flag
             # Use a dummy driver index since we don't have specific drivers
-            self.register_events(detection_result.event_type, [0])
+            self._register_events(detection_result.event_type, [0])
 
 
     def threshold_met(self):

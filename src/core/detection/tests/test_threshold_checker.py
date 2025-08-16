@@ -18,33 +18,33 @@ def threshold_checker():
 
 def test_off_track_threshold(threshold_checker, mocker):
     mocker.patch("time.time", return_value=1000.0)
-    threshold_checker.register_event(OFF_TRACK, 1, 1000.1)
-    threshold_checker.register_event(OFF_TRACK, 1, 1000.2)  # should not count
+    threshold_checker._register_event(OFF_TRACK, 1, 1000.1)
+    threshold_checker._register_event(OFF_TRACK, 1, 1000.2)  # should not count
     assert not threshold_checker.threshold_met()
-    threshold_checker.register_event(OFF_TRACK, 2, 1000.3)
+    threshold_checker._register_event(OFF_TRACK, 2, 1000.3)
     assert threshold_checker.threshold_met()
 
 def test_stopped_threshold(threshold_checker, mocker):
     mocker.patch("time.time", return_value=1000.0)
-    threshold_checker.register_event(STOPPED, 1, 1000.1)
-    threshold_checker.register_event(STOPPED, 1, 1000.2)  # should not count
+    threshold_checker._register_event(STOPPED, 1, 1000.1)
+    threshold_checker._register_event(STOPPED, 1, 1000.2)  # should not count
     assert not threshold_checker.threshold_met()
-    threshold_checker.register_event(STOPPED, 2, 1000.3)
-    threshold_checker.register_event(STOPPED, 2, 1000.4)  # should not count
+    threshold_checker._register_event(STOPPED, 2, 1000.3)
+    threshold_checker._register_event(STOPPED, 2, 1000.4)  # should not count
     assert not threshold_checker.threshold_met()
-    threshold_checker.register_event(STOPPED, 3, 1000.5)
+    threshold_checker._register_event(STOPPED, 3, 1000.5)
     assert threshold_checker.threshold_met()
 
 def test_mixed_threshold(threshold_checker, mocker):
     mocker.patch("time.time", return_value=1000.0)
-    threshold_checker.register_event(STOPPED, 1, 1000.1)
-    threshold_checker.register_event(STOPPED, 1, 1000.2) # should not count
-    threshold_checker.register_event(OFF_TRACK, 1, 1000.1)
+    threshold_checker._register_event(STOPPED, 1, 1000.1)
+    threshold_checker._register_event(STOPPED, 1, 1000.2) # should not count
+    threshold_checker._register_event(OFF_TRACK, 1, 1000.1)
     assert not threshold_checker.threshold_met()
-    threshold_checker.register_event(STOPPED, 2, 1000.3)
-    threshold_checker.register_event(STOPPED, 2, 1000.4) # should not count
+    threshold_checker._register_event(STOPPED, 2, 1000.3)
+    threshold_checker._register_event(STOPPED, 2, 1000.4) # should not count
     assert not threshold_checker.threshold_met()
-    threshold_checker.register_event(STOPPED, 3, 1000.5)
+    threshold_checker._register_event(STOPPED, 3, 1000.5)
     assert threshold_checker.threshold_met()
 
 @pytest.fixture
@@ -59,23 +59,23 @@ def accumulative_threshold_checker():
 def test_accumulative_threshold_offtracks(accumulative_threshold_checker, mocker):
     threshold_checker = accumulative_threshold_checker
     mocker.patch("time.time", return_value=1000.0)
-    threshold_checker.register_event(OFF_TRACK, 1, 1000.1)
-    threshold_checker.register_event(OFF_TRACK, 1, 1000.2) # should not count
-    threshold_checker.register_event(OFF_TRACK, 2, 1000.3)
-    threshold_checker.register_event(OFF_TRACK, 3, 1000.4)
-    threshold_checker.register_event(OFF_TRACK, 4, 1000.5)
+    threshold_checker._register_event(OFF_TRACK, 1, 1000.1)
+    threshold_checker._register_event(OFF_TRACK, 1, 1000.2) # should not count
+    threshold_checker._register_event(OFF_TRACK, 2, 1000.3)
+    threshold_checker._register_event(OFF_TRACK, 3, 1000.4)
+    threshold_checker._register_event(OFF_TRACK, 4, 1000.5)
     assert not threshold_checker.threshold_met()
-    threshold_checker.register_event(OFF_TRACK, 5, 1000.6)
+    threshold_checker._register_event(OFF_TRACK, 5, 1000.6)
     assert threshold_checker.threshold_met()
 
 def test_accumulative_threshold_stopped(accumulative_threshold_checker, mocker):
     threshold_checker = accumulative_threshold_checker
     mocker.patch("time.time", return_value=1000.0)
-    threshold_checker.register_event(STOPPED, 1, 1000.1)
-    threshold_checker.register_event(STOPPED, 1, 1000.2) # should not count
-    threshold_checker.register_event(STOPPED, 2, 1000.3)
+    threshold_checker._register_event(STOPPED, 1, 1000.1)
+    threshold_checker._register_event(STOPPED, 1, 1000.2) # should not count
+    threshold_checker._register_event(STOPPED, 2, 1000.3)
     assert not threshold_checker.threshold_met()
-    threshold_checker.register_event(STOPPED, 3, 1000.4)
+    threshold_checker._register_event(STOPPED, 3, 1000.4)
     assert threshold_checker.threshold_met()
 
 # Each of these sequences will trigger the threshold on the last event
@@ -91,7 +91,7 @@ def test_accumulative_threshold_mix(events, accumulative_threshold_checker, mock
     threshold_checker = accumulative_threshold_checker
     mocker.patch("time.time", return_value=1000.0)
     for idx, event in enumerate(events):
-        threshold_checker.register_event(event, idx, 1000.0 + (idx/10.0))
+        threshold_checker._register_event(event, idx, 1000.0 + (idx/10.0))
         if idx == len(events) - 1:
             assert threshold_checker.threshold_met()
         else:
@@ -102,13 +102,13 @@ def test_cleanup(threshold_checker, mocker):
     # and adjust the time in between cleanups to show the threshold_met flipping
     mocker.patch("time.time", return_value=1000.0)
     # just adding a couple to make sure maintaining the count works
-    threshold_checker.register_event(OFF_TRACK, 1, 1000.01)
-    threshold_checker.register_event(OFF_TRACK, 1, 1000.02)
-    threshold_checker.register_event(OFF_TRACK, 1, 1000.03)
+    threshold_checker._register_event(OFF_TRACK, 1, 1000.01)
+    threshold_checker._register_event(OFF_TRACK, 1, 1000.02)
+    threshold_checker._register_event(OFF_TRACK, 1, 1000.03)
     assert not threshold_checker.threshold_met()
-    threshold_checker.register_event(OFF_TRACK, 2, 1000.2)
+    threshold_checker._register_event(OFF_TRACK, 2, 1000.2)
     assert threshold_checker.threshold_met()
-    threshold_checker.register_event(OFF_TRACK, 3, 1000.3)
+    threshold_checker._register_event(OFF_TRACK, 3, 1000.3)
     threshold_checker.clean_up_events() # does not clean up anything
     assert threshold_checker.threshold_met()
 
