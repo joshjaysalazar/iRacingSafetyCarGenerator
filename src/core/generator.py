@@ -413,22 +413,26 @@ class Generator:
                     self._check_random()
                     self._check_stopped()
                     self._check_off_track()
-
+                    
                     # Use new detector system for threshold checking
-                    detector_results = self.detector.detect()
-                    
-                    # Clean up events outside the sliding window
-                    self.threshold_checker.clean_up_events()
-                    
-                    # Register events from detector results
-                    for event_type in DetectorEventTypes:
-                        detection_result = detector_results.get_events(event_type)
-                        if detection_result:
-                            self.threshold_checker.register_detection_result(detection_result)
+                    try:
+                        detector_results = self.detector.detect()
+                        
+                        # Clean up events outside the sliding window
+                        self.threshold_checker.clean_up_events()
+                        
+                        # Register events from detector results
+                        for event_type in DetectorEventTypes:
+                            detection_result = detector_results.get_events(event_type)
+                            if detection_result:
+                                self.threshold_checker.register_detection_result(detection_result)
 
-                    if self.threshold_checker.threshold_met():
-                        logger.info("ThresholdChecker is meeting threshold, would start safety car")
-                    
+                        if self.threshold_checker.threshold_met():
+                            logger.info("ThresholdChecker is meeting threshold, would start safety car")
+                            
+                    except Exception as e:
+                        logger.error(f"New detection system failed: {e}", exc_info=True)
+
                     # Wait 1 second before checking again
                     time.sleep(1)
 
