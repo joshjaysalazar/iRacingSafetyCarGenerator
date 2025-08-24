@@ -4,7 +4,7 @@ from core.detection.off_track_detector import OffTrackDetector
 from core.detection.detector_common_types import DetectorState, DetectorEventTypes
 from irsdk import TrkLoc
 
-from core.detection.tests.utils import MockDrivers, make_driver
+from core.tests.test_utils import MockDrivers, make_driver
 
 def test_detect_off_track_driver():
     drivers = MockDrivers([

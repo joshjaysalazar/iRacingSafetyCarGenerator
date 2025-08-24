@@ -23,8 +23,10 @@ def mock_arguments():
 @pytest.fixture
 def mock_master():
     """Mock master object with settings for Generator."""
+    from core.tests.test_utils import dict_to_config
+    
     mock_master = Mock()
-    mock_master.settings = {
+    mock_master.settings = dict_to_config({
         "settings": {
             # Detector settings
             "random": "1",
@@ -45,7 +47,7 @@ def mock_master():
             "max_safety_cars": "999",
             "min_time_between": "0",
         }
-    }
+    })
     return mock_master
 
 

@@ -3,7 +3,7 @@ import pytest
 from irsdk import TrkLoc
 from core.detection.stopped_detector import StoppedDetector
 from core.detection.detector_common_types import DetectorState, DetectorEventTypes
-from core.detection.tests.utils import MockDrivers, make_driver
+from core.tests.test_utils import MockDrivers, make_driver
 
 
 def test_detect_stopped_driver():
