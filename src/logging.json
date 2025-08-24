@@ -32,6 +32,30 @@
 				"file"
 			]
 		},
+		"core.detection.detector": {
+			"level": "DEBUG",
+			"handlers": [
+				"file"
+			]
+		},
+		"core.detection.off_track_detector": {
+			"level": "DEBUG",
+			"handlers": [
+				"file"
+			]
+		},
+		"core.detection.stopped_detector": {
+			"level": "DEBUG",
+			"handlers": [
+				"file"
+			]
+		},
+		"core.detection.random_detector": {
+			"level": "DEBUG",
+			"handlers": [
+				"file"
+			]
+		},
 		"core.drivers": {
 			"level": "INFO",
 			"handlers": [

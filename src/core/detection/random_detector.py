@@ -1,6 +1,9 @@
+import logging
 import random
 
 from core.detection.detector_common_types import DetectionResult, DetectorEventTypes, DetectorState
+
+logger = logging.getLogger(__name__)
 
 
 class RandomDetector:
@@ -22,12 +25,17 @@ class RandomDetector:
     def should_run(self, state: DetectorState) -> bool:
         """Check if this detector should run given current state."""
         # Check time bounds
-        if not (self.start_minute * 60 <= state.current_time_since_start <= self.end_minute * 60):
+        start_time = self.start_minute * 60
+        end_time = self.end_minute * 60
+        
+        if not (start_time <= state.current_time_since_start <= end_time):
+            logger.debug(f"Random detector outside time window: {state.current_time_since_start:.1f}s not in [{start_time}-{end_time}]")
             return False
         
         # Check occurrence limit
         current_count = state.safety_car_event_counts.get(DetectorEventTypes.RANDOM, 0)
         if current_count >= self.max_occurrences:
+            logger.debug(f"Random detector hit max occurrences: {current_count}/{self.max_occurrences}")
             return False
             
         return True
@@ -39,6 +47,7 @@ class RandomDetector:
             DetectionResult: Result indicating if a random event should be triggered.
         """
         if self.len_of_window <= 0:
+            logger.debug("Random detector window length is 0, returning False")
             return DetectionResult(DetectorEventTypes.RANDOM, detected_flag=False)
         
         # Generate a random number between 0 and 1
@@ -49,4 +58,10 @@ class RandomDetector:
 
         # If the random number is less than or equal to the chance, trigger
         result = rng <= current_chance
+        
+        if result:
+            logger.info(f"Random detector triggered: rng={rng:.6f} <= chance={current_chance:.6f} (base_chance={self.chance})")
+        else:
+            logger.debug(f"Random detector not triggered: rng={rng:.6f} > chance={current_chance:.6f}")
+            
         return DetectionResult(DetectorEventTypes.RANDOM, detected_flag=result)
