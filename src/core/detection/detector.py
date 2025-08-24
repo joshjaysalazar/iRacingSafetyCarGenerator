@@ -23,7 +23,7 @@ class BundledDetectedEvents:
     
     def get_events(self, event_type: DetectorEventTypes) -> DetectionResult:
         """Get events of a specific type."""
-        return self.events.get(event_type, [])
+        return self.events.get(event_type, None)
     
 @dataclass(frozen=True)
 class DetectorSettings:
