@@ -737,42 +737,46 @@ class Generator:
         Args:
             None
         """
-        logger.info("Connecting to iRacing")
-        self.master.generator_state = GeneratorState.CONNECTING_TO_IRACING
+        try:
+            logger.info("Connecting to iRacing")
+            self.master.generator_state = GeneratorState.CONNECTING_TO_IRACING
 
-        # Reset state variables
-        self._init_state_variables()
+            # Reset state variables
+            self._init_state_variables()
 
-        # Attempt to connect and tell user if successful
-        if self.ir.startup():
-            # Connect the command sender to the iRacing application window
-            self.command_sender.connect()
-            self.master.generator_state = GeneratorState.CONNECTED
-        else:
-            self.master.generator_state = GeneratorState.ERROR_CONNECTING
-            return False
-    
-        # Create the Drivers object
-        self.drivers = drivers.Drivers(self)
-
-        # Create the detectors
-        detector_settings = DetectorSettings.from_settings(self.master.settings)
-        self.detector = Detector.build_detector(detector_settings, self.drivers)
-
-        # Create the ThresholdChecker
-        threshold_checker_settings = ThresholdCheckerSettings.from_settings(self.master.settings)
-        self.threshold_checker = ThresholdChecker(threshold_checker_settings)
+            # Attempt to connect and tell user if successful
+            if self.ir.startup():
+                # Connect the command sender to the iRacing application window
+                self.command_sender.connect()
+                self.master.generator_state = GeneratorState.CONNECTED
+            else:
+                self.master.generator_state = GeneratorState.ERROR_CONNECTING
+                return False
         
-        threading.excepthook = self.generator_thread_excepthook
+            # Create the Drivers object
+            self.drivers = drivers.Drivers(self)
 
-        # Run the loop in a separate thread
-        if self.thread == None or not self.thread.is_alive():
-            logger.info("Starting the loop thread")
-            self.thread = threading.Thread(target=self._loop)
-            self.thread.start()
-            return True
-        else:
-            logger.warning("Not starting the loop thread because it is still alive")
+            # Create the detectors
+            detector_settings = DetectorSettings.from_settings(self.master.settings)
+            self.detector = Detector.build_detector(detector_settings, self.drivers)
+
+            # Create the ThresholdChecker
+            threshold_checker_settings = ThresholdCheckerSettings.from_settings(self.master.settings)
+            self.threshold_checker = ThresholdChecker(threshold_checker_settings)
+            
+            threading.excepthook = self.generator_thread_excepthook
+
+            # Run the loop in a separate thread
+            if self.thread == None or not self.thread.is_alive():
+                logger.info("Starting the loop thread")
+                self.thread = threading.Thread(target=self._loop)
+                self.thread.start()
+                return True
+            else:
+                logger.warning("Not starting the loop thread because it is still alive")
+                return False
+        except Exception as e:
+            logger.error(f"Could not start Generator loop: {e}", exc_info=True)
             return False
 
     def stop(self):

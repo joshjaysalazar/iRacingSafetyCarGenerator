@@ -35,7 +35,7 @@ def mock_master():
             "end_minute": "30",
             "random_max_occ": "2",
             "stopped": "1",
-            "off_track": "1",
+            "off": "1",
             # ThresholdChecker settings
             "off_min": "4",
             "stopped_min": "2",
@@ -385,7 +385,7 @@ class TestGeneratorDetectorEndToEndIntegration:
         
         # Disable some detectors in settings
         generator.master.settings["settings"]["random"] = "0"
-        generator.master.settings["settings"]["off_track"] = "0"
+        generator.master.settings["settings"]["off"] = "0"
         
         generator.drivers = mock_drivers
         

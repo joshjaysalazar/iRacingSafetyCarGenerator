@@ -52,7 +52,7 @@ class DetectorSettings:
             random_end_minute=float(settings["settings"]["end_minute"]),
             random_max_occ=int(settings["settings"]["random_max_occ"]),
             stopped_enabled=settings["settings"]["stopped"] == "1",
-            off_track_enabled=settings["settings"]["off_track"] == "1",
+            off_track_enabled=settings["settings"]["off"] == "1",
         )
 
     

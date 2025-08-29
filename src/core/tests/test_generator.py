@@ -35,7 +35,7 @@ def generator():
             "random_prob": "0.5",
             "random_max_occ": "1",
             "stopped": "1",
-            "off_track": "1",
+            "off": "1",
         }
     }
     gen = Generator(arguments=mock_arguments, master=mock_master)

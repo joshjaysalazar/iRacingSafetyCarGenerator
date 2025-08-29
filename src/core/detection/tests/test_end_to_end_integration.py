@@ -57,7 +57,7 @@ def full_detection_system(racing_drivers):
             # Detector enables
             "random": "1",
             "stopped": "1", 
-            "off_track": "1",
+            "off": "1",
             # Random detector settings
             "random_prob": "0.1",
             "start_minute": "0",
@@ -251,7 +251,7 @@ class TestEndToEndDetectionPipeline:
         # Settings with dynamic threshold enabled
         settings = dict_to_config({
             "settings": {
-                "random": "0", "stopped": "1", "off_track": "1",
+                "random": "0", "stopped": "1", "off": "1",
                 # Random detector settings (even though disabled, still needed)
                 "random_prob": "0.1", "start_minute": "0", "end_minute": "30", "random_max_occ": "1",
                 "off_min": "4", "stopped_min": "4",  # High thresholds
@@ -299,7 +299,7 @@ class TestEndToEndDetectionPipeline:
         
         settings = dict_to_config({
             "settings": {
-                "random": "1", "stopped": "0", "off_track": "0",
+                "random": "1", "stopped": "0", "off": "0",
                 "random_prob": "1.0",  # 100% chance for testing
                 "start_minute": "0", "end_minute": "30", "random_max_occ": "1",
                 "off_min": "999", "stopped_min": "999",  # High thresholds for other types
@@ -362,7 +362,7 @@ class TestEndToEndDetectionPipeline:
         
         settings = dict_to_config({
             "settings": {
-                "random": "0", "stopped": "1", "off_track": "1",
+                "random": "0", "stopped": "1", "off": "1",
                 # Random detector settings (even though disabled, still needed)
                 "random_prob": "0.1", "start_minute": "0", "end_minute": "30", "random_max_occ": "1",
                 "off_min": "5", "stopped_min": "3",

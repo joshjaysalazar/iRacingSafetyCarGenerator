@@ -22,7 +22,7 @@ def test_from_settings_valid_input():
             "end_minute": "20",
             "random_max_occ": "3",
             "stopped": "1",
-            "off_track": "0",
+            "off": "0",
         }
     }
     ds = DetectorSettings.from_settings(settings)
