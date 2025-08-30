@@ -124,12 +124,13 @@ def test_cleanup(threshold_checker, mocker):
     assert not threshold_checker.threshold_met() # now there's only one off track in last second
     
 def test_threshold_checker_settings_from_settings():
-    settings = {
-        "settings": {
-            "off_min": "5",
-            "stopped_min": "3",
-        }
-    }
+    # Mock settings object with the typed wrapper interface
+    class MockSettings:
+        def __init__(self):
+            self.off_min = 5
+            self.stopped_min = 3
+    
+    settings = MockSettings()
     threshold_checker_settings = ThresholdCheckerSettings.from_settings(settings)
     assert threshold_checker_settings.time_range == 10.0
     assert threshold_checker_settings.event_type_threshold[OFF_TRACK] == 5

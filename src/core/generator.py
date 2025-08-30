@@ -95,15 +95,15 @@ class Generator:
         logger.debug("Checking random safety car event")
 
         # Get relevant settings from the settings file
-        enabled = self.master.settings["settings"]["random"]
-        chance = float(self.master.settings["settings"]["random_prob"])
-        max_occ = int(self.master.settings["settings"]["random_max_occ"])
-        start_minute = float(self.master.settings["settings"]["start_minute"])
-        end_minute = float(self.master.settings["settings"]["end_minute"])
-        message = self.master.settings["settings"]["random_message"]
+        enabled = self.master.settings.random
+        chance = self.master.settings.random_prob
+        max_occ = self.master.settings.random_max_occ
+        start_minute = self.master.settings.start_minute
+        end_minute = self.master.settings.end_minute
+        message = self.master.settings.random_message
 
         # If random events are disabled, return
-        if enabled == "0":
+        if not enabled:
             return
 
         # If the random chance is 0, return
@@ -135,9 +135,9 @@ class Generator:
         logger.debug("Checking stopped car safety car event")
 
         # Get relevant settings from the settings file
-        enabled = self.master.settings["settings"]["stopped"]
-        threshold = float(self.master.settings["settings"]["stopped_min"])
-        message = self.master.settings["settings"]["stopped_message"]
+        enabled = self.master.settings.stopped
+        threshold = self.master.settings.stopped_min
+        message = self.master.settings.stopped_message
 
         # If stopped car events are disabled, return
         if enabled == "0":
@@ -203,9 +203,9 @@ class Generator:
         logger.debug("Checking off track safety car event")
 
         # Get relevant settings from the settings file
-        enabled = self.master.settings["settings"]["off"]
-        threshold = float(self.master.settings["settings"]["off_min"])
-        message = self.master.settings["settings"]["off_message"]
+        enabled = self.master.settings.off
+        threshold = self.master.settings.off_min
+        message = self.master.settings.off_message
 
         # If off track events are disabled, return
         if enabled == "0":
@@ -246,8 +246,8 @@ class Generator:
         Returns:
             The number of cars stopped/off-track which are within N percent of a lap_distance of each other
         """
-        proximity_yellows_enabled = self.master.settings["settings"]["proximity_yellows"] == "1"
-        proximity_yellows_distance = float(self.master.settings["settings"]["proximity_yellows_distance"])
+        proximity_yellows_enabled = self.master.settings.proximity_yellows
+        proximity_yellows_distance = self.master.settings.proximity_yellows_distance
         
         # If we are not using proximity-based yellows, return the length of the original list
         if not proximity_yellows_enabled:
@@ -301,8 +301,8 @@ class Generator:
         Returns: 
             The scaled threshold value
         """
-        multiplier = float(self.master.settings["settings"]["start_multi_val"])
-        multi_time = float(self.master.settings["settings"]["start_multi_time"])
+        multiplier = self.master.settings.start_multi_val
+        multi_time = self.master.settings.start_multi_time
         should_adjust = (time.time() - self.start_time) < multi_time
 
         if (multiplier == 0 or not should_adjust):
@@ -368,10 +368,10 @@ class Generator:
             logger.debug("Starting safety car loop")
             
             # Get relevant settings from the settings file
-            start_minute = float(self.master.settings["settings"]["start_minute"])
-            end_minute = float(self.master.settings["settings"]["end_minute"])
-            max_events = int(self.master.settings["settings"]["max_safety_cars"])
-            min_time = float(self.master.settings["settings"]["min_time_between"])
+            start_minute = self.master.settings.start_minute
+            end_minute = self.master.settings.end_minute
+            max_events = self.master.settings.max_safety_cars
+            min_time = self.master.settings.min_time_between
 
             # Adjust start minute if < 3s to avoid triggering on standing start
             if start_minute < 0.05:
@@ -459,7 +459,7 @@ class Generator:
         """
         # Get relevant settings from the settings file
         laps_under_sc = int(
-            self.master.settings["settings"]["laps_under_sc"]
+            self.master.settings.laps_under_sc
         )
 
         # If laps under safety car is 0, return
@@ -505,13 +505,11 @@ class Generator:
             True if wave arounds are done, False otherwise
         """
         # Get relevant settings from the settings file
-        wave_arounds = self.master.settings["settings"]["wave_arounds"]
-        laps_before = int(
-            self.master.settings["settings"]["laps_before_wave_arounds"]
-        )
+        wave_arounds = self.master.settings.wave_arounds
+        laps_before = self.master.settings.laps_before_wave_arounds
 
         # If immediate waveby is disabled, return True (no wave arounds)
-        if wave_arounds == "0":
+        if not wave_arounds:
             logger.debug("Wave arounds disabled, skipping wave arounds")
             return True
         
