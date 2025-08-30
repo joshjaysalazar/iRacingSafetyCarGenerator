@@ -41,8 +41,8 @@ class ThresholdCheckerSettings:
         return ThresholdCheckerSettings(
             time_range=10.0,
             event_type_threshold={
-                ThresholdCheckerEventTypes.OFF_TRACK: float(settings["settings"]["off_min"]),
-                ThresholdCheckerEventTypes.STOPPED: float(settings["settings"]["stopped_min"]),
+                ThresholdCheckerEventTypes.OFF_TRACK: settings.off_min,
+                ThresholdCheckerEventTypes.STOPPED: settings.stopped_min,
             },
         )
 
