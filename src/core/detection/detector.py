@@ -98,7 +98,7 @@ class Detector:
     def detect(self) -> BundledDetectedEvents:
         """Run all detectors and return their results."""
         if self.start_time is None:
-            logger.debug("Race hasn't started yet, returning empty results")
+            logger.warning("Detection attempted before race_started() was called. Returning empty results.")
             return BundledDetectedEvents.from_detector_results({})
             
         # Create detector state

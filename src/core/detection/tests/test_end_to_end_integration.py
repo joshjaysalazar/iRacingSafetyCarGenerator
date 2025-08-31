@@ -82,8 +82,9 @@ def full_detection_system(racing_drivers):
     detector = Detector.build_detector(detector_settings, racing_drivers)
     
     # Create threshold checker with controlled session start time for testing
-    threshold_settings = ThresholdCheckerSettings.from_settings(settings, session_start_time=1000.0)
+    threshold_settings = ThresholdCheckerSettings.from_settings(settings)
     threshold_checker = ThresholdChecker(threshold_settings)
+    threshold_checker.race_started(1000.0)
     
     return detector, threshold_checker, racing_drivers
 
@@ -266,11 +267,12 @@ class TestEndToEndDetectionPipeline:
         detector = Detector.build_detector(detector_settings, racing_drivers)
         
         # Session just started - should get dynamic scaling
-        threshold_settings = ThresholdCheckerSettings.from_settings(settings, session_start_time=1000.0)
+        threshold_settings = ThresholdCheckerSettings.from_settings(settings)
         threshold_checker = ThresholdChecker(threshold_settings)
         
-        # Initialize detector (simulate race start)
+        # Initialize detector and threshold checker (simulate race start)
         detector.race_started(1000.0)
+        threshold_checker.race_started(1000.0)
         
         # Create 2 off-track cars in proximity (normally not enough: 2 < 4)
         # But with 0.5 multiplier: effective threshold becomes 2

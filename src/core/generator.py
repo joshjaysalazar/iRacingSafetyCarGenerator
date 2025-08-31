@@ -705,7 +705,7 @@ class Generator:
                 # Set the start time if it hasn't been set yet
                 if self.start_time is None:
                     self.start_time = time.time()
-                    self.detector.race_started(self.start_time)
+                    self._notify_race_started(self.start_time)
 
                 # Progress to monitoring for SC state
                 self.master.generator_state = GeneratorState.MONITORING_FOR_INCIDENTS
@@ -718,7 +718,7 @@ class Generator:
                 logger.debug("Skipping wait for green because of a threading event")
                 if self.start_time is None:
                     self.start_time = time.time()
-                    self.detector.race_started(self.start_time)
+                    self._notify_race_started(self.start_time)
 
                 # Progress to monitoring for SC state
                 self.master.generator_state = GeneratorState.MONITORING_FOR_INCIDENTS
@@ -778,6 +778,12 @@ class Generator:
         except Exception as e:
             logger.error(f"Could not start Generator loop: {e}", exc_info=True)
             return False
+
+    def _notify_race_started(self, start_time: float):
+        """Notify all race-aware components that the race has started."""
+        logger.debug(f"Notifying components that race started at {start_time}")
+        self.detector.race_started(start_time)
+        self.threshold_checker.race_started(start_time)
 
     def stop(self):
         logger.info("Triggering shutdown event to stop generator")

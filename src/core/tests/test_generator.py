@@ -242,3 +242,18 @@ def test_adjust_for_proximity_lapped_cars(generator):
     # This should return 5 because only the cars on the ends are not in range
     # This is an extreme example with cars on different laps, but still at the same spot
     assert result == 5
+
+
+def test_notify_race_started_calls_both_components(generator, mocker):
+    """Test that _notify_race_started calls race_started on both detector and threshold_checker"""
+    
+    # Create mock detector and threshold_checker
+    generator.detector = Mock(spec=Detector)
+    generator.threshold_checker = Mock(spec=ThresholdChecker)
+    
+    start_time = 1000.0
+    generator._notify_race_started(start_time)
+    
+    # Verify both components were called
+    generator.detector.race_started.assert_called_once_with(start_time)
+    generator.threshold_checker.race_started.assert_called_once_with(start_time)

@@ -1,5 +1,5 @@
 import pytest
-import time
+from unittest.mock import patch
 
 from core.detection.threshold_checker import ThresholdChecker, DetectorEventTypes, ThresholdCheckerSettings
 from core.tests.test_utils import make_driver, dict_to_config
@@ -352,8 +352,8 @@ def test_threshold_met_dynamic_threshold_with_proximity(mocker):
         dynamic_threshold_enabled=True,
         dynamic_threshold_multiplier=0.5,  # Halve the thresholds
         dynamic_threshold_time=300.0,
-        session_start_time=999.0,  # 1 second ago
     ))
+    checker.race_started(999.0)  # 1 second ago
     
     mocker.patch("time.time", return_value=1000.0)
     
@@ -365,3 +365,46 @@ def test_threshold_met_dynamic_threshold_with_proximity(mocker):
     checker._register_event(OFF_TRACK, driver2, 1000.0)
     
     assert checker.threshold_met() == True
+
+
+def test_threshold_checker_race_started():
+    """Test that race_started properly sets race_start_time"""
+    checker = ThresholdChecker(ThresholdCheckerSettings())
+    
+    # Initially race_start_time should be None
+    assert checker.race_start_time is None
+    
+    # After calling race_started, it should be set
+    start_time = 1000.0
+    checker.race_started(start_time)
+    assert checker.race_start_time == start_time
+
+def test_threshold_met_warning_before_race_started(caplog):
+    """Test WARNING log when threshold_met() called before race_started()"""
+    checker = ThresholdChecker(ThresholdCheckerSettings())
+    
+    with caplog.at_level('WARNING'):
+        result = checker.threshold_met()
+    
+    assert "Threshold checking attempted before race_started() was called" in caplog.text
+    assert result is False  # Should still return sensible result
+
+def test_dynamic_threshold_without_race_started_and_after():
+    """Test dynamic threshold behavior when race hasn't started yet"""
+    settings = ThresholdCheckerSettings(
+        dynamic_threshold_enabled=True,
+        dynamic_threshold_multiplier=0.5
+    )
+    checker = ThresholdChecker(settings)
+    
+    # Should return base threshold unchanged when race hasn't started
+    base_threshold = 4.0
+    result = checker._calc_dynamic_threshold(base_threshold)
+    assert result == base_threshold
+    
+    # After race starts, should apply multiplier
+    checker.race_started(1000.0)
+    # Mock time to be within dynamic threshold window
+    with patch('time.time', return_value=1100.0):  # 100 seconds later
+        result = checker._calc_dynamic_threshold(base_threshold)
+        assert result == 2.0  # 4.0 * 0.5

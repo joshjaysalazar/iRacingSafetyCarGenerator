@@ -46,7 +46,6 @@ class ThresholdCheckerSettings:
     dynamic_threshold_enabled: bool = False
     dynamic_threshold_multiplier: float = 1.0
     dynamic_threshold_time: float = 300.0
-    session_start_time: float = 0.0
     
     def __post_init__(self):
         # Ensure RANDOM event type is always present with correct defaults
@@ -54,7 +53,7 @@ class ThresholdCheckerSettings:
         self.event_type_threshold[DetectorEventTypes.RANDOM] = 1.0 
 
     @staticmethod
-    def from_settings(settings, session_start_time: float = 0.0):
+    def from_settings(settings):
         return ThresholdCheckerSettings(
             time_range=10.0,
             event_type_threshold={
@@ -67,7 +66,6 @@ class ThresholdCheckerSettings:
             dynamic_threshold_enabled=True,
             dynamic_threshold_multiplier=float(settings["settings"]["start_multi_val"]),
             dynamic_threshold_time=float(settings["settings"]["start_multi_time"]),
-            session_start_time=session_start_time,
         )
 
 class ThresholdChecker:
@@ -100,6 +98,16 @@ class ThresholdChecker:
         self._settings = settings if settings else ThresholdCheckerSettings()
         self._events_dict = {det: {} for det in DetectorEventTypes} # Initialize dicts for each event type
         self._events_queue = deque()  # Stores (timestamp, event_type, driver_object)
+        self.race_start_time = None
+    
+    def race_started(self, start_time: float):
+        """Called when the race starts to set the start time for dynamic threshold calculations.
+        
+        Args:
+            start_time: The time when the race started (from time.time())
+        """
+        logger.info(f"Race started at {start_time}")
+        self.race_start_time = start_time
     
     def clean_up_events(self):
         """Clean up events that are outside the time range.
@@ -176,6 +184,9 @@ class ThresholdChecker:
             bool: True if either an individual event type threshold is met or if 
              the weighted sum of event types is over the accumulative threshold.
         """
+        if self.race_start_time is None:
+            logger.warning("Threshold checking attempted before race_started() was called. Dynamic thresholds will not work correctly.")
+        
         logger.debug(f"Checking threshold, events_dict={self._events_dict}, settings={self._settings}")
         
         # Get proximity clusters (single cluster if proximity disabled)
@@ -334,11 +345,11 @@ class ThresholdChecker:
         Returns:
             The dynamically adjusted threshold
         """
-        if not self._settings.dynamic_threshold_enabled:
+        if not self._settings.dynamic_threshold_enabled or self.race_start_time is None:
             return base_threshold
             
         current_time = time.time()
-        session_elapsed = current_time - self._settings.session_start_time
+        session_elapsed = current_time - self.race_start_time
         
         # Apply multiplier if within the time window
         if session_elapsed < self._settings.dynamic_threshold_time:

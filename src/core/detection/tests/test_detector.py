@@ -285,3 +285,14 @@ def test_detected_events_from_detector_results():
     detected = BundledDetectedEvents.from_detector_results(events)
     assert isinstance(detected, BundledDetectedEvents)
     assert detected.events == events
+
+
+def test_detector_detect_warning_before_race_started(caplog):
+    """Test WARNING log when detect() called before race_started()"""
+    detector = Detector({})
+    
+    with caplog.at_level('WARNING'):
+        result = detector.detect()
+    
+    assert "Detection attempted before race_started() was called" in caplog.text
+    assert len(result.events) == 0  # Should return empty results

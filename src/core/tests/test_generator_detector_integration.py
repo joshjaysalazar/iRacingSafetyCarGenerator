@@ -409,7 +409,12 @@ def test_generator_calls_race_started_when_green_flag_detected(generator_with_mo
     # Initialize detector and spy on race_started method
     detector_settings = DetectorSettings.from_settings(generator.master.settings)
     generator.detector = Detector.build_detector(detector_settings, mock_drivers)
-    race_started_spy = mocker.spy(generator.detector, 'race_started')
+    detector_race_started_spy = mocker.spy(generator.detector, 'race_started')
+    
+    # Initialize threshold checker
+    threshold_checker_settings = ThresholdCheckerSettings.from_settings(generator.master.settings)
+    generator.threshold_checker = ThresholdChecker(threshold_checker_settings)
+    threshold_checker_race_started_spy = mocker.spy(generator.threshold_checker, 'race_started')
     
     # Mock iRacing SDK to simulate green flag
     generator.ir = {"SessionFlags": irsdk.Flags.green}
@@ -426,7 +431,8 @@ def test_generator_calls_race_started_when_green_flag_detected(generator_with_mo
     generator._wait_for_green_flag(require_race_session=False)
     
     # Verify that race_started was called
-    race_started_spy.assert_called_once()
+    detector_race_started_spy.assert_called_once()
+    threshold_checker_race_started_spy.assert_called_once()
     # Verify that start_time was set
     assert generator.start_time is not None
 
@@ -439,7 +445,12 @@ def test_generator_calls_race_started_when_skipping_green_flag_wait(generator_wi
     # Initialize detector and spy on race_started method
     detector_settings = DetectorSettings.from_settings(generator.master.settings)
     generator.detector = Detector.build_detector(detector_settings, mock_drivers)
-    race_started_spy = mocker.spy(generator.detector, 'race_started')
+    detector_race_started_spy = mocker.spy(generator.detector, 'race_started')
+    
+    # Initialize threshold checker
+    threshold_checker_settings = ThresholdCheckerSettings.from_settings(generator.master.settings)
+    generator.threshold_checker = ThresholdChecker(threshold_checker_settings)
+    threshold_checker_race_started_spy = mocker.spy(generator.threshold_checker, 'race_started')
     
     # Mock iRacing SDK - no green flag
     generator.ir = {"SessionFlags": 0}  # No flags set
@@ -456,6 +467,7 @@ def test_generator_calls_race_started_when_skipping_green_flag_wait(generator_wi
     generator._wait_for_green_flag(require_race_session=False)
     
     # Verify that race_started was called
-    race_started_spy.assert_called_once()
+    detector_race_started_spy.assert_called_once()
+    threshold_checker_race_started_spy.assert_called_once()
     # Verify that start_time was set
     assert generator.start_time is not None
