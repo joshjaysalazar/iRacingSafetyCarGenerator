@@ -7,7 +7,8 @@ import time
 import irsdk
 
 from core import drivers
-from core.detection.threshold_checker import ThresholdChecker, ThresholdCheckerSettings, ThresholdCheckerEventTypes
+from core.detection.threshold_checker import ThresholdChecker, ThresholdCheckerSettings, DetectorEventTypes
+from core.detection.detector import Detector, DetectorSettings
 from core.interactions.interaction_factories import CommandSenderFactory
 
 from codetiming import Timer
@@ -410,17 +411,28 @@ class Generator:
 
                     # If all checks are passed, check for events
                     self._check_random()
-                    stopped = self._check_stopped()
-                    off_track = self._check_off_track()
-
-                    # Update sliding window events
-                    self.threshold_checker.clean_up_events()
-                    self.threshold_checker.register_events(ThresholdCheckerEventTypes.STOPPED, stopped)
-                    self.threshold_checker.register_events(ThresholdCheckerEventTypes.OFF_TRACK, off_track)
-
-                    if self.threshold_checker.threshold_met():
-                        logger.info("ThresholdChecker is meeting threshold, would start safety car")
+                    self._check_stopped()
+                    self._check_off_track()
                     
+                    # Use new detector system for threshold checking
+                    try:
+                        detector_results = self.detector.detect()
+                        
+                        # Clean up events outside the sliding window
+                        self.threshold_checker.clean_up_events()
+                        
+                        # Register events from detector results
+                        for event_type in DetectorEventTypes:
+                            detection_result = detector_results.get_events(event_type)
+                            if detection_result:
+                                self.threshold_checker.register_detection_result(detection_result)
+
+                        if self.threshold_checker.threshold_met():
+                            logger.info("ThresholdChecker is meeting threshold, would start safety car")
+                            
+                    except Exception as e:
+                        logger.error(f"New detection system failed: {e}", exc_info=True)
+
                     # Wait 1 second before checking again
                     time.sleep(1)
 
@@ -693,6 +705,7 @@ class Generator:
                 # Set the start time if it hasn't been set yet
                 if self.start_time is None:
                     self.start_time = time.time()
+                    self._notify_race_started(self.start_time)
 
                 # Progress to monitoring for SC state
                 self.master.generator_state = GeneratorState.MONITORING_FOR_INCIDENTS
@@ -705,6 +718,7 @@ class Generator:
                 logger.debug("Skipping wait for green because of a threading event")
                 if self.start_time is None:
                     self.start_time = time.time()
+                    self._notify_race_started(self.start_time)
 
                 # Progress to monitoring for SC state
                 self.master.generator_state = GeneratorState.MONITORING_FOR_INCIDENTS
@@ -723,39 +737,53 @@ class Generator:
         Args:
             None
         """
-        logger.info("Connecting to iRacing")
-        self.master.generator_state = GeneratorState.CONNECTING_TO_IRACING
+        try:
+            logger.info("Connecting to iRacing")
+            self.master.generator_state = GeneratorState.CONNECTING_TO_IRACING
 
-        # Reset state variables
-        self._init_state_variables()
+            # Reset state variables
+            self._init_state_variables()
 
-        # Attempt to connect and tell user if successful
-        if self.ir.startup():
-            # Connect the command sender to the iRacing application window
-            self.command_sender.connect()
-            self.master.generator_state = GeneratorState.CONNECTED
-        else:
-            self.master.generator_state = GeneratorState.ERROR_CONNECTING
-            return False
-    
-        # Create the Drivers object
-        self.drivers = drivers.Drivers(self)
-
-        # Create the ThresholdChecker
-        threshold_checker_settings = ThresholdCheckerSettings.from_settings(self.master.settings)
-        self.threshold_checker = ThresholdChecker(threshold_checker_settings)
+            # Attempt to connect and tell user if successful
+            if self.ir.startup():
+                # Connect the command sender to the iRacing application window
+                self.command_sender.connect()
+                self.master.generator_state = GeneratorState.CONNECTED
+            else:
+                self.master.generator_state = GeneratorState.ERROR_CONNECTING
+                return False
         
-        threading.excepthook = self.generator_thread_excepthook
+            # Create the Drivers object
+            self.drivers = drivers.Drivers(self)
 
-        # Run the loop in a separate thread
-        if self.thread == None or not self.thread.is_alive():
-            logger.info("Starting the loop thread")
-            self.thread = threading.Thread(target=self._loop)
-            self.thread.start()
-            return True
-        else:
-            logger.warning("Not starting the loop thread because it is still alive")
+            # Create the detectors
+            detector_settings = DetectorSettings.from_settings(self.master.settings)
+            self.detector = Detector.build_detector(detector_settings, self.drivers)
+
+            # Create the ThresholdChecker
+            threshold_checker_settings = ThresholdCheckerSettings.from_settings(self.master.settings)
+            self.threshold_checker = ThresholdChecker(threshold_checker_settings)
+            
+            threading.excepthook = self.generator_thread_excepthook
+
+            # Run the loop in a separate thread
+            if self.thread == None or not self.thread.is_alive():
+                logger.info("Starting the loop thread")
+                self.thread = threading.Thread(target=self._loop)
+                self.thread.start()
+                return True
+            else:
+                logger.warning("Not starting the loop thread because it is still alive")
+                return False
+        except Exception as e:
+            logger.error(f"Could not start Generator loop: {e}", exc_info=True)
             return False
+
+    def _notify_race_started(self, start_time: float):
+        """Notify all race-aware components that the race has started."""
+        logger.debug(f"Notifying components that race started at {start_time}")
+        self.detector.race_started(start_time)
+        self.threshold_checker.race_started(start_time)
 
     def stop(self):
         logger.info("Triggering shutdown event to stop generator")
