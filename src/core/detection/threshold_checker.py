@@ -214,6 +214,7 @@ class ThresholdChecker:
         """
         # Get latest event per driver per event type
         latest_events = self._get_latest_events_per_driver()
+        logger.debug(f"_get_proximity_clusters: Latest events per driver: {latest_events}")
         
         if not latest_events:
             return []
@@ -267,11 +268,13 @@ class ThresholdChecker:
             
         # Sort by lap distance
         events_with_positions.sort(key=lambda x: x[0])
+        logger.debug(f"Sorted events with positions: {events_with_positions}")
         
         # Account for cars near finish line by extending with +1 distances
         extended_events = events_with_positions + [(pos + 1, driver_idx, event_type, driver_obj) 
                                                   for pos, driver_idx, event_type, driver_obj in events_with_positions
                                                   if pos < self._settings.proximity_yellows_distance]
+        logger.debug(f"Extended events for proximity clustering: {extended_events}")
         
         # Find all possible proximity clusters using sliding window
         clusters = []
@@ -286,6 +289,7 @@ class ThresholdChecker:
                     # we are about to remove the leftmost event, so save current window as a cluster
                     cluster = [(d_idx, e_type, d_obj) for _, d_idx, e_type, d_obj in current_window]
                     clusters.append(cluster)
+                    logger.debug(f"Formed proximity cluster: {cluster}")
                     cluster_added = True
             
                 current_window.popleft()
@@ -297,6 +301,7 @@ class ThresholdChecker:
         if current_window:
             cluster = [(d_idx, e_type, d_obj) for _, d_idx, e_type, d_obj in current_window]
             clusters.append(cluster)
+            logger.debug(f"Formed proximity cluster: {cluster}")
             
                     
         logger.debug(f"Created {len(clusters)} proximity clusters from {len(latest_events)} events")
@@ -312,6 +317,8 @@ class ThresholdChecker:
         Returns:
             True if cluster meets either per-event-type or accumulative thresholds
         """
+        logger.debug(f"Checking if cluster meets threshold {cluster}")
+        
         # Count events per type in this cluster
         event_counts = {det: 0 for det in DetectorEventTypes}
         for driver_idx, event_type, driver_obj in cluster:
