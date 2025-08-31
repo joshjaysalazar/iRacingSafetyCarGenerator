@@ -2,7 +2,7 @@ import configparser
 import json
 import logging
 import tkinter as tk
-from tkinter import ttk
+from tkinter import ttk, filedialog, messagebox
 
 from core import generator
 from core import tooltip
@@ -880,6 +880,19 @@ class App(tk.Tk):
                 pady=5
             )
 
+            self.btn_parse_log_to_csv = ttk.Button(
+                self.frm_dev_mode,
+                text="Parse log to CSV",
+                command=self._parse_log_to_csv
+            )
+            self.btn_parse_log_to_csv.grid(
+                row=3,
+                column=0,
+                sticky="ew",
+                padx=5,
+                pady=5
+            )
+
         # Fill in the widgets with the settings from the config file
         logger.debug("Filling in widgets with settings from config file")
         self.var_random.set(self.settings["settings"].getboolean("random"))
@@ -1079,4 +1092,29 @@ class App(tk.Tk):
             None
         """
         send_test_commands()
+
+    def _parse_log_to_csv(self):
+        """Open file dialog to select log file and parse events to CSV.
+
+        Args:
+            None
+        """
+        # Open file dialog to select log file
+        log_file = filedialog.askopenfilename(
+            title="Select log file to parse",
+            initialdir="logs",
+            filetypes=[("Log files", "*.log"), ("All files", "*.*")]
+        )
+        
+        if log_file:
+            try:
+                from util.dev_utils import parse_log_events_to_csv
+                csv_file = parse_log_events_to_csv(log_file)
+                messagebox.showinfo(
+                    "Success", 
+                    f"Log parsed successfully!\nCSV file created: {csv_file}"
+                )
+            except Exception as e:
+                logger.error(f"Error parsing log file: {e}")
+                messagebox.showerror("Error", f"Failed to parse log file:\n{str(e)}")
         
