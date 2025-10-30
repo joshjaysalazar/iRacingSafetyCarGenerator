@@ -343,7 +343,7 @@ class Generator:
         reference_distance = 0
         for d in car_lap_distances:
             # pop elements from the left side that are not in range of d
-            while len(current_window) > 0 and current_window[0] < d - proximity_yellows_distance:
+            while len(current_window) > 0 and current_window[0] < round(d - proximity_yellows_distance, 6):
                 current_window.popleft()
             
             # now append our new value and check how many cars are in range
