@@ -37,7 +37,9 @@ def generator():
             "stopped": "1",
             "off": "1",
             # Combined threshold
+            "stopped_message": "Cars stopped on track.",
             "stopped_weight": "1",
+            "off_message": "Multiple cars off track.",
             "off_weight": "1",
             "combined": "1",
             "combined_min": "7",
@@ -73,6 +75,53 @@ def test_command_sender_init():
     generator = Generator(arguments=mock_arguments)
     assert isinstance(generator.command_sender, MockSender)
 
+
+def test_check_stopped_list_entire_field_returns_zero(generator):
+    """Test that the stopped cars list is reset if the entire field is stopped"""
+    result = generator._check_stopped()
+    assert result == 0
+
+def test_check_stopped_disabled_returns_num_stopped_cars(generator):
+    """Test that the stopped check returns the number of stopped cars when disabled"""
+    generator.master.settings["settings"]["stopped"] = 0
+
+    # Set 9 of the cars to not be at the same position
+    for i in range(1,10):
+        generator.drivers.current_drivers[i]["lap_distance"] = i * 0.1
+    
+    result = generator._check_stopped()
+    assert result == 4 # this is only 4 because we explicitly check if total distance decreased or stayed the same
+
+def test_check_stopped_disabled_does_not_throw_safety_car(generator):
+    """Test that the stopped check does not throw safety car when disabled"""
+    generator._start_safety_car = Mock()
+    generator.master.settings["settings"]["stopped"] = 0
+
+    # Set 9 of the cars to not be at the same position
+    for i in range(1,10):
+        generator.drivers.current_drivers[i]["lap_distance"] = i * 0.1
+    
+    generator._start_safety_car.assert_not_called()
+
+def test_check_off_track_disabled_returns_num_off_track_cars(generator):
+    """Test that the off track check returns the number of off track cars when disabled"""
+    generator.master.settings["settings"]["off"] = 0
+
+    for i in range(1,10):
+        generator.drivers.current_drivers[i]["track_loc"] = 0
+
+    result = generator._check_off_track()
+    assert result == 9
+
+def test_check_off_track_disabled_returns_num_off_track_cars(generator):
+    """Test that the off track check returns the number of off track cars when disabled"""
+    generator._start_safety_car = Mock()
+    generator.master.settings["settings"]["off"] = 0
+
+    for i in range(1,10):
+        generator.drivers.current_drivers[i]["track_loc"] = 0
+
+    generator._start_safety_car.assert_not_called()
 
 def test_threshold_no_multiplier(generator):
     """Test when multiplier is 0."""
