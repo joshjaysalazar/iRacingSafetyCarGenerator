@@ -185,15 +185,24 @@ class Generator:
         for car in cars_to_remove:
             stopped_cars.remove(car)
 
-        stopped_cars_count = self._adjust_for_proximity(stopped_cars)
+        adjustment_data = self._adjust_for_proximity(stopped_cars)
+
+        proximity_distance = float(self.master.settings["settings"]["proximity_yellows_distance"])
+        proximity_car_indexes = []
+        for car in stopped_cars:
+            distance = self.drivers.current_drivers[car]["lap_distance"]
+            if (adjustment_data["ref_dist"] - proximity_distance) < distance < (adjustment_data["ref_dist"] + proximity_distance):
+                proximity_car_indexes.append(car)
+
+        self.stopped_cars_indexes = proximity_car_indexes
 
         # Trigger the safety car event if the check is enabled and threshold is met
-        if enabled and stopped_cars_count >= self._calc_dynamic_yellow_threshold(threshold):
+        if enabled and adjustment_data["count"] >= self._calc_dynamic_yellow_threshold(threshold):
             self._log_driver_info(stopped_cars)
             self._start_safety_car(message)
             return 0
 
-        return stopped_cars_count
+        return adjustment_data["count"]
 
     def _check_off_track(self):
         """Check to see if an off track safety car event should be triggered.
@@ -225,17 +234,26 @@ class Generator:
         for car in cars_to_remove:
             off_track_cars.remove(car)
 
-        off_track_cars_count = self._adjust_for_proximity(off_track_cars)
+        adjustment_data = self._adjust_for_proximity(off_track_cars)
+
+        proximity_distance = float(self.master.settings["settings"]["proximity_yellows_distance"])
+        proximity_car_indexes = []
+        for car in off_track_cars:
+            distance = self.drivers.current_drivers[car]["lap_distance"]
+            if (adjustment_data["ref_dist"] - proximity_distance) < distance < (adjustment_data["ref_dist"] + proximity_distance):
+                proximity_car_indexes.append(car)
+
+        self.off_cars_indexes = proximity_car_indexes
 
         # Trigger the safety car event if the check is enabled and the threshold is met
-        if enabled and off_track_cars_count >= self._calc_dynamic_yellow_threshold(threshold):
+        if enabled and adjustment_data["count"] >= self._calc_dynamic_yellow_threshold(threshold):
             self._log_driver_info(off_track_cars)
             self._start_safety_car(message)
             return 0
 
-        return off_track_cars_count
+        return adjustment_data["count"]
 
-    def _check_combined(self, stopped_cars_count, off_cars_count):
+    def _check_combined(self):
         """Check to see if the combination of stopped and off track cars is high enough that
            a safety car should be deployed. The values are multiplied by their weight value for
            more granular control
@@ -244,8 +262,8 @@ class Generator:
             off_track_cars_count: Number of stopped cars in proximity
         """
         logger.debug("Checking combined safety car event")
-        logger.debug(f"Stopped cars unweighted: {stopped_cars_count}")
-        logger.debug(f"Off cars unweighted: {off_cars_count }")
+        logger.debug(f"Stopped cars unweighted: {self.stopped_cars_indexes}")
+        logger.debug(f"Off cars unweighted: {self.off_cars_indexes}")
 
         enabled = bool(self.master.settings["settings"]["combined"])
         threshold = float(self.master.settings["settings"]["combined_min"])
@@ -253,13 +271,18 @@ class Generator:
 
         if not enabled:
             return "Combined yellows disabled"
+        
+        # Remove cars from the off cars index list if they are also in the stopped cars list
+        for car in self.stopped_cars_indexes:
+            if car in self.off_cars_indexes:
+                self.off_cars_indexes.remove(car)
 
         # adjust values for their weights and add them
         stopped_weight = float(self.master.settings["settings"]["stopped_weight"])
-        weighted_stopped_count = stopped_cars_count * stopped_weight
+        weighted_stopped_count = len(self.stopped_cars_indexes) * stopped_weight
 
         off_track_weight = float(self.master.settings["settings"]["off_weight"])
-        weighted_off_track_count = off_cars_count * off_track_weight
+        weighted_off_track_count = len(self.off_cars_indexes) * off_track_weight
 
         total_weighted_count = weighted_stopped_count + weighted_off_track_count
 
@@ -315,6 +338,7 @@ class Generator:
 
         current_window = deque()
         max_size = 0
+        reference_distance = 0
         for d in car_lap_distances:
             # pop elements from the left side that are not in range of d
             while len(current_window) > 0 and current_window[0] < d - proximity_yellows_distance:
@@ -323,9 +347,13 @@ class Generator:
             # now append our new value and check how many cars are in range
             current_window.append(d)
             max_size = max(max_size, len(current_window))
+            
+            if max_size == len(current_window):
+                reference_distance = d
+
             logger.debug(f"after processing {d}, current_window={current_window}, max_size={max_size}")
 
-        return max_size
+        return {"count": max_size, "ref_dist": reference_distance}
 
     # Determine what the number of cars stopped should be based on the settings and threshold times
     def _calc_dynamic_yellow_threshold(self, threshold):
@@ -443,6 +471,9 @@ class Generator:
                             time.sleep(1)
                             continue
 
+                    self.stopped_cars_indexes = []
+                    self.off_cars_indexes = []
+
                     # If all checks are passed, check for events
                     self._check_random()
                     stopped_cars_count = self._check_stopped()
@@ -451,7 +482,7 @@ class Generator:
                     # If either of the stopped/off checks return 0 cars, then we don't need to calculate the combined
                     # count because the other function would throw a safety car if its count was high enough
                     if (stopped_cars_count > 0 and off_track_cars_count > 0):
-                        self._check_combined(stopped_cars_count, off_track_cars_count)
+                        self._check_combined()
                     
                     # Use new detector system for threshold checking
                     try:
