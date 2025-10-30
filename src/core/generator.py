@@ -302,7 +302,9 @@ class Generator:
             car_indexes_list: A list of the index positions in the drivers list for cars which are off track
                               or stopped, which needs to be adjusted for proximity to other cars in the list
         Returns:
-            The number of cars stopped/off-track which are within N percent of a lap_distance of each other
+            A dict containing:
+                count: The number of cars stopped/off-track which are within N percent of a lap_distance of each other
+                ref_dist: The distance value which is associated with the above number
         """
         proximity_yellows_enabled = self.master.settings["settings"]["proximity_yellows"] == "1"
         proximity_yellows_distance = float(self.master.settings["settings"]["proximity_yellows_distance"])
@@ -310,10 +312,10 @@ class Generator:
         # If we are not using proximity-based yellows, return the length of the original list
         if not proximity_yellows_enabled:
             logger.debug("Proximity-based yellows disabled, returning length of car indexes list")
-            return len(car_indexes_list)
+            return {"count": len(car_indexes_list), "ref_dist": 0}
 
         if len(car_indexes_list) == 0:
-            return 0
+            return {"count": 0, "ref_dist": 0}
 
         logger.debug(f"Current proximity threshold: {proximity_yellows_distance}")
         car_lap_distances = []
