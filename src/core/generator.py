@@ -467,26 +467,13 @@ class Generator:
                             time.sleep(1)
                             continue
 
-                    self.stopped_cars_indexes = []
-                    self.off_cars_indexes = []
-
-                    # If all checks are passed, check for events
-                    self._check_random()
-                    stopped_cars_count = self._check_stopped()
-                    off_track_cars_count = self._check_off_track()
-
-                    # If either of the stopped/off checks return 0 cars, then we don't need to calculate the combined
-                    # count because the other function would throw a safety car if its count was high enough
-                    if (stopped_cars_count > 0 and off_track_cars_count > 0):
-                        self._check_combined()
-                    
                     # Use new detector system for threshold checking
                     try:
                         detector_results = self.detector.detect()
-                        
+
                         # Clean up events outside the sliding window
                         self.threshold_checker.clean_up_events()
-                        
+
                         # Register events from detector results
                         for event_type in DetectorEventTypes:
                             detection_result = detector_results.get_events(event_type)
@@ -494,10 +481,11 @@ class Generator:
                                 self.threshold_checker.register_detection_result(detection_result)
 
                         if self.threshold_checker.threshold_met():
-                            logger.info("ThresholdChecker is meeting threshold, would start safety car")
-                            
+                            logger.info("Threshold met, starting safety car")
+                            self._start_safety_car("Incident on track")
+
                     except Exception as e:
-                        logger.error(f"New detection system failed: {e}", exc_info=True)
+                        logger.error(f"Detection system failed: {e}", exc_info=True)
 
                     # Wait 1 second before checking again
                     time.sleep(1)
