@@ -158,9 +158,6 @@ class TestGeneratorLoopDetectorIntegration:
         mocker.patch.object(generator, '_wait_for_green_flag')
         mocker.patch.object(generator, '_is_shutting_down', side_effect=[False, True])
         mocker.patch.object(generator.drivers, 'update')
-        mocker.patch.object(generator, '_check_random')
-        mocker.patch.object(generator, '_check_stopped', return_value=0)
-        mocker.patch.object(generator, '_check_off_track', return_value=0)
         mocker.patch('time.sleep', return_value=None)
         
         # Mock detector results to return empty results
@@ -181,9 +178,6 @@ class TestGeneratorLoopDetectorIntegration:
         mocker.patch.object(generator, '_wait_for_green_flag')
         mocker.patch.object(generator, '_is_shutting_down', side_effect=[False, True])
         mocker.patch.object(generator.drivers, 'update')
-        mocker.patch.object(generator, '_check_random')
-        mocker.patch.object(generator, '_check_stopped', return_value=0)
-        mocker.patch.object(generator, '_check_off_track', return_value=0)
         mocker.patch('time.sleep', return_value=None)
         
         # Create mock detection results
@@ -226,9 +220,6 @@ class TestGeneratorLoopDetectorIntegration:
         mocker.patch.object(generator, '_wait_for_green_flag')
         mocker.patch.object(generator, '_is_shutting_down', side_effect=[False, True])
         mocker.patch.object(generator.drivers, 'update')
-        mocker.patch.object(generator, '_check_random')
-        mocker.patch.object(generator, '_check_stopped', return_value=0)
-        mocker.patch.object(generator, '_check_off_track', return_value=0)
         mocker.patch('time.sleep', return_value=None)
         
         # Mock detector results
@@ -346,9 +337,6 @@ class TestGeneratorDetectorEndToEndIntegration:
         mocker.patch.object(generator, '_wait_for_green_flag')
         mocker.patch.object(generator, '_is_shutting_down', side_effect=[False, True])
         mocker.patch.object(generator.drivers, 'update')
-        mocker.patch.object(generator, '_check_random')
-        mocker.patch.object(generator, '_check_stopped', return_value=0)
-        mocker.patch.object(generator, '_check_off_track', return_value=0)
         mocker.patch('time.sleep', return_value=None)
         
         # Spy on threshold_met to capture the result
