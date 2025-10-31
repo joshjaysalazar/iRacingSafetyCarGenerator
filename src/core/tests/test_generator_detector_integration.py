@@ -39,6 +39,9 @@ def mock_master():
             # ThresholdChecker settings
             "off_min": "4",
             "stopped_min": "2",
+            "combined_min": "10",
+            "off_weight": "1.0",
+            "stopped_weight": "2.0",
             # Other required settings
             "start_multi_val": "1.0",
             "start_multi_time": "300",

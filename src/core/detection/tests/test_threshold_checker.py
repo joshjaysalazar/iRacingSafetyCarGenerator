@@ -147,6 +147,9 @@ def test_threshold_checker_settings_from_settings():
         "settings": {
             "off_min": "5",
             "stopped_min": "3",
+            "combined_min": "10",
+            "off_weight": "1.0",
+            "stopped_weight": "2.0",
             "proximity_yellows": "0",
             "proximity_yellows_distance": "0.05",
             "start_multi_val": "1.0",
