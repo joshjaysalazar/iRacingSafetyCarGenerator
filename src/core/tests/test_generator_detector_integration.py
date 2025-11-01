@@ -29,25 +29,25 @@ def mock_master():
     mock_master.settings = dict_to_config({
         "settings": {
             # Detector settings
-            "random": "1",
-            "random_prob": "0.1",
-            "start_minute": "0",
-            "end_minute": "30",
-            "random_max_occ": "2",
-            "stopped": "1",
-            "off": "1",
+            "random_detector_enabled": "1",
+            "random_probability": "0.1",
+            "detection_start_minute": "0",
+            "detection_end_minute": "30",
+            "random_max_safety_cars": "2",
+            "stopped_detector_enabled": "1",
+            "off_track_detector_enabled": "1",
             # ThresholdChecker settings
-            "time_range": "5.0",
-            "off_min": "4",
-            "stopped_min": "2",
-            "combined_min": "10",
-            "off_weight": "1.0",
+            "event_time_window_seconds": "5.0",
+            "off_track_cars_threshold": "4",
+            "stopped_cars_threshold": "2",
+            "accumulative_threshold": "10",
+            "off_track_weight": "1.0",
             "stopped_weight": "2.0",
             # Other required settings
-            "start_multi_val": "1.0",
-            "start_multi_time": "300",
-            "proximity_yellows": "0",
-            "proximity_yellows_distance": "0.05",
+            "race_start_threshold_multiplier": "1.0",
+            "race_start_threshold_multiplier_time_seconds": "300",
+            "proximity_filter_enabled": "0",
+            "proximity_filter_distance_percentage": "0.05",
             "max_safety_cars": "999",
             "min_time_between": "0",
         }
@@ -126,9 +126,9 @@ class TestGeneratorDetectorInitialization:
             detector_settings, drivers = args
             
             assert isinstance(detector_settings, DetectorSettings)
-            assert detector_settings.random_enabled is True
-            assert detector_settings.stopped_enabled is True
-            assert detector_settings.off_track_enabled is True
+            assert detector_settings.random_detector_enabled is True
+            assert detector_settings.stopped_detector_enabled is True
+            assert detector_settings.off_track_detector_enabled is True
             assert drivers is mock_drivers
 
 
@@ -354,8 +354,8 @@ class TestGeneratorDetectorEndToEndIntegration:
         generator = generator_with_mocks
 
         # Disable some detectors in settings
-        generator.master.settings.random = False
-        generator.master.settings.off = False
+        generator.master.settings.random_detector_enabled = False
+        generator.master.settings.off_track_detector_enabled = False
         
         generator.drivers = mock_drivers
         
