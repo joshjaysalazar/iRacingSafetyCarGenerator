@@ -1,6 +1,4 @@
 import logging
-import math
-import random
 import threading
 import time
 
@@ -12,7 +10,6 @@ from core.detection.detector import Detector, DetectorSettings
 from core.interactions.interaction_factories import CommandSenderFactory
 
 from codetiming import Timer
-from collections import deque
 from enum import Enum
 
 logger = logging.getLogger(__name__)
@@ -87,236 +84,12 @@ class Generator:
         """
         return self.skip_wait_for_green_event.is_set()
 
-    def _check_random(self):
-        """Check to see if a random safety car event should be triggered.
-        
-        Args:
-            None
-        """
-        logger.debug("Checking random safety car event")
+ 
 
-        # Get relevant settings from the settings file
-        enabled = self.master.settings["settings"]["random"]
-        chance = float(self.master.settings["settings"]["random_prob"])
-        max_occ = int(self.master.settings["settings"]["random_max_occ"])
-        start_minute = float(self.master.settings["settings"]["start_minute"])
-        end_minute = float(self.master.settings["settings"]["end_minute"])
-        message = self.master.settings["settings"]["random_message"]
 
-        # If random events are disabled, return
-        if enabled == "0":
-            return
 
-        # If the random chance is 0, return
-        if chance == 0:
-            return
-        
-        # If the max occurrences is reached, return
-        if self.total_random_sc_events >= max_occ:
-            return
 
-        # Generate a random number between 0 and 1
-        rng = random.random()
 
-        # Calculate the chance of triggering a safety car event this check
-        len_of_window = (end_minute - start_minute) * 60
-        chance = 1 - ((1 - chance) ** (1 / len_of_window))
-
-        # If the random number is less than or equal to the chance, trigger
-        if rng <= chance:
-            self.total_random_sc_events += 1
-            self._start_safety_car(message) 
-
-    def _check_stopped(self):
-        """Check to see if a stopped car safety car event should be triggered.
-        
-        Args:
-            None
-        """
-        logger.debug("Checking stopped car safety car event")
-
-        # Get relevant settings from the settings file
-        enabled = self.master.settings["settings"]["stopped"]
-        threshold = float(self.master.settings["settings"]["stopped_min"])
-        message = self.master.settings["settings"]["stopped_message"]
-
-        # If stopped car events are disabled, return
-        if enabled == "0":
-            return
-
-        # Get the indices of the stopped cars
-        stopped_cars = []
-        for i in range(len(self.drivers.current_drivers)):
-            current_comp = self.drivers.current_drivers[i]["laps_completed"]
-            current_dist = self.drivers.current_drivers[i]["lap_distance"]
-            prev_comp = self.drivers.previous_drivers[i]["laps_completed"]
-            prev_dist = self.drivers.previous_drivers[i]["lap_distance"]
-            current_total = current_comp + current_dist
-            prev_total = prev_comp + prev_dist
-            if current_total <= prev_total:
-                stopped_cars.append(i)
-
-        # If length of stopped cars is entire field, clear list (lag fix)
-        if len(stopped_cars) >= len(self.drivers.current_drivers) - 1:
-            stopped_cars = []
-
-        # For each stopped car, check if they're in pits, remove if so
-        cars_to_remove = []
-        for car in stopped_cars:
-            if self.drivers.current_drivers[car]["track_loc"] == 1:
-                cars_to_remove.append(car)
-            if self.drivers.current_drivers[car]["track_loc"] == 2:
-                cars_to_remove.append(car)
-        for car in cars_to_remove:
-            stopped_cars.remove(car)
-
-        # For each, check if not in world, remove if so
-        cars_to_remove = []
-        for car in stopped_cars:
-            if self.drivers.current_drivers[car]["track_loc"] == -1:
-                cars_to_remove.append(car)
-        for car in cars_to_remove:
-            stopped_cars.remove(car)
-
-        # For each, check if lap distance < 0, remove if so
-        cars_to_remove = []
-        for car in stopped_cars:
-            if self.drivers.current_drivers[car]["lap_distance"] < 0:
-                cars_to_remove.append(car)
-        for car in cars_to_remove:
-            stopped_cars.remove(car)
-
-        stopped_cars_count = self._adjust_for_proximity(stopped_cars)
-
-        # Trigger the safety car event if threshold is met
-        if stopped_cars_count >= self._calc_dynamic_yellow_threshold(threshold):
-            self._log_driver_info(stopped_cars)
-            self._start_safety_car(message)
-
-        return stopped_cars
-
-    def _check_off_track(self):
-        """Check to see if an off track safety car event should be triggered.
-        
-        Args:
-            None
-        """
-        logger.debug("Checking off track safety car event")
-
-        # Get relevant settings from the settings file
-        enabled = self.master.settings["settings"]["off"]
-        threshold = float(self.master.settings["settings"]["off_min"])
-        message = self.master.settings["settings"]["off_message"]
-
-        # If off track events are disabled, return
-        if enabled == "0":
-            return
-
-        # Get the indices of the off track cars
-        off_track_cars = []
-        for i in range(len(self.drivers.current_drivers)):
-            if self.drivers.current_drivers[i]["track_loc"] == 0:
-                off_track_cars.append(i)
-
-        # For each off track car, check if lap distance < 0, remove if so
-        cars_to_remove = []
-        for car in off_track_cars:
-            if self.drivers.current_drivers[car]["lap_distance"] < 0:
-                cars_to_remove.append(car)
-        for car in cars_to_remove:
-            off_track_cars.remove(car)
-
-        off_track_cars_count = self._adjust_for_proximity(off_track_cars)
-
-        # Trigger the safety car event if threshold is met
-        if off_track_cars_count >= self._calc_dynamic_yellow_threshold(threshold):
-            self._log_driver_info(off_track_cars)
-            self._start_safety_car(message)
-        
-        return off_track_cars
-
-    def _adjust_for_proximity(self, car_indexes_list):
-        """ Check each car in the car_indexes_list to see if it is within N percent of a lap_distance
-            of another car. This will stop a spurious yellow from being thrown if individual cars meet
-            the criteria for a yellow but are not in the same area of the track. If proximity yellows are
-            not enabled, no adjustment will be made and the length of the car_indexes_list will be returned.
-
-        Args:
-            car_indexes_list: A list of the index positions in the drivers list for cars which are off track
-                              or stopped, which needs to be adjusted for proximity to other cars in the list
-        Returns:
-            The number of cars stopped/off-track which are within N percent of a lap_distance of each other
-        """
-        proximity_yellows_enabled = self.master.settings["settings"]["proximity_yellows"] == "1"
-        proximity_yellows_distance = float(self.master.settings["settings"]["proximity_yellows_distance"])
-        
-        # If we are not using proximity-based yellows, return the length of the original list
-        if not proximity_yellows_enabled:
-            logger.debug("Proximity-based yellows disabled, returning length of car indexes list")
-            return len(car_indexes_list)
-
-        if len(car_indexes_list) == 0:
-            return 0
-
-        logger.debug(f"Current proximity threshold: {proximity_yellows_distance}")
-        car_lap_distances = []
-        # Get current lap distances; num is not the literal index of the car_indexes_list, it is the index position of the current_drivers array
-        for num in car_indexes_list:
-            lap_distance = self.drivers.current_drivers[num]["lap_distance"]
-
-            # Adding this check in case we pass the wrong data (including lap count)
-            if lap_distance > 1.0:
-                logger.warning(f"Lap distance for car idx {num} is > 1.0 ({lap_distance}), normalizing")
-                lap_distance = lap_distance % 1
-
-            car_lap_distances.append(lap_distance)
-
-        # sort in place
-        car_lap_distances.sort()
-
-        # because we need to account for cars being in range of each other across the finish line, we add another copy of all the distances+1 to the list
-        car_lap_distances.extend([d+1 for d in car_lap_distances])
-        logger.debug(f"Car indexes list:             {car_indexes_list}")
-        logger.debug(f"Distances list (sorted and extended): {car_lap_distances}")
-
-        current_window = deque()
-        max_size = 0
-        for d in car_lap_distances:
-            # pop elements from the left side that are not in range of d
-            while len(current_window) > 0 and current_window[0] < d - proximity_yellows_distance:
-                current_window.popleft()
-            
-            # now append our new value and check how many cars are in range
-            current_window.append(d)
-            max_size = max(max_size, len(current_window))
-            logger.debug(f"after processing {d}, current_window={current_window}, max_size={max_size}")
-
-        return max_size
-
-    # Determine what the number of cars stopped should be based on the settings and threshold times
-    def _calc_dynamic_yellow_threshold(self, threshold):
-        """Scales the threshold based on the configured multiplier time and value.
-        
-        Args:
-            threshold: The unscaled threshold value
-        Returns: 
-            The scaled threshold value
-        """
-        multiplier = float(self.master.settings["settings"]["start_multi_val"])
-        multi_time = float(self.master.settings["settings"]["start_multi_time"])
-        should_adjust = (time.time() - self.start_time) < multi_time
-
-        if (multiplier == 0 or not should_adjust):
-            return threshold
-
-        return math.ceil(threshold * multiplier)
-    
-    def _log_driver_info(self, car_indexes_array):
-        logger.info(f"Affected cars indexes: {car_indexes_array}")
-        logger.info("Current driver info:")
-        logger.info(self.drivers.current_drivers)
-        logger.info("Previous driver info:")
-        logger.info(self.drivers.previous_drivers)
 
     def _get_driver_number(self, id):
         """Get the driver number from the iRacing SDK.
@@ -409,18 +182,13 @@ class Generator:
                             time.sleep(1)
                             continue
 
-                    # If all checks are passed, check for events
-                    self._check_random()
-                    self._check_stopped()
-                    self._check_off_track()
-                    
                     # Use new detector system for threshold checking
                     try:
                         detector_results = self.detector.detect()
-                        
+
                         # Clean up events outside the sliding window
                         self.threshold_checker.clean_up_events()
-                        
+
                         # Register events from detector results
                         for event_type in DetectorEventTypes:
                             detection_result = detector_results.get_events(event_type)
@@ -428,10 +196,11 @@ class Generator:
                                 self.threshold_checker.register_detection_result(detection_result)
 
                         if self.threshold_checker.threshold_met():
-                            logger.info("ThresholdChecker is meeting threshold, would start safety car")
-                            
+                            logger.info("Threshold met, starting safety car")
+                            self._start_safety_car("Incident on track")
+
                     except Exception as e:
-                        logger.error(f"New detection system failed: {e}", exc_info=True)
+                        logger.error(f"Detection system failed: {e}", exc_info=True)
 
                     # Wait 1 second before checking again
                     time.sleep(1)

@@ -55,7 +55,13 @@ class ThresholdCheckerSettings:
     @staticmethod
     def from_settings(settings):
         return ThresholdCheckerSettings(
-            time_range=10.0,
+            time_range=float(settings["settings"]["time_range"]),
+            accumulative_threshold=float(settings["settings"]["combined_min"]),
+            accumulative_weights={
+                DetectorEventTypes.OFF_TRACK: float(settings["settings"]["off_weight"]),
+                DetectorEventTypes.RANDOM: 0.0, # Random events do not contribute to the accumulative threshold
+                DetectorEventTypes.STOPPED: float(settings["settings"]["stopped_weight"]),
+            },
             event_type_threshold={
                 DetectorEventTypes.OFF_TRACK: float(settings["settings"]["off_min"]),
                 DetectorEventTypes.RANDOM: 1.0, # Random does not have a threshold, it is just a flag

@@ -145,8 +145,12 @@ def test_cleanup(threshold_checker, mocker):
 def test_threshold_checker_settings_from_settings():
     settings = dict_to_config({
         "settings": {
+            "time_range": "5.0",
             "off_min": "5",
             "stopped_min": "3",
+            "combined_min": "10",
+            "off_weight": "1.0",
+            "stopped_weight": "2.0",
             "proximity_yellows": "0",
             "proximity_yellows_distance": "0.05",
             "start_multi_val": "1.0",
@@ -154,7 +158,7 @@ def test_threshold_checker_settings_from_settings():
         }
     })
     threshold_checker_settings = ThresholdCheckerSettings.from_settings(settings)
-    assert threshold_checker_settings.time_range == 10.0
+    assert threshold_checker_settings.time_range == 5.0
     assert threshold_checker_settings.event_type_threshold[OFF_TRACK] == 5
     assert threshold_checker_settings.event_type_threshold[STOPPED] == 3
     assert threshold_checker_settings.accumulative_threshold == 10
@@ -408,3 +412,279 @@ def test_dynamic_threshold_without_race_started_and_after():
     with patch('time.time', return_value=1100.0):  # 100 seconds later
         result = checker._calc_dynamic_threshold(base_threshold)
         assert result == 2.0  # 4.0 * 0.5
+
+
+# End-to-end integration tests for settings → ThresholdChecker behavior
+def test_from_settings_off_weight_affects_threshold_behavior(mocker):
+    """Test that changing off_weight in settings actually changes when threshold triggers."""
+    mocker.patch("time.time", return_value=1000.0)
+
+    # Test with off_weight = 1.0
+    settings_low_weight = dict_to_config({
+        "settings": {
+            "time_range": "5.0",
+            "off_min": "999",  # High individual threshold
+            "stopped_min": "999",
+            "combined_min": "3",  # Low accumulative threshold
+            "off_weight": "1.0",  # Low weight
+            "stopped_weight": "2.0",
+            "proximity_yellows": "0",
+            "proximity_yellows_distance": "0.05",
+            "start_multi_val": "1.0",
+            "start_multi_time": "300.0",
+        }
+    })
+
+    checker_low = ThresholdChecker(ThresholdCheckerSettings.from_settings(settings_low_weight))
+
+    # Register 2 off-track events: 2 * 1.0 = 2.0 (below threshold of 3)
+    driver1 = make_driver(track_loc=0, driver_idx=1, lap_distance=0.1)
+    driver2 = make_driver(track_loc=0, driver_idx=2, lap_distance=0.2)
+    checker_low._register_event(OFF_TRACK, driver1, 1000.0)
+    checker_low._register_event(OFF_TRACK, driver2, 1000.1)
+
+    assert not checker_low.threshold_met(), "Should not trigger with 2 off-track @ weight 1.0 (total 2.0 < 3.0)"
+
+    # Now test with off_weight = 2.0
+    settings_high_weight = dict_to_config({
+        "settings": {
+            "time_range": "5.0",
+            "off_min": "999",
+            "stopped_min": "999",
+            "combined_min": "3",
+            "off_weight": "2.0",  # Higher weight
+            "stopped_weight": "2.0",
+            "proximity_yellows": "0",
+            "proximity_yellows_distance": "0.05",
+            "start_multi_val": "1.0",
+            "start_multi_time": "300.0",
+        }
+    })
+
+    checker_high = ThresholdChecker(ThresholdCheckerSettings.from_settings(settings_high_weight))
+
+    # Register same 2 off-track events: 2 * 2.0 = 4.0 (above threshold of 3)
+    checker_high._register_event(OFF_TRACK, driver1, 1000.0)
+    checker_high._register_event(OFF_TRACK, driver2, 1000.1)
+
+    assert checker_high.threshold_met(), "Should trigger with 2 off-track @ weight 2.0 (total 4.0 >= 3.0)"
+
+
+def test_from_settings_stopped_weight_affects_threshold_behavior(mocker):
+    """Test that changing stopped_weight in settings actually changes when threshold triggers."""
+    mocker.patch("time.time", return_value=1000.0)
+
+    # Test with stopped_weight = 1.0
+    settings_low_weight = dict_to_config({
+        "settings": {
+            "time_range": "5.0",
+            "off_min": "999",
+            "stopped_min": "999",
+            "combined_min": "5",  # Accumulative threshold
+            "off_weight": "1.0",
+            "stopped_weight": "1.0",  # Low weight for stopped
+            "proximity_yellows": "0",
+            "proximity_yellows_distance": "0.05",
+            "start_multi_val": "1.0",
+            "start_multi_time": "300.0",
+        }
+    })
+
+    checker_low = ThresholdChecker(ThresholdCheckerSettings.from_settings(settings_low_weight))
+
+    # Register 2 stopped events: 2 * 1.0 = 2.0 (below threshold of 5)
+    driver1 = make_driver(track_loc=0, driver_idx=1, lap_distance=0.1)
+    driver2 = make_driver(track_loc=0, driver_idx=2, lap_distance=0.2)
+    checker_low._register_event(STOPPED, driver1, 1000.0)
+    checker_low._register_event(STOPPED, driver2, 1000.1)
+
+    assert not checker_low.threshold_met(), "Should not trigger with 2 stopped @ weight 1.0 (total 2.0 < 5.0)"
+
+    # Now test with stopped_weight = 3.0
+    settings_high_weight = dict_to_config({
+        "settings": {
+            "time_range": "5.0",
+            "off_min": "999",
+            "stopped_min": "999",
+            "combined_min": "5",
+            "off_weight": "1.0",
+            "stopped_weight": "3.0",  # Higher weight for stopped
+            "proximity_yellows": "0",
+            "proximity_yellows_distance": "0.05",
+            "start_multi_val": "1.0",
+            "start_multi_time": "300.0",
+        }
+    })
+
+    checker_high = ThresholdChecker(ThresholdCheckerSettings.from_settings(settings_high_weight))
+
+    # Register same 2 stopped events: 2 * 3.0 = 6.0 (above threshold of 5)
+    checker_high._register_event(STOPPED, driver1, 1000.0)
+    checker_high._register_event(STOPPED, driver2, 1000.1)
+
+    assert checker_high.threshold_met(), "Should trigger with 2 stopped @ weight 3.0 (total 6.0 >= 5.0)"
+
+
+def test_from_settings_combined_min_affects_threshold_behavior(mocker):
+    """Test that changing combined_min in settings actually changes when threshold triggers."""
+    mocker.patch("time.time", return_value=1000.0)
+
+    # Test with combined_min = 10 (high threshold)
+    settings_high_threshold = dict_to_config({
+        "settings": {
+            "time_range": "5.0",
+            "off_min": "999",
+            "stopped_min": "999",
+            "combined_min": "10",  # High accumulative threshold
+            "off_weight": "2.0",
+            "stopped_weight": "2.0",
+            "proximity_yellows": "0",
+            "proximity_yellows_distance": "0.05",
+            "start_multi_val": "1.0",
+            "start_multi_time": "300.0",
+        }
+    })
+
+    checker_high_threshold = ThresholdChecker(ThresholdCheckerSettings.from_settings(settings_high_threshold))
+
+    # Register 2 off-track + 1 stopped: (2*2.0) + (1*2.0) = 6.0 (below threshold of 10)
+    driver1 = make_driver(track_loc=0, driver_idx=1, lap_distance=0.1)
+    driver2 = make_driver(track_loc=0, driver_idx=2, lap_distance=0.2)
+    driver3 = make_driver(track_loc=0, driver_idx=3, lap_distance=0.3)
+    checker_high_threshold._register_event(OFF_TRACK, driver1, 1000.0)
+    checker_high_threshold._register_event(OFF_TRACK, driver2, 1000.1)
+    checker_high_threshold._register_event(STOPPED, driver3, 1000.2)
+
+    assert not checker_high_threshold.threshold_met(), "Should not trigger with total 6.0 < combined_min 10.0"
+
+    # Now test with combined_min = 5 (low threshold)
+    settings_low_threshold = dict_to_config({
+        "settings": {
+            "time_range": "5.0",
+            "off_min": "999",
+            "stopped_min": "999",
+            "combined_min": "5",  # Low accumulative threshold
+            "off_weight": "2.0",
+            "stopped_weight": "2.0",
+            "proximity_yellows": "0",
+            "proximity_yellows_distance": "0.05",
+            "start_multi_val": "1.0",
+            "start_multi_time": "300.0",
+        }
+    })
+
+    checker_low_threshold = ThresholdChecker(ThresholdCheckerSettings.from_settings(settings_low_threshold))
+
+    # Register same events: (2*2.0) + (1*2.0) = 6.0 (above threshold of 5)
+    checker_low_threshold._register_event(OFF_TRACK, driver1, 1000.0)
+    checker_low_threshold._register_event(OFF_TRACK, driver2, 1000.1)
+    checker_low_threshold._register_event(STOPPED, driver3, 1000.2)
+
+    assert checker_low_threshold.threshold_met(), "Should trigger with total 6.0 >= combined_min 5.0"
+
+
+def test_from_settings_complete_integration_with_realistic_scenario(mocker):
+    """Complete end-to-end test showing how UI settings control threshold behavior in realistic racing scenario.
+
+    This test simulates a race director configuring different thresholds and weights through the UI
+    and verifies the ThresholdChecker respects those settings exactly.
+    """
+    mocker.patch("time.time", return_value=1000.0)
+
+    # Scenario: Race director wants stopped cars weighted more heavily than off-track
+    # UI Configuration: stopped_weight=3, off_weight=1, combined_min=8
+    # This means: 1 stopped car = 3 points, 1 off-track = 1 point, need 8 points total
+    settings_config_1 = dict_to_config({
+        "settings": {
+            "time_range": "5.0",
+            "off_min": "999",  # Disable individual thresholds
+            "stopped_min": "999",
+            "combined_min": "8",
+            "off_weight": "1.0",
+            "stopped_weight": "3.0",  # Stopped cars weighted 3x more
+            "proximity_yellows": "0",
+            "proximity_yellows_distance": "0.05",
+            "start_multi_val": "1.0",
+            "start_multi_time": "300.0",
+        }
+    })
+
+    checker_1 = ThresholdChecker(ThresholdCheckerSettings.from_settings(settings_config_1))
+
+    # Test case 1: 5 off-track cars = 5 points (not enough)
+    drivers = [make_driver(track_loc=0, driver_idx=i, lap_distance=0.1 + i*0.01) for i in range(6)]
+    for i in range(5):
+        checker_1._register_event(OFF_TRACK, drivers[i], 1000.0 + i*0.01)
+    assert not checker_1.threshold_met(), "5 off-track (5 points) should not trigger with threshold 8"
+
+    # Test case 2: Add 1 stopped car = 5 + 3 = 8 points (exactly threshold)
+    checker_1._register_event(STOPPED, drivers[5], 1000.05)
+    assert checker_1.threshold_met(), "5 off-track + 1 stopped (8 points) should trigger with threshold 8"
+
+    # Now race director changes mind - wants equal weighting
+    # UI Configuration: stopped_weight=2, off_weight=2, combined_min=10
+    settings_config_2 = dict_to_config({
+        "settings": {
+            "time_range": "5.0",
+            "off_min": "999",
+            "stopped_min": "999",
+            "combined_min": "10",  # Higher threshold
+            "off_weight": "2.0",  # Equal weights
+            "stopped_weight": "2.0",
+            "proximity_yellows": "0",
+            "proximity_yellows_distance": "0.05",
+            "start_multi_val": "1.0",
+            "start_multi_time": "300.0",
+        }
+    })
+
+    checker_2 = ThresholdChecker(ThresholdCheckerSettings.from_settings(settings_config_2))
+
+    # Same scenario: 3 off-track + 2 stopped
+    # With equal weights: (3*2) + (2*2) = 10 points (exactly threshold)
+    for i in range(3):
+        checker_2._register_event(OFF_TRACK, drivers[i], 1000.0 + i*0.01)
+    for i in range(3, 5):
+        checker_2._register_event(STOPPED, drivers[i], 1000.0 + i*0.01)
+    assert checker_2.threshold_met(), "3 off-track + 2 stopped (10 points) should trigger with threshold 10"
+
+    # Test case 3: Just 2 stopped + 2 off-track = 8 points (not enough with threshold 10)
+    checker_3 = ThresholdChecker(ThresholdCheckerSettings.from_settings(settings_config_2))
+    for i in range(2):
+        checker_3._register_event(OFF_TRACK, drivers[i], 1000.0 + i*0.01)
+    for i in range(2, 4):
+        checker_3._register_event(STOPPED, drivers[i], 1000.0 + i*0.01)
+    assert not checker_3.threshold_met(), "2 off-track + 2 stopped (8 points) should not trigger with threshold 10"
+
+    # Race director goes conservative - very low weights but high threshold
+    # UI Configuration: stopped_weight=0.5, off_weight=0.5, combined_min=15
+    # This requires many more cars to trigger
+    settings_config_3 = dict_to_config({
+        "settings": {
+            "time_range": "5.0",
+            "off_min": "999",
+            "stopped_min": "999",
+            "combined_min": "15",
+            "off_weight": "0.5",
+            "stopped_weight": "0.5",
+            "proximity_yellows": "0",
+            "proximity_yellows_distance": "0.05",
+            "start_multi_val": "1.0",
+            "start_multi_time": "300.0",
+        }
+    })
+
+    checker_4 = ThresholdChecker(ThresholdCheckerSettings.from_settings(settings_config_3))
+
+    # Need 30 cars at 0.5 weight each to reach 15 points - let's use 20 (10 points, not enough)
+    drivers_large = [make_driver(track_loc=0, driver_idx=i, lap_distance=0.01*i) for i in range(40)]
+    for i in range(20):
+        event_type = STOPPED if i % 2 == 0 else OFF_TRACK
+        checker_4._register_event(event_type, drivers_large[i], 1000.0 + i*0.001)
+    assert not checker_4.threshold_met(), "20 cars @ 0.5 weight (10 points) should not trigger with threshold 15"
+
+    # Add 10 more cars to reach 30 total = 15 points
+    for i in range(20, 30):
+        event_type = STOPPED if i % 2 == 0 else OFF_TRACK
+        checker_4._register_event(event_type, drivers_large[i], 1000.0 + i*0.001)
+    assert checker_4.threshold_met(), "30 cars @ 0.5 weight (15 points) should trigger with threshold 15"

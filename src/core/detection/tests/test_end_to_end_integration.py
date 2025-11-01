@@ -56,16 +56,21 @@ def full_detection_system(racing_drivers):
         "settings": {
             # Detector enables
             "random": "1",
-            "stopped": "1", 
+            "stopped": "1",
             "off": "1",
             # Random detector settings
             "random_prob": "0.1",
             "start_minute": "0",
-            "end_minute": "30", 
+            "end_minute": "30",
             "random_max_occ": "5",
             # Threshold settings
+            "time_range": "5.0",
             "off_min": "3",
-            "stopped_min": "2", 
+            "stopped_min": "2",
+            # Combined/accumulative threshold settings
+            "combined_min": "10",
+            "off_weight": "1.0",
+            "stopped_weight": "2.0",
             # Dynamic threshold settings
             "start_multi_val": "0.5",  # Half threshold at start
             "start_multi_time": "300",  # For 5 minutes
@@ -255,7 +260,9 @@ class TestEndToEndDetectionPipeline:
                 "random": "0", "stopped": "1", "off": "1",
                 # Random detector settings (even though disabled, still needed)
                 "random_prob": "0.1", "start_minute": "0", "end_minute": "30", "random_max_occ": "1",
+                "time_range": "5.0",
                 "off_min": "4", "stopped_min": "4",  # High thresholds
+                "combined_min": "10", "off_weight": "1.0", "stopped_weight": "2.0",
                 "start_multi_val": "0.5",  # Half threshold at start
                 "start_multi_time": "300",  # For 5 minutes
                 "proximity_yellows": "1",
@@ -304,7 +311,9 @@ class TestEndToEndDetectionPipeline:
                 "random": "1", "stopped": "0", "off": "0",
                 "random_prob": "1.0",  # 100% chance for testing
                 "start_minute": "0", "end_minute": "30", "random_max_occ": "1",
+                "time_range": "5.0",
                 "off_min": "999", "stopped_min": "999",  # High thresholds for other types
+                "combined_min": "999", "off_weight": "1.0", "stopped_weight": "2.0",
                 "start_multi_val": "1.0", "start_multi_time": "300",
                 "proximity_yellows": "0",
                 "proximity_yellows_distance": "0.05",
@@ -367,7 +376,9 @@ class TestEndToEndDetectionPipeline:
                 "random": "0", "stopped": "1", "off": "1",
                 # Random detector settings (even though disabled, still needed)
                 "random_prob": "0.1", "start_minute": "0", "end_minute": "30", "random_max_occ": "1",
+                "time_range": "5.0",
                 "off_min": "5", "stopped_min": "3",
+                "combined_min": "10", "off_weight": "1.0", "stopped_weight": "2.0",
                 "start_multi_val": "1.0", "start_multi_time": "300",
                 "proximity_yellows": "1", "proximity_yellows_distance": "0.1",
             }

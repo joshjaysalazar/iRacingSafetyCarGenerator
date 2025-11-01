@@ -37,8 +37,12 @@ def mock_master():
             "stopped": "1",
             "off": "1",
             # ThresholdChecker settings
+            "time_range": "5.0",
             "off_min": "4",
             "stopped_min": "2",
+            "combined_min": "10",
+            "off_weight": "1.0",
+            "stopped_weight": "2.0",
             # Other required settings
             "start_multi_val": "1.0",
             "start_multi_time": "300",
@@ -155,9 +159,6 @@ class TestGeneratorLoopDetectorIntegration:
         mocker.patch.object(generator, '_wait_for_green_flag')
         mocker.patch.object(generator, '_is_shutting_down', side_effect=[False, True])
         mocker.patch.object(generator.drivers, 'update')
-        mocker.patch.object(generator, '_check_random')
-        mocker.patch.object(generator, '_check_stopped', return_value=[])
-        mocker.patch.object(generator, '_check_off_track', return_value=[])
         mocker.patch('time.sleep', return_value=None)
         
         # Mock detector results to return empty results
@@ -178,9 +179,6 @@ class TestGeneratorLoopDetectorIntegration:
         mocker.patch.object(generator, '_wait_for_green_flag')
         mocker.patch.object(generator, '_is_shutting_down', side_effect=[False, True])
         mocker.patch.object(generator.drivers, 'update')
-        mocker.patch.object(generator, '_check_random')
-        mocker.patch.object(generator, '_check_stopped', return_value=[])
-        mocker.patch.object(generator, '_check_off_track', return_value=[])
         mocker.patch('time.sleep', return_value=None)
         
         # Create mock detection results
@@ -214,30 +212,6 @@ class TestGeneratorLoopDetectorIntegration:
         register_spy.assert_any_call(mock_stopped_result)
         register_spy.assert_any_call(mock_off_track_result)
 
-    def test_legacy_methods_still_called_for_side_effects(self, generator_with_mocks, mock_drivers, mocker):
-        """Test that legacy _check_stopped and _check_off_track are still called for side effects."""
-        generator = generator_with_mocks
-        mock_results = self.setup_generator_for_loop_test(generator, mock_drivers)
-        
-        # Mock other dependencies
-        mocker.patch.object(generator, '_wait_for_green_flag')
-        mocker.patch.object(generator, '_is_shutting_down', side_effect=[False, True])
-        mocker.patch.object(generator.drivers, 'update')
-        mocker.patch.object(generator, '_check_random')
-        check_stopped_spy = mocker.patch.object(generator, '_check_stopped', return_value=[])
-        check_off_track_spy = mocker.patch.object(generator, '_check_off_track', return_value=[])
-        mocker.patch('time.sleep', return_value=None)
-        
-        # Mock detector results to return empty results
-        mock_results.get_events.return_value = None
-        
-        # Run the loop
-        generator._loop()
-        
-        # Verify legacy methods were called
-        check_stopped_spy.assert_called_once()
-        check_off_track_spy.assert_called_once()
-
     def test_threshold_checker_clean_up_events_called(self, generator_with_mocks, mock_drivers, mocker):
         """Test that threshold_checker.clean_up_events is called before registering new events."""
         generator = generator_with_mocks
@@ -247,9 +221,6 @@ class TestGeneratorLoopDetectorIntegration:
         mocker.patch.object(generator, '_wait_for_green_flag')
         mocker.patch.object(generator, '_is_shutting_down', side_effect=[False, True])
         mocker.patch.object(generator.drivers, 'update')
-        mocker.patch.object(generator, '_check_random')
-        mocker.patch.object(generator, '_check_stopped', return_value=[])
-        mocker.patch.object(generator, '_check_off_track', return_value=[])
         mocker.patch('time.sleep', return_value=None)
         
         # Mock detector results
@@ -268,36 +239,37 @@ class TestGeneratorLoopDetectorIntegration:
 class TestGeneratorThresholdCheckerIntegration:
     """Tests for threshold checking integration."""
 
-    def test_threshold_met_triggers_safety_car_log(self, generator_with_mocks, mock_drivers, mocker, caplog):
-        """Test that when threshold is met, appropriate log message is generated."""
+    def test_threshold_met_triggers_safety_car(self, generator_with_mocks, mock_drivers, mocker, caplog):
+        """Test that when threshold is met, logs properly and calls _start_safety_car."""
         generator = generator_with_mocks
         generator.drivers = mock_drivers
         generator.threshold_checker = Mock(spec=ThresholdChecker)
         generator.detector = Mock(spec=Detector)
-        
+
         # Mock other dependencies
         mocker.patch.object(generator, '_wait_for_green_flag')
         mocker.patch.object(generator, '_is_shutting_down', side_effect=[False, True])
         mocker.patch.object(generator.drivers, 'update')
-        mocker.patch.object(generator, '_check_random')
-        mocker.patch.object(generator, '_check_stopped', return_value=[])
-        mocker.patch.object(generator, '_check_off_track', return_value=[])
+        start_safety_car_spy = mocker.patch.object(generator, '_start_safety_car')
         mocker.patch('time.sleep', return_value=None)
-        
+
         # Mock detector results
         mock_results = Mock(spec=BundledDetectedEvents)
         mock_results.get_events.return_value = None
         generator.detector.detect.return_value = mock_results
-        
+
         # Configure threshold_checker to return True for threshold_met
         generator.threshold_checker.threshold_met.return_value = True
-        
+
         # Run the loop
         with caplog.at_level('INFO'):
             generator._loop()
-        
+
         # Verify the log message
-        assert "ThresholdChecker is meeting threshold, would start safety car" in caplog.text
+        assert "Threshold met, starting safety car" in caplog.text
+
+        # Verify _start_safety_car was called with correct message
+        start_safety_car_spy.assert_called_once_with("Incident on track")
 
     def test_threshold_not_met_no_safety_car_log(self, generator_with_mocks, mock_drivers, mocker, caplog):
         """Test that when threshold is not met, no safety car log message is generated."""
@@ -305,30 +277,31 @@ class TestGeneratorThresholdCheckerIntegration:
         generator.drivers = mock_drivers
         generator.threshold_checker = Mock(spec=ThresholdChecker)
         generator.detector = Mock(spec=Detector)
-        
+
         # Mock other dependencies
         mocker.patch.object(generator, '_wait_for_green_flag')
         mocker.patch.object(generator, '_is_shutting_down', side_effect=[False, True])
         mocker.patch.object(generator.drivers, 'update')
-        mocker.patch.object(generator, '_check_random')
-        mocker.patch.object(generator, '_check_stopped', return_value=[])
-        mocker.patch.object(generator, '_check_off_track', return_value=[])
+        start_safety_car_spy = mocker.patch.object(generator, '_start_safety_car')
         mocker.patch('time.sleep', return_value=None)
-        
+
         # Mock detector results
         mock_results = Mock(spec=BundledDetectedEvents)
         mock_results.get_events.return_value = None
         generator.detector.detect.return_value = mock_results
-        
+
         # Configure threshold_checker to return False for threshold_met
         generator.threshold_checker.threshold_met.return_value = False
-        
+
         # Run the loop
         with caplog.at_level('INFO'):
             generator._loop()
-        
+
         # Verify no safety car log message
-        assert "ThresholdChecker is meeting threshold, would start safety car" not in caplog.text
+        assert "Threshold met, starting safety car" not in caplog.text
+
+        # Verify _start_safety_car was NOT called
+        start_safety_car_spy.assert_not_called()
 
 
 class TestGeneratorDetectorEndToEndIntegration:
@@ -365,9 +338,6 @@ class TestGeneratorDetectorEndToEndIntegration:
         mocker.patch.object(generator, '_wait_for_green_flag')
         mocker.patch.object(generator, '_is_shutting_down', side_effect=[False, True])
         mocker.patch.object(generator.drivers, 'update')
-        mocker.patch.object(generator, '_check_random')
-        mocker.patch.object(generator, '_check_stopped', return_value=[])
-        mocker.patch.object(generator, '_check_off_track', return_value=[])
         mocker.patch('time.sleep', return_value=None)
         
         # Spy on threshold_met to capture the result
