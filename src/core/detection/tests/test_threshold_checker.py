@@ -143,20 +143,21 @@ def test_cleanup(threshold_checker, mocker):
     assert not threshold_checker.threshold_met() # now there's only one off track in last second
     
 def test_threshold_checker_settings_from_settings():
-    settings = dict_to_config({
-        "settings": {
-            "time_range": "5.0",
-            "off_min": "5",
-            "stopped_min": "3",
-            "combined_min": "10",
-            "off_weight": "1.0",
-            "stopped_weight": "2.0",
-            "proximity_yellows": "0",
-            "proximity_yellows_distance": "0.05",
-            "start_multi_val": "1.0",
-            "start_multi_time": "300.0",
-        }
-    })
+    # Mock settings object with the typed wrapper interface
+    class MockSettings:
+        def __init__(self):
+            self.time_range = 5.0
+            self.off_min = 5
+            self.stopped_min = 3
+            self.combined_min = 10
+            self.off_weight = 1.0
+            self.stopped_weight = 2.0
+            self.proximity_yellows = False
+            self.proximity_yellows_distance = 0.05
+            self.start_multi_val = 1.0
+            self.start_multi_time = 300.0
+    
+    settings = MockSettings()
     threshold_checker_settings = ThresholdCheckerSettings.from_settings(settings)
     assert threshold_checker_settings.time_range == 5.0
     assert threshold_checker_settings.event_type_threshold[OFF_TRACK] == 5

@@ -4,6 +4,7 @@ from core.detection.detector_common_types import DetectionResult
 from src.core.detection.detector import DetectorSettings
 from unittest.mock import MagicMock, patch
 from src.core.detection.detector import Detector, DetectorSettings, DetectorEventTypes, BundledDetectedEvents
+from core.tests.test_utils import dict_to_config
 
 class DummyDetector:
     def __init__(self, result):
@@ -14,7 +15,7 @@ class DummyDetector:
         return True
 
 def test_from_settings_valid_input():
-    settings = {
+    settings = dict_to_config({
         "settings": {
             "random": "1",
             "random_prob": "0.1",
@@ -24,7 +25,7 @@ def test_from_settings_valid_input():
             "stopped": "1",
             "off": "0",
         }
-    }
+    })
     ds = DetectorSettings.from_settings(settings)
     assert ds.random_enabled is True
     assert ds.random_chance == 0.1

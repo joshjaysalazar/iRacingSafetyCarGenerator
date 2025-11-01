@@ -62,10 +62,30 @@ def make_driver(track_loc, laps_completed = 0, lap_distance = 0.0, driver_idx = 
 
 
 def dict_to_config(settings_dict):
-    """Convert a dictionary to a ConfigParser object for testing."""
-    config = ConfigParser()
-    for section_name, section_data in settings_dict.items():
-        config.add_section(section_name)
-        for key, value in section_data.items():
-            config.set(section_name, key, str(value))
-    return config
+    """Convert a dictionary to a Mock Settings object for testing.
+
+    This function creates a mock Settings object that mimics the behavior of the
+    actual Settings class, with property access for all settings values.
+    """
+    mock_settings = Mock()
+
+    # Extract the settings section
+    settings_section = settings_dict.get("settings", {})
+
+    # Set properties on the mock based on the dict
+    for key, value in settings_section.items():
+        # Convert string values to appropriate types
+        if value in ("0", "1"):
+            # Boolean values
+            setattr(mock_settings, key, value == "1")
+        elif "." in str(value):
+            # Float values
+            setattr(mock_settings, key, float(value))
+        else:
+            # Try int, fallback to string
+            try:
+                setattr(mock_settings, key, int(value))
+            except ValueError:
+                setattr(mock_settings, key, value)
+
+    return mock_settings

@@ -46,13 +46,13 @@ class DetectorSettings:
     @staticmethod
     def from_settings(settings):
         return DetectorSettings(
-            random_enabled=settings["settings"]["random"] == "1",
-            random_chance=float(settings["settings"]["random_prob"]),
-            random_start_minute=float(settings["settings"]["start_minute"]),
-            random_end_minute=float(settings["settings"]["end_minute"]),
-            random_max_occ=int(settings["settings"]["random_max_occ"]),
-            stopped_enabled=settings["settings"]["stopped"] == "1",
-            off_track_enabled=settings["settings"]["off"] == "1",
+            random_enabled=settings.random,
+            random_chance=settings.random_prob,
+            random_start_minute=settings.start_minute,
+            random_end_minute=settings.end_minute,
+            random_max_occ=settings.random_max_occ,
+            stopped_enabled=settings.stopped,
+            off_track_enabled=settings.off,
         )
 
     

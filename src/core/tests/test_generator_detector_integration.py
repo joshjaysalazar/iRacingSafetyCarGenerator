@@ -352,10 +352,10 @@ class TestGeneratorDetectorEndToEndIntegration:
     def test_detector_settings_disabled_detectors_not_called(self, generator_with_mocks, mock_drivers, mocker):
         """Test that disabled detectors are not included in the detector."""
         generator = generator_with_mocks
-        
+
         # Disable some detectors in settings
-        generator.master.settings["settings"]["random"] = "0"
-        generator.master.settings["settings"]["off"] = "0"
+        generator.master.settings.random = False
+        generator.master.settings.off = False
         
         generator.drivers = mock_drivers
         
