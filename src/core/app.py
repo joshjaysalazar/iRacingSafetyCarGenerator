@@ -382,8 +382,6 @@ class App(tk.Tk):
             self.tooltips_text.get("message")
         )        
 
-        # Create 
-
         # Create Safety Car Settings frame
         logger.debug("Creating Safety Car Settings frame")
         self.frm_sc_settings = ttk.LabelFrame(self, text="Safety Car Settings")
@@ -727,7 +725,7 @@ class App(tk.Tk):
             self.tooltips_text.get("stopped_weight")
         )
         settings_row += 1
-        
+
         logger.debug("Creating combined message entry")
         self.ent_combined_message = ttk.Entry(
             self.frm_sc_settings,
