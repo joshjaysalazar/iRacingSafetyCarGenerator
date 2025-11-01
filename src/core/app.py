@@ -389,7 +389,57 @@ class App(tk.Tk):
         self.frm_sc_settings = ttk.LabelFrame(self, text="Safety Car Settings")
         self.frm_sc_settings.grid(row=0, column=1, sticky="nesw", padx=5, pady=5)
         settings_row = 0
-        
+
+        # Create Event Time Window spinbox
+        logger.debug("Creating event time window spinbox")
+        self.lbl_time_range = ttk.Label(
+            self.frm_sc_settings,
+            text="Event Time Window (s)"
+        )
+        self.lbl_time_range.grid(
+            row=settings_row,
+            column=0,
+            sticky="w",
+            padx=5,
+            pady=5
+        )
+        self.spn_time_range = ttk.Spinbox(
+            self.frm_sc_settings,
+            from_=1,
+            to=15,
+            increment=0.5,
+            width=5
+        )
+        self.spn_time_range.grid(
+            row=settings_row,
+            column=1,
+            sticky="e",
+            padx=5,
+            pady=5
+        )
+        tooltip.CreateToolTip(
+            self.lbl_time_range,
+            "Time window in seconds to consider recent events for threshold calculations"
+        )
+        tooltip.CreateToolTip(
+            self.spn_time_range,
+            "Time window in seconds to consider recent events for threshold calculations"
+        )
+        settings_row += 1
+
+        # Create horizontal separator
+        logger.debug("Creating horizontal separator")
+        separator = ttk.Separator(self.frm_sc_settings, orient="horizontal")
+        separator.grid(
+            row=settings_row,
+            column=0,
+            columnspan=2,
+            sticky="ew",
+            padx=5,
+            pady=5
+        )
+        settings_row += 1
+
         # Create Race Start Multiplier spinbox
         logger.debug("Creating race start SC multiplier spinbox")
         self.lbl_start_multiplier = ttk.Label(
@@ -676,6 +726,8 @@ class App(tk.Tk):
             self.spn_stopped_weight,
             self.tooltips_text.get("stopped_weight")
         )
+        settings_row += 1
+        
         logger.debug("Creating combined message entry")
         self.ent_combined_message = ttk.Entry(
             self.frm_sc_settings,
@@ -1079,6 +1131,8 @@ class App(tk.Tk):
         self.spn_off_min.insert(0, self.settings["settings"]["off_min"])
         self.ent_off_message.delete(0, "end")
         self.ent_off_message.insert(0, self.settings["settings"]["off_message"])
+        self.spn_time_range.delete(0, "end")
+        self.spn_time_range.insert(0, self.settings["settings"]["time_range"])
         self.spn_start_multi_time.delete(0, "end")
         self.spn_start_multi_time.insert(0, self.settings["settings"]["start_multi_time"])
         self.spn_start_multiplier.delete(0, "end")
@@ -1160,6 +1214,7 @@ class App(tk.Tk):
         stopped = self.var_stopped.get()
         stopped_min = self.spn_stopped_min.get()
         stopped_message = self.ent_stopped_message.get()
+        time_range = self.spn_time_range.get()
         start_multi_val = self.spn_start_multiplier.get()
         start_multi_time = self.spn_start_multi_time.get()
         off = self.var_off.get()
@@ -1188,6 +1243,7 @@ class App(tk.Tk):
         self.settings["settings"]["stopped"] = str(stopped)
         self.settings["settings"]["stopped_min"] = str(stopped_min)
         self.settings["settings"]["stopped_message"] = str(stopped_message)
+        self.settings["settings"]["time_range"] = str(time_range)
         self.settings["settings"]["start_multi_val"] = str(start_multi_val)
         self.settings["settings"]["start_multi_time"] = str(start_multi_time)
         self.settings["settings"]["off"] = str(off)

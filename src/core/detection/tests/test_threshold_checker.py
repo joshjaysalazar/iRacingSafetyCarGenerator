@@ -145,6 +145,7 @@ def test_cleanup(threshold_checker, mocker):
 def test_threshold_checker_settings_from_settings():
     settings = dict_to_config({
         "settings": {
+            "time_range": "5.0",
             "off_min": "5",
             "stopped_min": "3",
             "combined_min": "10",
@@ -157,7 +158,7 @@ def test_threshold_checker_settings_from_settings():
         }
     })
     threshold_checker_settings = ThresholdCheckerSettings.from_settings(settings)
-    assert threshold_checker_settings.time_range == 10.0
+    assert threshold_checker_settings.time_range == 5.0
     assert threshold_checker_settings.event_type_threshold[OFF_TRACK] == 5
     assert threshold_checker_settings.event_type_threshold[STOPPED] == 3
     assert threshold_checker_settings.accumulative_threshold == 10
@@ -421,6 +422,7 @@ def test_from_settings_off_weight_affects_threshold_behavior(mocker):
     # Test with off_weight = 1.0
     settings_low_weight = dict_to_config({
         "settings": {
+            "time_range": "5.0",
             "off_min": "999",  # High individual threshold
             "stopped_min": "999",
             "combined_min": "3",  # Low accumulative threshold
@@ -446,6 +448,7 @@ def test_from_settings_off_weight_affects_threshold_behavior(mocker):
     # Now test with off_weight = 2.0
     settings_high_weight = dict_to_config({
         "settings": {
+            "time_range": "5.0",
             "off_min": "999",
             "stopped_min": "999",
             "combined_min": "3",
@@ -474,6 +477,7 @@ def test_from_settings_stopped_weight_affects_threshold_behavior(mocker):
     # Test with stopped_weight = 1.0
     settings_low_weight = dict_to_config({
         "settings": {
+            "time_range": "5.0",
             "off_min": "999",
             "stopped_min": "999",
             "combined_min": "5",  # Accumulative threshold
@@ -499,6 +503,7 @@ def test_from_settings_stopped_weight_affects_threshold_behavior(mocker):
     # Now test with stopped_weight = 3.0
     settings_high_weight = dict_to_config({
         "settings": {
+            "time_range": "5.0",
             "off_min": "999",
             "stopped_min": "999",
             "combined_min": "5",
@@ -527,6 +532,7 @@ def test_from_settings_combined_min_affects_threshold_behavior(mocker):
     # Test with combined_min = 10 (high threshold)
     settings_high_threshold = dict_to_config({
         "settings": {
+            "time_range": "5.0",
             "off_min": "999",
             "stopped_min": "999",
             "combined_min": "10",  # High accumulative threshold
@@ -554,6 +560,7 @@ def test_from_settings_combined_min_affects_threshold_behavior(mocker):
     # Now test with combined_min = 5 (low threshold)
     settings_low_threshold = dict_to_config({
         "settings": {
+            "time_range": "5.0",
             "off_min": "999",
             "stopped_min": "999",
             "combined_min": "5",  # Low accumulative threshold
@@ -589,6 +596,7 @@ def test_from_settings_complete_integration_with_realistic_scenario(mocker):
     # This means: 1 stopped car = 3 points, 1 off-track = 1 point, need 8 points total
     settings_config_1 = dict_to_config({
         "settings": {
+            "time_range": "5.0",
             "off_min": "999",  # Disable individual thresholds
             "stopped_min": "999",
             "combined_min": "8",
@@ -617,6 +625,7 @@ def test_from_settings_complete_integration_with_realistic_scenario(mocker):
     # UI Configuration: stopped_weight=2, off_weight=2, combined_min=10
     settings_config_2 = dict_to_config({
         "settings": {
+            "time_range": "5.0",
             "off_min": "999",
             "stopped_min": "999",
             "combined_min": "10",  # Higher threshold
@@ -652,6 +661,7 @@ def test_from_settings_complete_integration_with_realistic_scenario(mocker):
     # This requires many more cars to trigger
     settings_config_3 = dict_to_config({
         "settings": {
+            "time_range": "5.0",
             "off_min": "999",
             "stopped_min": "999",
             "combined_min": "15",

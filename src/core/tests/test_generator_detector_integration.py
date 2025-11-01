@@ -37,6 +37,7 @@ def mock_master():
             "stopped": "1",
             "off": "1",
             # ThresholdChecker settings
+            "time_range": "5.0",
             "off_min": "4",
             "stopped_min": "2",
             "combined_min": "10",

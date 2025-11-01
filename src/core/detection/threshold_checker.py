@@ -55,7 +55,7 @@ class ThresholdCheckerSettings:
     @staticmethod
     def from_settings(settings):
         return ThresholdCheckerSettings(
-            time_range=10.0,
+            time_range=float(settings["settings"]["time_range"]),
             accumulative_threshold=float(settings["settings"]["combined_min"]),
             accumulative_weights={
                 DetectorEventTypes.OFF_TRACK: float(settings["settings"]["off_weight"]),
