@@ -1,4 +1,3 @@
-import configparser
 import json
 import logging
 import tkinter as tk
@@ -7,6 +6,7 @@ from tkinter import ttk, filedialog, messagebox
 from core import generator
 from core import tooltip
 from core.generator import GeneratorState
+from core.settings import Settings
 from util.state_utils import generator_state_messages, is_stopped_state
 from util.dev_utils import copy_sdk_data_to_clipboard, send_test_commands
 
@@ -29,8 +29,7 @@ class App(tk.Tk):
 
         # Load settings from config file
         logger.info("Loading settings from settings.ini")
-        self.settings = configparser.ConfigParser()
-        self.settings.read("settings.ini")
+        self.settings = Settings()
 
         # Set window properties
         self.title("iRacing Safety Car Generator")
@@ -1158,85 +1157,54 @@ class App(tk.Tk):
 
         # Fill in the widgets with the settings from the config file
         logger.debug("Filling in widgets with settings from config file")
-        self.var_random.set(self.settings["settings"].getboolean("random"))
+        self.var_random.set(self.settings.random_detector_enabled)
         self.spn_random_max_occ.delete(0, "end")
-        self.spn_random_max_occ.insert(
-            0,
-            self.settings["settings"]["random_max_occ"]
-        )
+        self.spn_random_max_occ.insert(0, str(self.settings.random_max_safety_cars))
         self.ent_random_prob.delete(0, "end")
-        self.ent_random_prob.insert(0, self.settings["settings"]["random_prob"])
+        self.ent_random_prob.insert(0, str(self.settings.random_probability))
         self.ent_random_message.delete(0, "end")
-        self.ent_random_message.insert(
-            0,
-            self.settings["settings"]["random_message"]
-        )
-        self.var_stopped.set(self.settings["settings"].getboolean("stopped"))
+        self.ent_random_message.insert(0, self.settings.random_message)
+        self.var_stopped.set(self.settings.stopped_detector_enabled)
         self.spn_stopped_min.delete(0, "end")
-        self.spn_stopped_min.insert(
-            0,
-            self.settings["settings"]["stopped_min"]
-        )
+        self.spn_stopped_min.insert(0, str(self.settings.stopped_cars_threshold))
         self.ent_stopped_message.delete(0, "end")
-        self.ent_stopped_message.insert(
-            0,
-            self.settings["settings"]["stopped_message"]
-        )
-        self.var_off.set(self.settings["settings"].getboolean("off"))
+        self.ent_stopped_message.insert(0, self.settings.stopped_message)
+        self.var_off.set(self.settings.off_track_detector_enabled)
         self.spn_off_min.delete(0, "end")
-        self.spn_off_min.insert(0, self.settings["settings"]["off_min"])
+        self.spn_off_min.insert(0, str(self.settings.off_track_cars_threshold))
         self.ent_off_message.delete(0, "end")
-        self.ent_off_message.insert(0, self.settings["settings"]["off_message"])
+        self.ent_off_message.insert(0, self.settings.off_track_message)
         self.spn_time_range.delete(0, "end")
-        self.spn_time_range.insert(0, self.settings["settings"]["time_range"])
+        self.spn_time_range.insert(0, str(self.settings.event_time_window_seconds))
         self.spn_start_multi_time.delete(0, "end")
-        self.spn_start_multi_time.insert(0, self.settings["settings"]["start_multi_time"])
+        self.spn_start_multi_time.insert(0, str(self.settings.race_start_threshold_multiplier_time_seconds))
         self.spn_start_multiplier.delete(0, "end")
-        self.spn_start_multiplier.insert(0, self.settings["settings"]["start_multi_val"])
+        self.spn_start_multiplier.insert(0, str(self.settings.race_start_threshold_multiplier))
         self.ent_max_safety_cars.delete(0, "end")
-        self.ent_max_safety_cars.insert(
-            0,
-            self.settings["settings"]["max_safety_cars"]
-        )
+        self.ent_max_safety_cars.insert(0, str(self.settings.max_safety_cars))
         self.ent_start_minute.delete(0, "end")
-        self.ent_start_minute.insert(
-            0,
-            self.settings["settings"]["start_minute"]
-        )
+        self.ent_start_minute.insert(0, str(self.settings.detection_start_minute))
         self.ent_end_minute.delete(0, "end")
-        self.ent_end_minute.insert(0, self.settings["settings"]["end_minute"])
+        self.ent_end_minute.insert(0, str(self.settings.detection_end_minute))
         self.ent_min_time_between.delete(0, "end")
-        self.ent_min_time_between.insert(
-            0,
-            self.settings["settings"]["min_time_between"]
-        )
+        self.ent_min_time_between.insert(0, str(self.settings.min_time_between_safety_cars_minutes))
         self.ent_laps_under_sc.delete(0, "end")
-        self.ent_laps_under_sc.insert(
-            0,
-            self.settings["settings"]["laps_under_sc"]
-        )
-        self.var_wave_arounds.set(
-            self.settings["settings"].getboolean("wave_arounds")
-        )
+        self.ent_laps_under_sc.insert(0, str(self.settings.laps_under_safety_car))
+        self.var_wave_arounds.set(self.settings.wave_arounds_enabled)
         self.ent_laps_before_wave_arounds.delete(0, "end")
-        self.ent_laps_before_wave_arounds.insert(
-            0,
-            self.settings["settings"]["laps_before_wave_arounds"]
-        )
-        self.var_proximity_yellows.set(
-            self.settings["settings"].getboolean("proximity_yellows")
-        )
+        self.ent_laps_before_wave_arounds.insert(0, str(self.settings.laps_before_wave_arounds))
+        self.var_proximity_yellows.set(self.settings.proximity_filter_enabled)
         self.spn_proximity_dist.delete(0, "end")
-        self.spn_proximity_dist.insert(0, self.settings["settings"]["proximity_yellows_distance"])
-        self.var_combined.set(self.settings["settings"].getboolean("combined"))
+        self.spn_proximity_dist.insert(0, str(self.settings.proximity_filter_distance_percentage))
+        self.var_combined.set(self.settings.accumulative_detector_enabled)
         self.spn_combined_min.delete(0, "end")
-        self.spn_combined_min.insert(0, self.settings["settings"]["combined_min"])
-        self.spn_stopped_weight.delete(0, "end")
-        self.spn_stopped_weight.insert(0, self.settings["settings"]["stopped_weight"])
+        self.spn_combined_min.insert(0, str(self.settings.accumulative_threshold))
         self.spn_off_weight.delete(0, "end")
-        self.spn_off_weight.insert(0, self.settings["settings"]["off_weight"])
-        self.ent_combined_message.delete(0,"end")
-        self.ent_combined_message.insert(0, self.settings["settings"]["combined_message"])
+        self.spn_off_weight.insert(0, str(self.settings.off_track_weight))
+        self.spn_stopped_weight.delete(0, "end")
+        self.spn_stopped_weight.insert(0, str(self.settings.stopped_weight))
+        self.ent_combined_message.delete(0, "end")
+        self.ent_combined_message.insert(0, self.settings.accumulative_message)
 
     def _save_and_run(self):
         """Save the settings to the config file and run the generator.
@@ -1304,38 +1272,36 @@ class App(tk.Tk):
         combined_message = self.ent_combined_message.get()
 
         # Save the settings to the config file
-        self.settings["settings"]["random"] = str(random)
-        self.settings["settings"]["random_max_occ"] = str(random_max_occ)
-        self.settings["settings"]["random_prob"] = str(random_prob)
-        self.settings["settings"]["random_message"] = str(random_message)
-        self.settings["settings"]["stopped"] = str(stopped)
-        self.settings["settings"]["stopped_min"] = str(stopped_min)
-        self.settings["settings"]["stopped_message"] = str(stopped_message)
-        self.settings["settings"]["time_range"] = str(time_range)
-        self.settings["settings"]["start_multi_val"] = str(start_multi_val)
-        self.settings["settings"]["start_multi_time"] = str(start_multi_time)
-        self.settings["settings"]["off"] = str(off)
-        self.settings["settings"]["off_min"] = str(off_min)
-        self.settings["settings"]["off_message"] = str(off_message)
-        self.settings["settings"]["max_safety_cars"] = str(max_safety_cars)
-        self.settings["settings"]["start_minute"] = str(start_minute)
-        self.settings["settings"]["end_minute"] = str(end_minute)
-        self.settings["settings"]["min_time_between"] = str(min_time_between)
-        self.settings["settings"]["laps_under_sc"] = str(laps_under_sc)
-        self.settings["settings"]["wave_arounds"] = str(wave_arounds)
-        self.settings["settings"]["laps_before_wave_arounds"] = str(
-            laps_before_wave_arounds
-        )
-        self.settings["settings"]["proximity_yellows"] = str(proximity_yellows)
-        self.settings["settings"]["proximity_yellows_distance"] = str(proximity_yellows_distance)
-        self.settings["settings"]["combined"] = str(combined)
-        self.settings["settings"]["combined_min"] = str(combined_min)
-        self.settings["settings"]["stopped_weight"] = str(stopped_weight)
-        self.settings["settings"]["off_weight"] = str(off_weight)
-        self.settings["settings"]["combined_message"] = str(combined_message)
+        # IntVar.get() returns int (0 or 1), bool() converts correctly
+        self.settings.random_detector_enabled = bool(random)
+        self.settings.random_max_safety_cars = int(random_max_occ)
+        self.settings.random_probability = float(random_prob)
+        self.settings.random_message = str(random_message)
+        self.settings.stopped_detector_enabled = bool(stopped)
+        self.settings.stopped_cars_threshold = int(stopped_min)
+        self.settings.stopped_message = str(stopped_message)
+        self.settings.event_time_window_seconds = float(time_range)
+        self.settings.race_start_threshold_multiplier = float(start_multi_val)
+        self.settings.race_start_threshold_multiplier_time_seconds = float(start_multi_time)
+        self.settings.off_track_detector_enabled = bool(off)
+        self.settings.off_track_cars_threshold = int(off_min)
+        self.settings.off_track_message = str(off_message)
+        self.settings.max_safety_cars = int(max_safety_cars)
+        self.settings.detection_start_minute = float(start_minute)
+        self.settings.detection_end_minute = float(end_minute)
+        self.settings.min_time_between_safety_cars_minutes = float(min_time_between)
+        self.settings.laps_under_safety_car = int(laps_under_sc)
+        self.settings.wave_arounds_enabled = bool(wave_arounds)
+        self.settings.laps_before_wave_arounds = int(laps_before_wave_arounds)
+        self.settings.proximity_filter_enabled = bool(proximity_yellows)
+        self.settings.proximity_filter_distance_percentage = float(proximity_yellows_distance)
+        self.settings.accumulative_threshold = float(combined_min)
+        self.settings.stopped_weight = float(stopped_weight)
+        self.settings.off_track_weight = float(off_weight)
+        self.settings.accumulative_detector_enabled = bool(combined)
+        self.settings.accumulative_message = str(combined_message)
 
-        with open("settings.ini", "w") as configfile:
-            self.settings.write(configfile)
+        self.settings.save()
 
     def set_message(self, message):
         """Set the status label to a message.

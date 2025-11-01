@@ -143,20 +143,21 @@ def test_cleanup(threshold_checker, mocker):
     assert not threshold_checker.threshold_met() # now there's only one off track in last second
     
 def test_threshold_checker_settings_from_settings():
-    settings = dict_to_config({
-        "settings": {
-            "time_range": "5.0",
-            "off_min": "5",
-            "stopped_min": "3",
-            "combined_min": "10",
-            "off_weight": "1.0",
-            "stopped_weight": "2.0",
-            "proximity_yellows": "0",
-            "proximity_yellows_distance": "0.05",
-            "start_multi_val": "1.0",
-            "start_multi_time": "300.0",
-        }
-    })
+    # Mock settings object with the typed wrapper interface
+    class MockSettings:
+        def __init__(self):
+            self.event_time_window_seconds = 5.0
+            self.off_track_cars_threshold = 5
+            self.stopped_cars_threshold = 3
+            self.accumulative_threshold = 10
+            self.off_track_weight = 1.0
+            self.stopped_weight = 2.0
+            self.proximity_filter_enabled = False
+            self.proximity_filter_distance_percentage = 0.05
+            self.race_start_threshold_multiplier = 1.0
+            self.race_start_threshold_multiplier_time_seconds = 300.0
+
+    settings = MockSettings()
     threshold_checker_settings = ThresholdCheckerSettings.from_settings(settings)
     assert threshold_checker_settings.time_range == 5.0
     assert threshold_checker_settings.event_type_threshold[OFF_TRACK] == 5
@@ -422,16 +423,16 @@ def test_from_settings_off_weight_affects_threshold_behavior(mocker):
     # Test with off_weight = 1.0
     settings_low_weight = dict_to_config({
         "settings": {
-            "time_range": "5.0",
-            "off_min": "999",  # High individual threshold
-            "stopped_min": "999",
-            "combined_min": "3",  # Low accumulative threshold
-            "off_weight": "1.0",  # Low weight
+            "event_time_window_seconds": "5.0",
+            "off_track_cars_threshold": "999",  # High individual threshold
+            "stopped_cars_threshold": "999",
+            "accumulative_threshold": "3",  # Low accumulative threshold
+            "off_track_weight": "1.0",  # Low weight
             "stopped_weight": "2.0",
-            "proximity_yellows": "0",
-            "proximity_yellows_distance": "0.05",
-            "start_multi_val": "1.0",
-            "start_multi_time": "300.0",
+            "proximity_filter_enabled": "0",
+            "proximity_filter_distance_percentage": "0.05",
+            "race_start_threshold_multiplier": "1.0",
+            "race_start_threshold_multiplier_time_seconds": "300.0",
         }
     })
 
@@ -448,16 +449,16 @@ def test_from_settings_off_weight_affects_threshold_behavior(mocker):
     # Now test with off_weight = 2.0
     settings_high_weight = dict_to_config({
         "settings": {
-            "time_range": "5.0",
-            "off_min": "999",
-            "stopped_min": "999",
-            "combined_min": "3",
-            "off_weight": "2.0",  # Higher weight
+            "event_time_window_seconds": "5.0",
+            "off_track_cars_threshold": "999",
+            "stopped_cars_threshold": "999",
+            "accumulative_threshold": "3",
+            "off_track_weight": "2.0",  # Higher weight
             "stopped_weight": "2.0",
-            "proximity_yellows": "0",
-            "proximity_yellows_distance": "0.05",
-            "start_multi_val": "1.0",
-            "start_multi_time": "300.0",
+            "proximity_filter_enabled": "0",
+            "proximity_filter_distance_percentage": "0.05",
+            "race_start_threshold_multiplier": "1.0",
+            "race_start_threshold_multiplier_time_seconds": "300.0",
         }
     })
 
@@ -477,16 +478,16 @@ def test_from_settings_stopped_weight_affects_threshold_behavior(mocker):
     # Test with stopped_weight = 1.0
     settings_low_weight = dict_to_config({
         "settings": {
-            "time_range": "5.0",
-            "off_min": "999",
-            "stopped_min": "999",
-            "combined_min": "5",  # Accumulative threshold
-            "off_weight": "1.0",
+            "event_time_window_seconds": "5.0",
+            "off_track_cars_threshold": "999",
+            "stopped_cars_threshold": "999",
+            "accumulative_threshold": "5",  # Accumulative threshold
+            "off_track_weight": "1.0",
             "stopped_weight": "1.0",  # Low weight for stopped
-            "proximity_yellows": "0",
-            "proximity_yellows_distance": "0.05",
-            "start_multi_val": "1.0",
-            "start_multi_time": "300.0",
+            "proximity_filter_enabled": "0",
+            "proximity_filter_distance_percentage": "0.05",
+            "race_start_threshold_multiplier": "1.0",
+            "race_start_threshold_multiplier_time_seconds": "300.0",
         }
     })
 
@@ -503,16 +504,16 @@ def test_from_settings_stopped_weight_affects_threshold_behavior(mocker):
     # Now test with stopped_weight = 3.0
     settings_high_weight = dict_to_config({
         "settings": {
-            "time_range": "5.0",
-            "off_min": "999",
-            "stopped_min": "999",
-            "combined_min": "5",
-            "off_weight": "1.0",
+            "event_time_window_seconds": "5.0",
+            "off_track_cars_threshold": "999",
+            "stopped_cars_threshold": "999",
+            "accumulative_threshold": "5",
+            "off_track_weight": "1.0",
             "stopped_weight": "3.0",  # Higher weight for stopped
-            "proximity_yellows": "0",
-            "proximity_yellows_distance": "0.05",
-            "start_multi_val": "1.0",
-            "start_multi_time": "300.0",
+            "proximity_filter_enabled": "0",
+            "proximity_filter_distance_percentage": "0.05",
+            "race_start_threshold_multiplier": "1.0",
+            "race_start_threshold_multiplier_time_seconds": "300.0",
         }
     })
 
@@ -532,16 +533,16 @@ def test_from_settings_combined_min_affects_threshold_behavior(mocker):
     # Test with combined_min = 10 (high threshold)
     settings_high_threshold = dict_to_config({
         "settings": {
-            "time_range": "5.0",
-            "off_min": "999",
-            "stopped_min": "999",
-            "combined_min": "10",  # High accumulative threshold
-            "off_weight": "2.0",
+            "event_time_window_seconds": "5.0",
+            "off_track_cars_threshold": "999",
+            "stopped_cars_threshold": "999",
+            "accumulative_threshold": "10",  # High accumulative threshold
+            "off_track_weight": "2.0",
             "stopped_weight": "2.0",
-            "proximity_yellows": "0",
-            "proximity_yellows_distance": "0.05",
-            "start_multi_val": "1.0",
-            "start_multi_time": "300.0",
+            "proximity_filter_enabled": "0",
+            "proximity_filter_distance_percentage": "0.05",
+            "race_start_threshold_multiplier": "1.0",
+            "race_start_threshold_multiplier_time_seconds": "300.0",
         }
     })
 
@@ -560,16 +561,16 @@ def test_from_settings_combined_min_affects_threshold_behavior(mocker):
     # Now test with combined_min = 5 (low threshold)
     settings_low_threshold = dict_to_config({
         "settings": {
-            "time_range": "5.0",
-            "off_min": "999",
-            "stopped_min": "999",
-            "combined_min": "5",  # Low accumulative threshold
-            "off_weight": "2.0",
+            "event_time_window_seconds": "5.0",
+            "off_track_cars_threshold": "999",
+            "stopped_cars_threshold": "999",
+            "accumulative_threshold": "5",  # Low accumulative threshold
+            "off_track_weight": "2.0",
             "stopped_weight": "2.0",
-            "proximity_yellows": "0",
-            "proximity_yellows_distance": "0.05",
-            "start_multi_val": "1.0",
-            "start_multi_time": "300.0",
+            "proximity_filter_enabled": "0",
+            "proximity_filter_distance_percentage": "0.05",
+            "race_start_threshold_multiplier": "1.0",
+            "race_start_threshold_multiplier_time_seconds": "300.0",
         }
     })
 
@@ -596,16 +597,16 @@ def test_from_settings_complete_integration_with_realistic_scenario(mocker):
     # This means: 1 stopped car = 3 points, 1 off-track = 1 point, need 8 points total
     settings_config_1 = dict_to_config({
         "settings": {
-            "time_range": "5.0",
-            "off_min": "999",  # Disable individual thresholds
-            "stopped_min": "999",
-            "combined_min": "8",
-            "off_weight": "1.0",
+            "event_time_window_seconds": "5.0",
+            "off_track_cars_threshold": "999",  # Disable individual thresholds
+            "stopped_cars_threshold": "999",
+            "accumulative_threshold": "8",
+            "off_track_weight": "1.0",
             "stopped_weight": "3.0",  # Stopped cars weighted 3x more
-            "proximity_yellows": "0",
-            "proximity_yellows_distance": "0.05",
-            "start_multi_val": "1.0",
-            "start_multi_time": "300.0",
+            "proximity_filter_enabled": "0",
+            "proximity_filter_distance_percentage": "0.05",
+            "race_start_threshold_multiplier": "1.0",
+            "race_start_threshold_multiplier_time_seconds": "300.0",
         }
     })
 
@@ -625,16 +626,16 @@ def test_from_settings_complete_integration_with_realistic_scenario(mocker):
     # UI Configuration: stopped_weight=2, off_weight=2, combined_min=10
     settings_config_2 = dict_to_config({
         "settings": {
-            "time_range": "5.0",
-            "off_min": "999",
-            "stopped_min": "999",
-            "combined_min": "10",  # Higher threshold
-            "off_weight": "2.0",  # Equal weights
+            "event_time_window_seconds": "5.0",
+            "off_track_cars_threshold": "999",
+            "stopped_cars_threshold": "999",
+            "accumulative_threshold": "10",  # Higher threshold
+            "off_track_weight": "2.0",  # Equal weights
             "stopped_weight": "2.0",
-            "proximity_yellows": "0",
-            "proximity_yellows_distance": "0.05",
-            "start_multi_val": "1.0",
-            "start_multi_time": "300.0",
+            "proximity_filter_enabled": "0",
+            "proximity_filter_distance_percentage": "0.05",
+            "race_start_threshold_multiplier": "1.0",
+            "race_start_threshold_multiplier_time_seconds": "300.0",
         }
     })
 
@@ -661,16 +662,16 @@ def test_from_settings_complete_integration_with_realistic_scenario(mocker):
     # This requires many more cars to trigger
     settings_config_3 = dict_to_config({
         "settings": {
-            "time_range": "5.0",
-            "off_min": "999",
-            "stopped_min": "999",
-            "combined_min": "15",
-            "off_weight": "0.5",
+            "event_time_window_seconds": "5.0",
+            "off_track_cars_threshold": "999",
+            "stopped_cars_threshold": "999",
+            "accumulative_threshold": "15",
+            "off_track_weight": "0.5",
             "stopped_weight": "0.5",
-            "proximity_yellows": "0",
-            "proximity_yellows_distance": "0.05",
-            "start_multi_val": "1.0",
-            "start_multi_time": "300.0",
+            "proximity_filter_enabled": "0",
+            "proximity_filter_distance_percentage": "0.05",
+            "race_start_threshold_multiplier": "1.0",
+            "race_start_threshold_multiplier_time_seconds": "300.0",
         }
     })
 

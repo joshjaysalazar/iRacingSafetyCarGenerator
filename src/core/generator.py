@@ -158,10 +158,10 @@ class Generator:
             logger.debug("Starting safety car loop")
             
             # Get relevant settings from the settings file
-            start_minute = float(self.master.settings["settings"]["start_minute"])
-            end_minute = float(self.master.settings["settings"]["end_minute"])
-            max_events = int(self.master.settings["settings"]["max_safety_cars"])
-            min_time = float(self.master.settings["settings"]["min_time_between"])
+            start_minute = self.master.settings.detection_start_minute
+            end_minute = self.master.settings.detection_end_minute
+            max_events = self.master.settings.max_safety_cars
+            min_time = self.master.settings.min_time_between_safety_cars_minutes
 
             # Adjust start minute if < 3s to avoid triggering on standing start
             if start_minute < 0.05:
@@ -258,7 +258,7 @@ class Generator:
         """
         # Get relevant settings from the settings file
         laps_under_sc = int(
-            self.master.settings["settings"]["laps_under_sc"]
+            self.master.settings.laps_under_safety_car
         )
 
         # If laps under safety car is 0, return
@@ -304,13 +304,11 @@ class Generator:
             True if wave arounds are done, False otherwise
         """
         # Get relevant settings from the settings file
-        wave_arounds = self.master.settings["settings"]["wave_arounds"]
-        laps_before = int(
-            self.master.settings["settings"]["laps_before_wave_arounds"]
-        )
+        wave_arounds = self.master.settings.wave_arounds_enabled
+        laps_before = self.master.settings.laps_before_wave_arounds
 
         # If immediate waveby is disabled, return True (no wave arounds)
-        if wave_arounds == "0":
+        if not wave_arounds:
             logger.debug("Wave arounds disabled, skipping wave arounds")
             return True
         

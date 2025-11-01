@@ -31,28 +31,28 @@ class BundledDetectedEvents:
 @dataclass(frozen=True)
 class DetectorSettings:
     # RandomDetector settings
-    random_enabled: bool = False
-    random_chance: float = 0.1
+    random_detector_enabled: bool = False
+    random_probability: float = 0.1
     random_start_minute: float = 3
     random_end_minute: float = 30
-    random_max_occ: int = 1
+    random_max_safety_cars: int = 1
     
     # StoppedDetector settings
-    stopped_enabled: bool = True
+    stopped_detector_enabled: bool = True
     
     # OffTrackDetector settings
-    off_track_enabled: bool = True
+    off_track_detector_enabled: bool = True
     
     @staticmethod
     def from_settings(settings):
         return DetectorSettings(
-            random_enabled=settings["settings"]["random"] == "1",
-            random_chance=float(settings["settings"]["random_prob"]),
-            random_start_minute=float(settings["settings"]["start_minute"]),
-            random_end_minute=float(settings["settings"]["end_minute"]),
-            random_max_occ=int(settings["settings"]["random_max_occ"]),
-            stopped_enabled=settings["settings"]["stopped"] == "1",
-            off_track_enabled=settings["settings"]["off"] == "1",
+            random_detector_enabled=settings.random_detector_enabled,
+            random_probability=settings.random_probability,
+            random_start_minute=settings.detection_start_minute,
+            random_end_minute=settings.detection_end_minute,
+            random_max_safety_cars=settings.random_max_safety_cars,
+            stopped_detector_enabled=settings.stopped_detector_enabled,
+            off_track_detector_enabled=settings.off_track_detector_enabled,
         )
 
     
@@ -79,17 +79,17 @@ class Detector:
             Detector: An instance of Detector with the enabled detectors based on settings.
         """
         detectors = {}
-        if settings.random_enabled:
+        if settings.random_detector_enabled:
             detectors[DetectorEventTypes.RANDOM] = RandomDetector(
-                chance=settings.random_chance,
+                chance=settings.random_probability,
                 start_minute=settings.random_start_minute,
                 end_minute=settings.random_end_minute,
-                max_occurrences=settings.random_max_occ
+                max_occurrences=settings.random_max_safety_cars
             )
-        if settings.stopped_enabled:
+        if settings.stopped_detector_enabled:
             detectors[DetectorEventTypes.STOPPED] = StoppedDetector(drivers)
 
-        if settings.off_track_enabled:
+        if settings.off_track_detector_enabled:
             detectors[DetectorEventTypes.OFF_TRACK] = OffTrackDetector(drivers)
         
         return Detector(detectors)

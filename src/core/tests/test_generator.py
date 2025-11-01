@@ -13,37 +13,30 @@ def generator():
     mock_arguments = Mock()
     mock_arguments.disable_window_interactions = True
     mock_master = Mock()
-    mock_master.settings = {
-        "settings": {
-            # Multiplier dependencies
-            "start_multi_val": "1.5",
-            "start_multi_time": "300",
-            # Proximity checker dependencies
-            "proximity_yellows": "0",
-            "proximity_yellows_distance": "0.05",
-            # threshold checker dependencies
-            "start_minute": "0",
-            "end_minute": "999",
-            "max_safety_cars": "999",
-            "min_time_between": "0",
-            "off_min": "4",
-            "stopped_min": "2",
-            # Detector dependencies
-            "random": "0",
-            "random_prob": "0.5",
-            "random_max_occ": "1",
-            "stopped": "1",
-            "off": "1",
-            # Combined threshold
-            "stopped_message": "Cars stopped on track.",
-            "stopped_weight": "1",
-            "off_message": "Multiple cars off track.",
-            "off_weight": "1",
-            "combined": "1",
-            "combined_min": "7",
-            "combined_message": "Cars stopped and off track."
-        }
-    }
+
+    # Create a mock settings object that behaves like our Settings wrapper
+    mock_settings = Mock()
+    # Set default values for all properties used in tests
+    mock_settings.race_start_threshold_multiplier = 1.5
+    mock_settings.race_start_threshold_multiplier_time_seconds = 300.0
+    mock_settings.proximity_filter_enabled = False
+    mock_settings.proximity_filter_distance_percentage = 0.05
+    mock_settings.detection_start_minute = 0.0
+    mock_settings.detection_end_minute = 999.0
+    mock_settings.max_safety_cars = 999
+    mock_settings.min_time_between_safety_cars_minutes = 0.0
+    mock_settings.off_track_cars_threshold = 4
+    mock_settings.stopped_cars_threshold = 2
+    mock_settings.event_time_window_seconds = 5.0
+    mock_settings.accumulative_threshold = 7.0
+    mock_settings.stopped_weight = 1.0
+    mock_settings.off_track_weight = 1.0
+    mock_settings.random_detector_enabled = False
+    mock_settings.random_probability = 0.5
+    mock_settings.random_max_safety_cars = 1
+    mock_settings.stopped_detector_enabled = True
+    mock_settings.off_track_detector_enabled = True
+    mock_master.settings = mock_settings
     gen = Generator(arguments=mock_arguments, master=mock_master)
     gen.start_time = 0  # Simulate the start time as 0 for testing
 
