@@ -2,6 +2,7 @@
 
 This program is designed to trigger safety car events in iRacing with more control than the built-in automatic yellows in iRacing, with adjustable settings.
 
+
 ![Screenshot of the main window](screenshot.png)
 
 ## Usage
@@ -169,6 +170,12 @@ We account for:
 * For each driver, we check their track location which indicates whether they're off track.
 * We account for any negative lap progress, which may indicate an SDK glitch(?).
 * When the threshold of off-track cars is met, we throw a Safety Car event.
+
+#### Combined events
+
+* The number of stopped cars and off track cars are passed in by the return from the above event functions
+* Each value is multiplied by its respective weight value
+* The values are added, and if the combined threshold is met, we throw a Safety Car event.
 
 #### Safety Car procedure
 

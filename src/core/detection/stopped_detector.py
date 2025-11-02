@@ -48,6 +48,10 @@ class StoppedDetector:
             
             current_position = current["laps_completed"] + current["lap_distance"]
             previous_position = previous["laps_completed"] + previous["lap_distance"]
+            
+            if current['driver_idx'] == 0:
+                logger.debug(f"Driver {current['driver_idx']} positions: current={current_position:.10f}, previous={previous_position:.10f}")
+            
             if current_position <= previous_position:
                 stopped_cars.append(current)
                 logger.debug(f"Driver {current['driver_idx']} appears stopped: current={current_position:.3f}, previous={previous_position:.3f}")

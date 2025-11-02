@@ -55,17 +55,23 @@ class ThresholdCheckerSettings:
     @staticmethod
     def from_settings(settings):
         return ThresholdCheckerSettings(
-            time_range=10.0,
-            event_type_threshold={
-                DetectorEventTypes.OFF_TRACK: float(settings["settings"]["off_min"]),
-                DetectorEventTypes.RANDOM: 1.0, # Random does not have a threshold, it is just a flag
-                DetectorEventTypes.STOPPED: float(settings["settings"]["stopped_min"]),
+            time_range=settings.event_time_window_seconds,
+            accumulative_threshold=settings.accumulative_threshold,
+            accumulative_weights={
+                DetectorEventTypes.OFF_TRACK: settings.off_track_weight,
+                DetectorEventTypes.RANDOM: 0.0, # Random events do not contribute to the accumulative threshold
+                DetectorEventTypes.STOPPED: settings.stopped_weight,
             },
-            proximity_yellows_enabled=settings["settings"].getboolean("proximity_yellows"),
-            proximity_yellows_distance=float(settings["settings"]["proximity_yellows_distance"]),
+            event_type_threshold={
+                DetectorEventTypes.OFF_TRACK: settings.off_track_cars_threshold,
+                DetectorEventTypes.RANDOM: 1.0, # Random does not have a threshold, it is just a flag
+                DetectorEventTypes.STOPPED: settings.stopped_cars_threshold,
+            },
+            proximity_yellows_enabled=settings.proximity_filter_enabled,
+            proximity_yellows_distance=settings.proximity_filter_distance_percentage,
             dynamic_threshold_enabled=True,
-            dynamic_threshold_multiplier=float(settings["settings"]["start_multi_val"]),
-            dynamic_threshold_time=float(settings["settings"]["start_multi_time"]),
+            dynamic_threshold_multiplier=settings.race_start_threshold_multiplier,
+            dynamic_threshold_time=settings.race_start_threshold_multiplier_time_seconds,
         )
 
 class ThresholdChecker:
