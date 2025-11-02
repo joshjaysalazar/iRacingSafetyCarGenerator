@@ -32,7 +32,9 @@ class CommandSender:
         logger.info(f"Sending command: {command}")
 
         self.iracing_window.focus()
+        time.sleep(0.1) # It seems we need a small delay since iRacing's UI update
         self.irsdk.chat_command(1)
+        time.sleep(0.1) # It seems we need a small delay since iRacing's UI update
         self.iracing_window.send_message(f"{command}{{ENTER}}")
         
         if delay > 0:
