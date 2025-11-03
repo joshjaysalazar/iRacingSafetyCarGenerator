@@ -1,9 +1,9 @@
 import pytest
 
 from core.detection.detector_common_types import DetectionResult
-from src.core.detection.detector import DetectorSettings
+from core.detection.detector import DetectorSettings
 from unittest.mock import MagicMock, patch
-from src.core.detection.detector import Detector, DetectorSettings, DetectorEventTypes, BundledDetectedEvents
+from core.detection.detector import Detector, DetectorSettings, DetectorEventTypes, BundledDetectedEvents
 from core.tests.test_utils import dict_to_config
 
 class DummyDetector:
@@ -46,9 +46,9 @@ def test_build_detector_enables_correct_detectors():
         stopped_detector_enabled=True,
         off_track_detector_enabled=False,
     )
-    with patch("src.core.detection.detector.RandomDetector") as mock_random, \
-            patch("src.core.detection.detector.StoppedDetector") as mock_stopped, \
-            patch("src.core.detection.detector.OffTrackDetector") as mock_offtrack:
+    with patch("core.detection.detector.RandomDetector") as mock_random, \
+            patch("core.detection.detector.StoppedDetector") as mock_stopped, \
+            patch("core.detection.detector.OffTrackDetector") as mock_offtrack:
         detector = Detector.build_detector(settings, drivers)
         assert DetectorEventTypes.RANDOM in detector.detectors
         assert DetectorEventTypes.STOPPED in detector.detectors
@@ -70,9 +70,9 @@ def test_build_detector_all_enabled():
         stopped_detector_enabled=True,
         off_track_detector_enabled=True,
     )
-    with patch("src.core.detection.detector.RandomDetector") as mock_random, \
-            patch("src.core.detection.detector.StoppedDetector") as mock_stopped, \
-            patch("src.core.detection.detector.OffTrackDetector") as mock_offtrack:
+    with patch("core.detection.detector.RandomDetector") as mock_random, \
+            patch("core.detection.detector.StoppedDetector") as mock_stopped, \
+            patch("core.detection.detector.OffTrackDetector") as mock_offtrack:
         detector = Detector.build_detector(settings, drivers)
         assert set(detector.detectors.keys()) == {
             DetectorEventTypes.RANDOM,
@@ -90,9 +90,9 @@ def test_build_detector_none_enabled():
         stopped_detector_enabled=False,
         off_track_detector_enabled=False,
     )
-    with patch("src.core.detection.detector.RandomDetector") as mock_random, \
-            patch("src.core.detection.detector.StoppedDetector") as mock_stopped, \
-            patch("src.core.detection.detector.OffTrackDetector") as mock_offtrack:
+    with patch("core.detection.detector.RandomDetector") as mock_random, \
+            patch("core.detection.detector.StoppedDetector") as mock_stopped, \
+            patch("core.detection.detector.OffTrackDetector") as mock_offtrack:
         detector = Detector.build_detector(settings, drivers)
         assert detector.detectors == {}
         mock_random.assert_not_called()
