@@ -80,11 +80,6 @@ class Builder:
                 [sys.executable, "-m", "pip", "install", "-r", str(self.script_dir / "requirements.txt")],
                 check=True
             )
-            # Make sure PyInstaller is installed
-            subprocess.run(
-                [sys.executable, "-m", "pip", "install", "pyinstaller"],
-                check=True
-            )
         except subprocess.CalledProcessError as e:
             print(f"Failed to install dependencies: {e}")
             sys.exit(1)
@@ -107,6 +102,7 @@ class Builder:
             "--log-level=WARN",
             "--noconsole",
             "--onefile",
+            f"--paths={self.src_dir.absolute()}",  # Add src directory to Python path for imports
             "--hidden-import=comtypes.gen.UIAutomationClient",
             "--hidden-import=pywinauto.application",
             f"--name={self.exe_name}",
