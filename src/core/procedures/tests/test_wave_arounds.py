@@ -4,12 +4,35 @@ import pytest
 
 from . import resources
 
+from core.drivers import Driver
 from core.procedures.wave_arounds import (
     WaveAroundType,
     wave_arounds_factory,
     wave_lapped_cars,
     wave_ahead_of_class_lead,
 )
+from irsdk import TrkLoc
+
+def create_driver_from_test_data(idx: int, car_number: str, car_class_id: int,
+                                   total_distance: float, on_pit_road: bool) -> Driver:
+    """Helper to create Driver objects from test data."""
+    laps_completed = int(total_distance)
+    lap_distance = total_distance - laps_completed
+    # laps_started is the lap you're currently on (0-indexed in iRacing)
+    # If you've completed 1 lap and are 80% through lap 2, laps_started = 1
+    laps_started = laps_completed if lap_distance == 0 else laps_completed + 1
+    return {
+        "driver_idx": idx,
+        "car_number": car_number,
+        "car_class_id": car_class_id,
+        "is_pace_car": car_class_id == 11,  # pace car has unique class 11
+        "laps_completed": laps_completed,
+        "laps_started": laps_started,
+        "lap_distance": lap_distance,
+        "total_distance": total_distance,
+        "track_loc": TrkLoc.on_track,
+        "on_pit_road": on_pit_road,
+    }
 
 def test_wave_arounds_factory_valid():
     assert wave_arounds_factory(WaveAroundType.WAVE_LAPPED_CARS) == wave_lapped_cars
@@ -34,33 +57,29 @@ wave_ahead_of_CL   -       -       -       -       -       -       -      -
 """
 @pytest.fixture
 def setup_data():
-    return ([
-        {"CarIdx": 0, "CarClassID": 11, "CarNumber": "0"}, # pace car with a unique class
-        {"CarIdx": 1, "CarClassID": 1, "CarNumber": "1"},
-        {"CarIdx": 2, "CarClassID": 1, "CarNumber": "2"},
-        {"CarIdx": 3, "CarClassID": 1, "CarNumber": "3"},
-        {"CarIdx": 4, "CarClassID": 1, "CarNumber": "4"},
-        {"CarIdx": 5, "CarClassID": 2, "CarNumber": "5"},
-        {"CarIdx": 6, "CarClassID": 2, "CarNumber": "6"},
-        {"CarIdx": 7, "CarClassID": 3, "CarNumber": "7"},
-        {"CarIdx": 8, "CarClassID": 3, "CarNumber": "8"},
-    ],
-    [0.1, 1.9, 1.8, 1.7, 1.6, 1.5, 1.4, 1.3, 1.2], # default order represents "No cars to wave" case
-    [False, False, False, False, False, False, False, False, False], # no cars on pit road
-    0 # pace car index
-    )
+    car_classes = [11, 1, 1, 1, 1, 2, 2, 3, 3]
+    car_numbers = ["0", "1", "2", "3", "4", "5", "6", "7", "8"]
+    car_positions = [0.1, 1.9, 1.8, 1.7, 1.6, 1.5, 1.4, 1.3, 1.2]
+    on_pit_road = [False] * 9
 
-@pytest.mark.skip(reason="Not implemented yet")
+    drivers = [
+        create_driver_from_test_data(i, car_numbers[i], car_classes[i],
+                                       car_positions[i], on_pit_road[i])
+        for i in range(9)
+    ]
+
+    return drivers, 0  # drivers list and pace car index
+
 def test_wave_lapped_cars_no_cars_to_wave(setup_data):
-    drivers, car_positions, on_pit_road, pace_car_idx = setup_data
+    drivers, pace_car_idx = setup_data
     expected = []
-    result = wave_lapped_cars(drivers, car_positions, on_pit_road, pace_car_idx)
+    result = wave_lapped_cars(drivers, pace_car_idx)
     assert result == expected
 
 def test_wave_ahead_of_class_lead_no_cars_to_wave(setup_data):
-    drivers, car_positions, on_pit_road, pace_car_idx = setup_data
+    drivers, pace_car_idx = setup_data
     expected = []
-    result = wave_ahead_of_class_lead(drivers, car_positions, on_pit_road, pace_car_idx)
+    result = wave_ahead_of_class_lead(drivers, pace_car_idx)
     assert result == expected
 
 
@@ -78,32 +97,31 @@ wave_ahead_of_CL   -       -       -       -       -       -       -      -
 """
 @pytest.fixture
 def setup_data_mixed_classes(setup_data):
-    drivers, car_positions, on_pit_road, pace_car_idx = setup_data
-    drivers[2]["CarClassID"] = 2
-    drivers[3]["CarClassID"] = 3
-    drivers[6]["CarClassID"] = 1
-    drivers[7]["CarClassID"] = 2
-    drivers[8]["CarClassID"] = 3
-    return (drivers, car_positions, on_pit_road, pace_car_idx)
+    drivers, pace_car_idx = setup_data
+    drivers[2]["car_class_id"] = 2
+    drivers[3]["car_class_id"] = 3
+    drivers[6]["car_class_id"] = 1
+    drivers[7]["car_class_id"] = 2
+    drivers[8]["car_class_id"] = 3
+    return (drivers, pace_car_idx)
 
-@pytest.mark.skip(reason="Not implemented yet")
-def test_wave_lapped_cars_no_cars_to_wave(setup_data_mixed_classes):
-    drivers, car_positions, on_pit_road, pace_car_idx = setup_data_mixed_classes
+def test_wave_lapped_cars_no_cars_to_wave_mixed(setup_data_mixed_classes):
+    drivers, pace_car_idx = setup_data_mixed_classes
     expected = []
-    result = wave_lapped_cars(drivers, car_positions, on_pit_road, pace_car_idx)
+    result = wave_lapped_cars(drivers, pace_car_idx)
     assert result == expected
 
-def test_wave_ahead_of_class_lead_no_cars_to_wave(setup_data_mixed_classes):
-    drivers, car_positions, on_pit_road, pace_car_idx = setup_data_mixed_classes
+def test_wave_ahead_of_class_lead_no_cars_to_wave_mixed(setup_data_mixed_classes):
+    drivers, pace_car_idx = setup_data_mixed_classes
     expected = []
-    result = wave_ahead_of_class_lead(drivers, car_positions, on_pit_road, pace_car_idx)
+    result = wave_ahead_of_class_lead(drivers, pace_car_idx)
     assert result == expected
 
 
 """
 ## Two leaders lap ahead - B got lapped, A is ahead of lead ##
 
-             S/F   v                       v       
+             S/F   v                       v
 <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
     PC(0.1)   |    B(2.9)  A(1.8)  A(1.7)  A(2.6)  B(1.5)  B(1.4)  C(1.3) C(1.2)
 <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
@@ -114,30 +132,35 @@ wave_ahead_of_CL   -       X       X       -       -       -       -      -
 """
 @pytest.fixture
 def setup_data_two_lap_ahead(setup_data):
-    drivers, car_positions, on_pit_road, pace_car_idx = setup_data
-    drivers[1]["CarClassID"] = 2
-    car_positions[1] = 2.9
-    car_positions[4] = 2.6
-    return (drivers, car_positions, on_pit_road, pace_car_idx)
+    drivers, pace_car_idx = setup_data
+    drivers[1]["car_class_id"] = 2
+    drivers[1]["total_distance"] = 2.9
+    drivers[1]["laps_completed"] = 2
+    drivers[1]["laps_started"] = 3  # Currently on lap 3
+    drivers[1]["lap_distance"] = 0.9
+    drivers[4]["total_distance"] = 2.6
+    drivers[4]["laps_completed"] = 2
+    drivers[4]["laps_started"] = 3  # Currently on lap 3
+    drivers[4]["lap_distance"] = 0.6
+    return (drivers, pace_car_idx)
 
-@pytest.mark.skip(reason="Not implemented yet")
 def test_wave_lapped_cars_two_lapped(setup_data_two_lap_ahead):
-    drivers, car_positions, on_pit_road, pace_car_idx = setup_data_two_lap_ahead
+    drivers, pace_car_idx = setup_data_two_lap_ahead
     expected = ['!w 5', '!w 6']
-    result = wave_lapped_cars(drivers, car_positions, on_pit_road, pace_car_idx)
+    result = wave_lapped_cars(drivers, pace_car_idx)
     assert result == expected
 
 def test_wave_ahead_of_class_lead_all_of_A_but_lead(setup_data_two_lap_ahead):
-    drivers, car_positions, on_pit_road, pace_car_idx = setup_data_two_lap_ahead
+    drivers, pace_car_idx = setup_data_two_lap_ahead
     expected = ['!w 2', '!w 3']
-    result = wave_ahead_of_class_lead(drivers, car_positions, on_pit_road, pace_car_idx)
+    result = wave_ahead_of_class_lead(drivers, pace_car_idx)
     assert result == expected
 
 
 """
 ## Two leaders lap ahead - B got lapped, A is split by lead ##
 
-             S/F   v               v               
+             S/F   v               v
 <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
     PC(0.1)   |    B(2.9)  A(1.8)  A(2.7)  A(1.6)  B(1.5)  B(1.4)  C(1.3) C(1.2)
 <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
@@ -148,23 +171,28 @@ wave_ahead_of_CL   -       X       -       -       -       -       -      -
 """
 @pytest.fixture
 def setup_data_class_a_split(setup_data):
-    drivers, car_positions, on_pit_road, pace_car_idx = setup_data
-    drivers[1]["CarClassID"] = 2
-    car_positions[1] = 2.9
-    car_positions[3] = 2.7
-    return (drivers, car_positions, on_pit_road, pace_car_idx)
+    drivers, pace_car_idx = setup_data
+    drivers[1]["car_class_id"] = 2
+    drivers[1]["total_distance"] = 2.9
+    drivers[1]["laps_completed"] = 2
+    drivers[1]["laps_started"] = 3  # Currently on lap 3
+    drivers[1]["lap_distance"] = 0.9
+    drivers[3]["total_distance"] = 2.7
+    drivers[3]["laps_completed"] = 2
+    drivers[3]["laps_started"] = 3  # Currently on lap 3
+    drivers[3]["lap_distance"] = 0.7
+    return (drivers, pace_car_idx)
 
-@pytest.mark.skip(reason="Not implemented yet")
 def test_wave_lapped_cars_one_lapped(setup_data_class_a_split):
-    drivers, car_positions, on_pit_road, pace_car_idx = setup_data_class_a_split
+    drivers, pace_car_idx = setup_data_class_a_split
     expected = ["!w 4", "!w 5", "!w 6"]
-    result = wave_lapped_cars(drivers, car_positions, on_pit_road, pace_car_idx)
+    result = wave_lapped_cars(drivers, pace_car_idx)
     assert result == expected
 
 def test_wave_ahead_of_class_lead_two_ahead(setup_data_class_a_split):
-    drivers, car_positions, on_pit_road, pace_car_idx = setup_data_class_a_split
+    drivers, pace_car_idx = setup_data_class_a_split
     expected = ["!w 2"]
-    result = wave_ahead_of_class_lead(drivers, car_positions, on_pit_road, pace_car_idx)
+    result = wave_ahead_of_class_lead(drivers, pace_car_idx)
     assert result == expected
 
 """
@@ -181,26 +209,25 @@ wave_ahead_of_CL   -       -       -       -       X       -       X      -
 """
 @pytest.fixture
 def setup_data_slower_classes_waves(setup_data):
-    drivers, car_positions, on_pit_road, pace_car_idx = setup_data
-    car_positions[1] = 2.9
-    car_positions[2] = 2.8
-    car_positions[3] = 2.7
-    car_positions[4] = 2.6
-    car_positions[6] = 2.4
-    car_positions[8] = 2.2
-    return (drivers, car_positions, on_pit_road, pace_car_idx)
+    drivers, pace_car_idx = setup_data
+    for i, total_dist in [(1, 2.9), (2, 2.8), (3, 2.7), (4, 2.6), (6, 2.4), (8, 2.2)]:
+        drivers[i]["total_distance"] = total_dist
+        laps_completed = int(total_dist)
+        drivers[i]["laps_completed"] = laps_completed
+        drivers[i]["laps_started"] = laps_completed + 1  # Currently on next lap
+        drivers[i]["lap_distance"] = total_dist - laps_completed
+    return (drivers, pace_car_idx)
 
-@pytest.mark.skip(reason="Not implemented yet")
 def test_wave_lapped_cars_slower_classes_none(setup_data_slower_classes_waves):
-    drivers, car_positions, on_pit_road, pace_car_idx = setup_data_slower_classes_waves
+    drivers, pace_car_idx = setup_data_slower_classes_waves
     expected = []
-    result = wave_lapped_cars(drivers, car_positions, on_pit_road, pace_car_idx)
+    result = wave_lapped_cars(drivers, pace_car_idx)
     assert result == expected
 
 def test_wave_ahead_of_class_lead_slower_classes(setup_data_slower_classes_waves):
-    drivers, car_positions, on_pit_road, pace_car_idx = setup_data_slower_classes_waves
+    drivers, pace_car_idx = setup_data_slower_classes_waves
     expected = ["!w 5", "!w 7"]
-    result = wave_ahead_of_class_lead(drivers, car_positions, on_pit_road, pace_car_idx)
+    result = wave_ahead_of_class_lead(drivers, pace_car_idx)
     assert result == expected
 
 """
@@ -219,7 +246,7 @@ wave_ahead_of_CL   -       -       -       -       -       -       -      -
 """
 ## Two leaders lap ahead - B got lapped, A is ahead of lead ##
 
-             S/F   v               v       v       
+             S/F   v               v       v
 <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
     PC(0.1)   |    B(2.9)  A(1.8)  A(1.7)  A(2.6)  B(1.5)  B(1.4)  C(1.3) C(1.2)
 <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
@@ -230,31 +257,37 @@ wave_ahead_of_CL   -       X       /       -       -       -       -      -
 """
 @pytest.fixture
 def setup_data_skip_pits(setup_data):
-    drivers, car_positions, on_pit_road, pace_car_idx = setup_data
-    drivers[1]["CarClassID"] = 2
-    car_positions[1] = 2.9
-    car_positions[4] = 2.6
-    on_pit_road[3] = True
-    return (drivers, car_positions, on_pit_road, pace_car_idx)
+    drivers, pace_car_idx = setup_data
+    drivers[1]["car_class_id"] = 2
+    drivers[1]["total_distance"] = 2.9
+    drivers[1]["laps_completed"] = 2
+    drivers[1]["laps_started"] = 3  # Currently on lap 3
+    drivers[1]["lap_distance"] = 0.9
+    drivers[4]["total_distance"] = 2.6
+    drivers[4]["laps_completed"] = 2
+    drivers[4]["laps_started"] = 3  # Currently on lap 3
+    drivers[4]["lap_distance"] = 0.6
+    drivers[3]["on_pit_road"] = True  # A(1.7)
+    drivers[5]["on_pit_road"] = True  # B(1.5)
+    return (drivers, pace_car_idx)
 
-@pytest.mark.skip(reason="Not implemented yet")
 def test_wave_lapped_cars_two_lapped_but_one_pitted(setup_data_skip_pits):
-    drivers, car_positions, on_pit_road, pace_car_idx = setup_data_skip_pits
+    drivers, pace_car_idx = setup_data_skip_pits
     expected = ['!w 6']
-    result = wave_lapped_cars(drivers, car_positions, on_pit_road, pace_car_idx)
+    result = wave_lapped_cars(drivers, pace_car_idx)
     assert result == expected
 
 def test_wave_ahead_of_class_lead_two_ahead_but_one_pitted(setup_data_skip_pits):
-    drivers, car_positions, on_pit_road, pace_car_idx = setup_data_skip_pits
+    drivers, pace_car_idx = setup_data_skip_pits
     expected = ['!w 2']
-    result = wave_ahead_of_class_lead(drivers, car_positions, on_pit_road, pace_car_idx)
+    result = wave_ahead_of_class_lead(drivers, pace_car_idx)
     assert result == expected
 
 
-""" 
-This test case represents a real world example where the commands were sent right when the 
+"""
+This test case represents a real world example where the commands were sent right when the
 SC came out and there were some cars stuck between the SC and the overall lead. It showed
-an issue where the trapped cars were automatically let by, but we waved them too so they gained 
+an issue where the trapped cars were automatically let by, but we waved them too so they gained
 a lap. Based on this, the logic was updated to only wave those that are ahead of their class
 lead BUT behind the overall lead.
 """
@@ -265,10 +298,24 @@ def test_wave_ahead_of_class_real_world_example():
             setup_data = json.load(f)
 
     assert setup_data is not None, "Failed to load real world data"
-    drivers = setup_data["drivers"]
+
+    # Convert old format to Driver objects
+    old_drivers = setup_data["drivers"]
     car_positions = setup_data["car_positions"]
     on_pit_road = setup_data["on_pit_road"]
     pace_car_idx = setup_data["pace_car_idx"]
+
+    drivers = [
+        create_driver_from_test_data(
+            old_drivers[i]["CarIdx"],
+            old_drivers[i]["CarNumber"],
+            old_drivers[i]["CarClassID"],
+            car_positions[i],
+            on_pit_road[i]
+        )
+        for i in range(len(old_drivers))
+    ]
+
     expected = setup_data["expected_wave_around_commands"]
-    result = wave_ahead_of_class_lead(drivers, car_positions, on_pit_road, pace_car_idx)
+    result = wave_ahead_of_class_lead(drivers, pace_car_idx)
     assert result == expected

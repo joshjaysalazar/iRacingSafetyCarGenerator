@@ -106,6 +106,10 @@ def test_send_wave_arounds_wave_ahead_of_class_lead(mocker, generator):
     generator.current_lap_under_sc = 7
     generator.ir = MagicMock()
 
+    # Mock drivers with session_info
+    generator.drivers.current_drivers = []
+    generator.drivers.session_info = {"pace_car_idx": 0}
+
     mock_wave_around_func = mocker.patch("core.generator.wave_arounds_factory", return_value=lambda *args: ["!w 1", "!w 2"])
     mock_command_sender = mocker.patch.object(generator.command_sender, "send_commands")
 
@@ -124,11 +128,15 @@ def test_send_wave_arounds_no_eligible_cars(generator, mocker):
     generator.lap_at_sc = 5
     generator.current_lap_under_sc = 7  # At wave lap
 
+    # Mock drivers with session_info
+    generator.drivers.current_drivers = []
+    generator.drivers.session_info = {"pace_car_idx": 0}
+
     mock_wave_around_func = mocker.patch("core.generator.wave_arounds_factory", return_value=lambda *args: [])
-    mock_command_sender = mocker.patch.object(generator.command_sender, "send_command")
+    mock_command_sender = mocker.patch.object(generator.command_sender, "send_commands")
 
     generator.ir = MagicMock()
 
     result = generator._send_wave_arounds()
-    mock_command_sender.assert_not_called()
+    mock_command_sender.assert_called_once_with([])
     assert result is True

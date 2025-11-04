@@ -8,7 +8,7 @@ from core import drivers
 from core.detection.threshold_checker import ThresholdChecker, ThresholdCheckerSettings, DetectorEventTypes
 from core.detection.detector import Detector, DetectorSettings
 from core.interactions.interaction_factories import CommandSenderFactory
-from core.procedures.wave_arounds import WaveAroundType, wave_around_type_from_selection, wave_arounds_factory
+from core.procedures.wave_arounds import wave_around_type_from_selection, wave_arounds_factory
 
 from codetiming import Timer
 from enum import Enum
@@ -108,25 +108,6 @@ class Generator:
             self.throw_manual_sc_event.clear()
             
 
-    def _get_driver_number(self, id):
-        """Get the driver number from the iRacing SDK.
-
-        Args:
-            id: The iRacing driver ID
-
-        Returns:
-            The driver number, or None if not found
-        """
-        logger.debug(f"Getting driver number for ID {id}")
-
-        # Get the driver number from the iRacing SDK
-        for driver in self.ir["DriverInfo"]["Drivers"]:
-            if driver["CarIdx"] == id:
-                return driver["CarNumber"]
-                
-        # If the driver number wasn't found, return None
-        return None
-    
     def _get_current_lap_under_sc(self):
         """Get the current lap under safety car for each car on the track.
         
@@ -321,98 +302,17 @@ class Generator:
 
         wave_around_type = wave_around_type_from_selection(self.master.settings.wave_around_rules_index)
         wave_around_func = wave_arounds_factory(wave_around_type)
-        
-        if wave_around_type == WaveAroundType.WAVE_AHEAD_OF_CLASS_LEAD:
-            # TODO: when we move our "legacy" implementation to the wave_arounds file, we do not have to
-            # inject this logic here but can just call it directly
-            logger.info("Sending wave arounds for cars ahead of class lead")
 
-            # Get the commands for the wave arounds
-            lap_list = self.ir["CarIdxLap"]
-            lap_distance_list = self.ir["CarIdxLapDistPct"]
-            total_distance = [t[0] + t[1] for t in zip(lap_list, lap_distance_list)]
-            commands = wave_around_func(
-                self.ir["DriverInfo"]["Drivers"],
-                total_distance,
-                self.ir["CarIdxOnPitRoad"],
-                self.ir["DriverInfo"]["PaceCarIdx"]
-            )
+        logger.info(f"Sending wave arounds using {wave_around_type.value}")
 
-            # Send the commands in order
-            self.command_sender.send_commands(commands)
-
-            # Return True when wave arounds are done
-            return True
-        
-        logger.info("Sending wave arounds using legacy method")
-
-        # Get all class IDs (except safety car)
-        class_ids = []
-        for driver in self.ir["DriverInfo"]["Drivers"]:
-            # Skip the safety car
-            if driver["CarIsPaceCar"] == 1:
-                continue
-
-            # If the class ID isn't already in the list, add it
-            else:
-                if driver["CarClassID"] not in class_ids:
-                    class_ids.append(driver["CarClassID"])
-
-        # Zip together number of laps started, position on track, and class
-        drivers = zip(
-            self.ir["CarIdxLap"],
-            self.ir["CarIdxLapDistPct"],
-            self.ir["CarIdxClass"]
+        # Get the commands for the wave arounds using our data models
+        commands = wave_around_func(
+            self.drivers.current_drivers,
+            self.drivers.session_info["pace_car_idx"]
         )
-        drivers = tuple(drivers)
 
-        # Get the highest started lap for each class
-        highest_lap = {}
-        for class_id in class_ids:
-            # Get the highest lap and track position for the current class
-            max_lap = (0, 0)
-            for driver in drivers:
-                if driver[2] == class_id:
-                    if driver[0] > max_lap[0]:
-                        max_lap = (driver[0], driver[1])
-
-            # Add the highest lap to the dictionary
-            highest_lap[class_id] = max_lap
-
-        # Create an empty list of cars to wave around
-        cars_to_wave = []
-
-        # For each driver, check if they're eligible for a wave around
-        for i, driver in enumerate(drivers):
-            # Get the class ID for the current driver
-            driver_class = driver[2]
-
-            # If the class ID isn't in the class IDs list, skip the driver
-            if driver_class not in class_ids:
-                continue
-
-            driver_number = None
-
-            # If driver started 2 or fewer laps than class leader, wave them
-            lap_target = highest_lap[driver_class][0] - 2
-            if driver[0] <= lap_target:
-                driver_number = self._get_driver_number(i)
-
-            # If they started 1 fewer laps & are behind on track, wave them
-            lap_target = highest_lap[driver_class][0] - 1
-            track_pos_target = highest_lap[driver_class][1]
-            if driver[0] == lap_target and driver[1] < track_pos_target:
-                driver_number = self._get_driver_number(i)
-
-            # If the driver number is not None, add it to the list
-            if driver_number is not None:
-                cars_to_wave.append(driver_number)
-
-        # Send the wave chat command for each car
-        if len(cars_to_wave) > 0:
-            for car in cars_to_wave:
-                logger.info(f"Sending wave around command for car {car}")
-                self.command_sender.send_command(f"!w {car}")
+        # Send the commands in order
+        self.command_sender.send_commands(commands)
 
         # Return True when wave arounds are done
         return True
