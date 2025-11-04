@@ -79,20 +79,21 @@ class Drivers:
         }
 
         # Organize the updated driver data and update the current drivers
+        # Loop over actual drivers and fetch corresponding values from idx arrays
         logger.debug("Organizing updated driver data")
-        for i in range(len(laps_completed)):
-            driver_details = driver_info[i]
+        for driver_details in driver_info:
+            car_idx = driver_details["CarIdx"]
             self.current_drivers.append(
                 {
-                    "driver_idx": i,
+                    "driver_idx": car_idx,
                     "car_number": driver_details["CarNumber"],
                     "car_class_id": driver_details["CarClassID"],
                     "is_pace_car": driver_details["CarIsPaceCar"] == 1,
-                    "laps_completed": laps_completed[i],
-                    "laps_started": laps_started[i],
-                    "lap_distance": lap_distance[i],
-                    "total_distance": laps_completed[i] + lap_distance[i],
-                    "track_loc": track_loc[i],
-                    "on_pit_road": on_pit_road[i],
+                    "laps_completed": laps_completed[car_idx],
+                    "laps_started": laps_started[car_idx],
+                    "lap_distance": lap_distance[car_idx],
+                    "total_distance": laps_completed[car_idx] + lap_distance[car_idx],
+                    "track_loc": track_loc[car_idx],
+                    "on_pit_road": on_pit_road[car_idx],
                 }
             )

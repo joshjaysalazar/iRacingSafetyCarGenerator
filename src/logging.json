@@ -93,7 +93,7 @@
 			]
 		},
 		"core.procedures.wave_arounds": {
-			"level": "INFO",
+			"level": "DEBUG",
 			"handlers": [
 				"file"
 			]

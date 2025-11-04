@@ -56,7 +56,8 @@ def wave_lapped_cars(drivers: List[Driver], pace_car_idx: int) -> List[str]:
     logger.debug("Wave around lapped cars")
     logger.debug(f"Number of drivers: {len(drivers)}")
     logger.debug(f"Pace car index: {pace_car_idx}")
-
+    logger.debug(f"Drivers: {drivers}")
+    
     commands = []
 
     # Get all class IDs (except safety car)
@@ -132,12 +133,13 @@ def wave_ahead_of_class_lead(drivers: List[Driver], pace_car_idx: int) -> List[s
     logger.debug("Wave around ahead of class lead")
     logger.debug(f"Number of drivers: {len(drivers)}")
     logger.debug(f"Pace car index: {pace_car_idx}")
+    logger.debug(f"Drivers: {drivers}")
 
     commands = []
     class_leads = {}
 
-    # Extract total distances for positions_from_safety_car
-    car_positions = [driver["total_distance"] for driver in drivers]
+    # Extract lap distances for positions_from_safety_car
+    car_positions = [driver["lap_distance"] for driver in drivers]
     relative_to_sc = positions_from_safety_car(car_positions, pace_car_idx)
     logger.debug(f"Relative positions to SC: {relative_to_sc}")
 
@@ -164,10 +166,14 @@ def wave_ahead_of_class_lead(drivers: List[Driver], pace_car_idx: int) -> List[s
     for driver in drivers:
         idx = driver["driver_idx"]
         if idx == pace_car_idx or driver["on_pit_road"]:
+            logger.debug(f"Skipping driver idx {idx} (pace car or on pit road)")
             continue
 
         car_class = driver["car_class_id"]
         class_lead_idx, class_lead_position = class_leads.get(car_class)
+        logger.debug(f"Driver idx {idx} class lead idx {class_lead_idx}")
+        logger.debug(f"Driver idx {idx} relative to SC: {relative_to_sc[idx]}")
+        logger.debug(f"Class lead position: {class_lead_position}")
 
         if (class_lead_idx is not None # Should always be true
             and relative_to_sc[idx] < class_lead_position # They are ahead of their class lead
