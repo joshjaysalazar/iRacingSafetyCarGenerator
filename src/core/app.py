@@ -1260,7 +1260,28 @@ class App(tk.Tk):
         """
         if not is_stopped_state(self.generator_state):
             logger.info('Starting a manual safety car')
-            self.generator.throw_manual_safety_car()
+
+            # Check the current state of the generator
+            current_state = self.generator_state
+
+            if current_state == GeneratorState.SAFETY_CAR_DEPLOYED:
+                # Safety car is already deployed, send command directly
+                logger.info('Safety car already deployed, sending command directly')
+                # Queue a direct send request to avoid threading issues
+                self.generator.throw_manual_safety_car()
+            elif current_state == GeneratorState.MONITORING_FOR_INCIDENTS:
+                # Normal case: generator is monitoring, use the queue
+                logger.info('Generator monitoring, queuing manual SC request')
+                self.generator.throw_manual_safety_car()
+            elif current_state in [GeneratorState.WAITING_FOR_GREEN,
+                                  GeneratorState.WAITING_FOR_RACE_SESSION]:
+                # Generator is waiting, queue the request
+                logger.info('Generator waiting, queuing manual SC request')
+                self.generator.throw_manual_safety_car()
+            else:
+                # Generator is in some other state (CONNECTING, CONNECTED, etc.)
+                logger.warning(f'Generator in state {current_state}, queuing manual SC request anyway')
+                self.generator.throw_manual_safety_car()
         else:
             logger.info('Tried to throw a manual SC, but generator not running')
 

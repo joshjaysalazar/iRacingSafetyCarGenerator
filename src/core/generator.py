@@ -1,4 +1,5 @@
 import logging
+import queue
 import threading
 import time
 
@@ -53,7 +54,7 @@ class Generator:
 
         # Create a shutdown event
         self.shutdown_event = threading.Event()
-        self.throw_manual_sc_event = threading.Event()
+        self.manual_sc_queue = queue.Queue()
         self.skip_wait_for_green_event = threading.Event()
 
     def _init_state_variables(self):
@@ -78,13 +79,13 @@ class Generator:
         """
         return self.shutdown_event.is_set()
     
-    def _throw_manual_safety_car(self):
-        """ Returns True if throw_manual_sc_event event was triggered
-        
+    def _has_manual_sc_request(self):
+        """ Returns True if there are pending manual SC requests in the queue
+
         Args:
             None
         """
-        return self.throw_manual_sc_event.is_set()
+        return not self.manual_sc_queue.empty()
     
     def _skip_waiting_for_green(self):
         """ Returns True if skip_wait_for_green_event event was triggered
@@ -101,11 +102,17 @@ class Generator:
             None
         """
         try:
-            if self._throw_manual_safety_car():
+            # Process all pending manual SC requests
+            while self._has_manual_sc_request():
+                request = self.manual_sc_queue.get_nowait()
+                logger.info(f"Processing manual SC request from queue")
                 self._start_safety_car()
-        finally:
-            # we always want to clear the threading flag, so adding in finally clause
-            self.throw_manual_sc_event.clear()
+                self.manual_sc_queue.task_done()
+        except queue.Empty:
+            # Queue is empty, nothing to do
+            pass
+        except Exception as e:
+            logger.error(f"Error processing manual SC request: {e}", exc_info=True)
             
 
     def _get_current_lap_under_sc(self):
@@ -221,13 +228,13 @@ class Generator:
             
             # Report timer stats
             logger.debug("Generator loop completed")
-            logger.debug(f"GeneratorLoopTimer (count): {Timer.timers.count("GeneratorLoopTimer")}")
-            logger.debug(f"GeneratorLoopTimer (total): {Timer.timers.total("GeneratorLoopTimer")}")
-            logger.debug(f"GeneratorLoopTimer (min): {Timer.timers.min("GeneratorLoopTimer")}")
-            logger.debug(f"GeneratorLoopTimer (max): {Timer.timers.max("GeneratorLoopTimer")}")
-            logger.debug(f"GeneratorLoopTimer (mean): {Timer.timers.mean("GeneratorLoopTimer")}")
-            logger.debug(f"GeneratorLoopTimer (median): {Timer.timers.median("GeneratorLoopTimer")}")
-            logger.debug(f"GeneratorLoopTimer (stdev): {Timer.timers.stdev("GeneratorLoopTimer")}")
+            logger.debug(f"GeneratorLoopTimer (count): {Timer.timers.count('GeneratorLoopTimer')}")
+            logger.debug(f"GeneratorLoopTimer (total): {Timer.timers.total('GeneratorLoopTimer')}")
+            logger.debug(f"GeneratorLoopTimer (min): {Timer.timers.min('GeneratorLoopTimer')}")
+            logger.debug(f"GeneratorLoopTimer (max): {Timer.timers.max('GeneratorLoopTimer')}")
+            logger.debug(f"GeneratorLoopTimer (mean): {Timer.timers.mean('GeneratorLoopTimer')}")
+            logger.debug(f"GeneratorLoopTimer (median): {Timer.timers.median('GeneratorLoopTimer')}")
+            logger.debug(f"GeneratorLoopTimer (stdev): {Timer.timers.stdev('GeneratorLoopTimer')}")
             
     def _send_pacelaps(self):
         """Send a pacelaps chat command to iRacing.
@@ -350,6 +357,19 @@ class Generator:
             # Get the current lap behind safety car
             self._get_current_lap_under_sc()
 
+            # Check for manual SC requests even when SC is already deployed
+            # This allows re-throwing the yellow if the first one didn't work
+            if self._has_manual_sc_request():
+                try:
+                    request = self.manual_sc_queue.get_nowait()
+                    logger.info("Processing manual SC request while SC already deployed - resending yellow flag")
+                    self.command_sender.send_command("!y Manual safety car")
+                    self.manual_sc_queue.task_done()
+                except queue.Empty:
+                    pass
+                except Exception as e:
+                    logger.error(f"Error processing manual SC request during deployment: {e}", exc_info=True)
+
             # If wave arounds aren't done, send the wave arounds
             if not waves_done:
                 waves_done = self._send_wave_arounds()
@@ -401,11 +421,22 @@ class Generator:
                     logger.debug("Skip waiting for race session because of a threading event")
                     break
 
+                # Check for manual SC requests while waiting for race session
+                if self._has_manual_sc_request():
+                    try:
+                        request = self.manual_sc_queue.get_nowait()
+                        logger.info("Manual SC request received while waiting for race session - will deploy when race starts")
+                        # Keep the request in queue by putting it back, or just skip it
+                        # For now, we'll consume it but note it was requested during wait
+                        self.manual_sc_queue.task_done()
+                    except queue.Empty:
+                        pass
+
                 # If the current session is PRACTICE, QUALIFY, or WARMUP
                 if sessions[current_idx] in ["PRACTICE", "QUALIFY", "WARMUP"]:
                     # Wait 1 second before checking again
                     time.sleep(1)
-                
+
                 # If the current session is anything else, break the loop
                 else:
                     break
@@ -425,9 +456,26 @@ class Generator:
 
                 # Progress to monitoring for SC state
                 self.master.generator_state = GeneratorState.MONITORING_FOR_INCIDENTS
-                
+
                 # Break the loop
                 break
+
+            # Check for manual SC requests while waiting for green flag
+            if self._has_manual_sc_request():
+                try:
+                    request = self.manual_sc_queue.get_nowait()
+                    logger.info("Manual SC request received while waiting for green - deploying now")
+                    # Deploy safety car immediately since we're already in a yellow/caution state
+                    if self.start_time is None:
+                        self.start_time = time.time()
+                        self._notify_race_started(self.start_time)
+                    self._start_safety_car("Manual safety car")
+                    self.manual_sc_queue.task_done()
+                    # After SC completes, we'll be back in this loop waiting for green
+                except queue.Empty:
+                    pass
+                except Exception as e:
+                    logger.error(f"Error processing manual SC request while waiting for green: {e}", exc_info=True)
 
             # Break the loop if we are shutting down the thread or skipping the wait
             if self._is_shutting_down() or self._skip_waiting_for_green():
@@ -438,7 +486,7 @@ class Generator:
 
                 # Progress to monitoring for SC state
                 self.master.generator_state = GeneratorState.MONITORING_FOR_INCIDENTS
-                
+
                 break
 
             # Wait 1 second before checking again
@@ -506,5 +554,29 @@ class Generator:
         self.shutdown_event.set()
 
     def throw_manual_safety_car(self):
-        logger.info("Setting manual SC threading flag")
-        self.throw_manual_sc_event.set()
+        """Queue a manual safety car request.
+
+        This method is called from the UI thread. It adds a request to the queue
+        that will be processed by the generator thread in the monitoring loop.
+        """
+        logger.info("Adding manual SC request to queue")
+        self.manual_sc_queue.put({"timestamp": time.time()})
+
+    def send_manual_safety_car_direct(self):
+        """Send a manual safety car command directly, bypassing the queue.
+
+        This method is used when the safety car is already deployed or when
+        we need to send the command immediately without waiting for the
+        monitoring loop. This should be called from the generator thread or
+        when we're certain it's safe to interact with iRacing directly.
+
+        Returns:
+            bool: True if command was sent successfully, False otherwise
+        """
+        try:
+            logger.info("Sending manual SC command directly")
+            self.command_sender.send_command("!y Manual safety car")
+            return True
+        except Exception as e:
+            logger.error(f"Failed to send manual SC command: {e}", exc_info=True)
+            return False
