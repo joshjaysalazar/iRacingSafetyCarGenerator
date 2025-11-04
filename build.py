@@ -102,6 +102,7 @@ class Builder:
             "--log-level=WARN",
             "--noconsole",
             "--onefile",
+            f"--paths={self.src_dir.absolute()}",  # Add src directory to Python path for imports
             "--hidden-import=comtypes.gen.UIAutomationClient",
             "--hidden-import=pywinauto.application",
             f"--name={self.exe_name}",
