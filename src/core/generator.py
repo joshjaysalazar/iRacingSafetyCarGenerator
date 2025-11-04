@@ -344,6 +344,9 @@ class Generator:
         waves_done = False
         pace_done = False
         while not waves_done or not pace_done:
+            # Update driver data to ensure we have current positions, pit status, etc.
+            self.drivers.update()
+
             # Get the current lap behind safety car
             self._get_current_lap_under_sc()
 
