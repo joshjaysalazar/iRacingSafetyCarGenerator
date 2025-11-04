@@ -997,6 +997,7 @@ class App(tk.Tk):
         self.cmb_wave_around_rules['values'] = (
             "Wave lapped cars",
             "Wave ahead of class lead",
+            "Wave both (combined)",
         )
         tooltip.CreateToolTip(
             self.cmb_wave_around_rules,

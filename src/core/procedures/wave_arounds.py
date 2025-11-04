@@ -9,13 +9,14 @@ logger = logging.getLogger(__name__)
 class WaveAroundType(Enum):
     WAVE_LAPPED_CARS = "wave_lapped_cars"
     WAVE_AHEAD_OF_CLASS_LEAD = "wave_ahead_of_class_lead"
+    WAVE_COMBINED = "wave_combined"
 
 def wave_around_type_from_selection(selection: int) -> WaveAroundType:
     """ Convert the selection from the GUI to a WaveAroundType.
-    
+
         Args:
             selection (int): The selection from the GUI.
-        
+
         Returns:
             WaveAroundType: The corresponding WaveAroundType.
     """
@@ -23,15 +24,17 @@ def wave_around_type_from_selection(selection: int) -> WaveAroundType:
         return WaveAroundType.WAVE_LAPPED_CARS
     elif selection == 1:
         return WaveAroundType.WAVE_AHEAD_OF_CLASS_LEAD
+    elif selection == 2:
+        return WaveAroundType.WAVE_COMBINED
     else:
         raise ValueError(f"Invalid selection: {selection}")
 
 def wave_arounds_factory(wave_around_type: WaveAroundType):
     """Get the appropriate wave around function based on the type of wave arounds.
-    
+
         Args:
             wave_around_type (WaveAroundType): The type of wave arounds.
-            
+
         Returns:
             Callable: The function to use for the wave arounds.
     """
@@ -40,6 +43,8 @@ def wave_arounds_factory(wave_around_type: WaveAroundType):
             return wave_lapped_cars
         case WaveAroundType.WAVE_AHEAD_OF_CLASS_LEAD:
             return wave_ahead_of_class_lead
+        case WaveAroundType.WAVE_COMBINED:
+            return wave_combined
         case _:
             raise ValueError(f"Invalid wave around type: {wave_around_type}")
 
@@ -184,4 +189,40 @@ def wave_ahead_of_class_lead(drivers: List[Driver], pace_car_idx: int) -> List[s
 
     logger.debug(f"Commands: {commands}")
     return commands
+
+def wave_combined(drivers: List[Driver], pace_car_idx: int) -> List[str]:
+    """ Provide the commands that need to be sent to wave around cars that are either lapped
+        OR ahead of their class lead. This is a combination of both wave_lapped_cars and
+        wave_ahead_of_class_lead methods.
+
+        Args:
+            drivers: The list of Driver objects from the Drivers data model.
+            pace_car_idx: The index of the pacecar.
+
+        Returns:
+            List[str]: The commands to send, in order, for the cars to be waved.
+    """
+    logger.debug("Wave around combined (lapped + ahead of class lead)")
+    logger.debug(f"Number of drivers: {len(drivers)}")
+    logger.debug(f"Pace car index: {pace_car_idx}")
+
+    # Get commands from both methods
+    lapped_commands = wave_lapped_cars(drivers, pace_car_idx)
+    ahead_commands = wave_ahead_of_class_lead(drivers, pace_car_idx)
+
+    logger.debug(f"Lapped commands: {lapped_commands}")
+    logger.debug(f"Ahead commands: {ahead_commands}")
+
+    # Combine and deduplicate while preserving order
+    # Use a set to track car numbers we've already added
+    seen_cars = set()
+    combined_commands = []
+
+    for cmd in lapped_commands + ahead_commands:
+        if cmd not in seen_cars:
+            seen_cars.add(cmd)
+            combined_commands.append(cmd)
+
+    logger.debug(f"Combined commands: {combined_commands}")
+    return combined_commands
 
