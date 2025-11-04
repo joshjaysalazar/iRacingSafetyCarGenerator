@@ -401,8 +401,8 @@ class App(tk.Tk):
 
         # Create Safety Car Settings frame
         logger.debug("Creating Safety Car Settings frame")
-        self.frm_sc_settings = ttk.LabelFrame(self, text="Safety Car Settings")
-        self.frm_sc_settings.grid(row=0, column=1, sticky="nesw", padx=5, pady=5)
+        self.frm_sc_settings = ttk.LabelFrame(self, text="Safety Car Threshold checks")
+        self.frm_sc_settings.grid(row=0, column=1, sticky="nesw", padx=5, pady=5, rowspan=3)
         settings_row = 0
 
         # Create Event Time Window spinbox
@@ -763,7 +763,7 @@ class App(tk.Tk):
 
         # Create General frame
         logger.debug("Creating General frame")
-        self.frm_general = ttk.LabelFrame(self, text="General")
+        self.frm_general = ttk.LabelFrame(self, text="Eligibility window")
         self.frm_general.grid(row=0, column=2, sticky="nesw", padx=5, pady=5)
 
         # Create variable to hold the current row in the frame
