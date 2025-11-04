@@ -91,6 +91,12 @@
 			"handlers": [
 				"file"
 			]
+		},
+		"core.procedures.wave_arounds": {
+			"level": "DEBUG",
+			"handlers": [
+				"file"
+			]
 		}
 	}
 }

@@ -1,6 +1,6 @@
 import pytest
 
-from unittest.mock import Mock
+from unittest.mock import MagicMock, Mock
 from core.detection.threshold_checker import ThresholdChecker
 from core.detection.detector import Detector, DetectorSettings
 from core.generator import Generator
@@ -80,3 +80,63 @@ def test_notify_race_started_calls_both_components(generator):
     # Verify both components were called
     generator.detector.race_started.assert_called_once_with(start_time)
     generator.threshold_checker.race_started.assert_called_once_with(start_time)
+
+def test_send_wave_arounds_disabled(generator):
+    """Test when wave arounds are disabled."""
+    generator.master.settings.wave_arounds_enabled = False
+    generator.master.settings.laps_before_wave_arounds = 2
+    result = generator._send_wave_arounds()
+    assert result is True
+
+def test_send_wave_arounds_not_time_yet(generator):
+    """Test when it's not time for wave arounds."""
+    generator.master.settings.wave_arounds_enabled = True
+    generator.master.settings.laps_before_wave_arounds = 2
+    generator.lap_at_sc = 5
+    generator.current_lap_under_sc = 6  # Not yet at wave lap
+    result = generator._send_wave_arounds()
+    assert result is False
+
+def test_send_wave_arounds_wave_ahead_of_class_lead(mocker, generator):
+    """Test wave arounds for cars ahead of class lead."""
+    generator.master.settings.wave_arounds_enabled = True
+    generator.master.settings.laps_before_wave_arounds = 1
+    generator.master.settings.wave_around_rules_index = 1  # Wave ahead of class lead
+    generator.lap_at_sc = 5
+    generator.current_lap_under_sc = 7
+    generator.ir = MagicMock()
+
+    # Mock drivers with session_info
+    generator.drivers.current_drivers = []
+    generator.drivers.session_info = {"pace_car_idx": 0}
+
+    mock_wave_around_func = mocker.patch("core.generator.wave_arounds_factory", return_value=lambda *args: ["!w 1", "!w 2"])
+    mock_command_sender = mocker.patch.object(generator.command_sender, "send_commands")
+
+    result = generator._send_wave_arounds()
+
+    # Assert waves were actually sent
+    mock_wave_around_func.assert_called_once()
+    mock_command_sender.assert_called_once_with(["!w 1", "!w 2"])
+    assert result is True
+
+def test_send_wave_arounds_no_eligible_cars(generator, mocker):
+    """Test wave arounds when no cars are eligible."""
+    generator.master.settings.wave_arounds_enabled = True
+    generator.master.settings.laps_before_wave_arounds = 1
+    generator.master.settings.wave_around_rules_index = 1  # Wave ahead of class lead
+    generator.lap_at_sc = 5
+    generator.current_lap_under_sc = 7  # At wave lap
+
+    # Mock drivers with session_info
+    generator.drivers.current_drivers = []
+    generator.drivers.session_info = {"pace_car_idx": 0}
+
+    mock_wave_around_func = mocker.patch("core.generator.wave_arounds_factory", return_value=lambda *args: [])
+    mock_command_sender = mocker.patch.object(generator.command_sender, "send_commands")
+
+    generator.ir = MagicMock()
+
+    result = generator._send_wave_arounds()
+    mock_command_sender.assert_called_once_with([])
+    assert result is True
