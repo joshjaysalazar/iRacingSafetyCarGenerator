@@ -274,17 +274,157 @@ def test_wave_combined_slower_classes(setup_data_slower_classes_waves):
     assert result == expected
 
 """
-## Some in class A, but one pitted ##
+## Car both lapped and ahead of class lead - tests deduplication ##
 
-             S/F                   v
+             S/F   v               v       v               v
 <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
-    PC(0.1)   |    A(1.9)  A(1.8)  A(2.7)  B(1.6)  A(1.5)  C(1.4)  B(1.3) C(1.2)
+    PC(0.1)   |    C(3.9)  A(1.8)  B(1.7)  A(3.5)  B(3.4)
 <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
 
-Class leaders              Pit     X       X       Pit     X
-wave_lapped_cars   -       -       -       -       -       -       -      -
-wave_ahead_of_CL   -       -       -       -       -       -       -      -
+Class leaders      X                       X       X
+wave_lapped_cars           X       X
+wave_ahead_of_CL           X       X
+wave_combined              X       X
 """
+@pytest.fixture
+def setup_data_lapped_and_ahead(setup_data):
+    drivers, pace_car_idx = setup_data
+    # Reduce to 6 cars: PC, 1xC (overall lead), 2xA, 2xB
+    drivers = drivers[:6]
+
+    # Setup: C(3.9) as overall lead with high lap_distance,
+    # lapped A and B cars with medium lap_distance,
+    # class leads with low lap_distance
+    drivers[1]["car_class_id"] = 3
+    drivers[1]["total_distance"] = 3.9
+    drivers[1]["laps_completed"] = 3
+    drivers[1]["laps_started"] = 4
+    drivers[1]["lap_distance"] = 0.9
+    drivers[1]["car_number"] = "1"
+
+    drivers[2]["car_class_id"] = 1
+    drivers[2]["total_distance"] = 1.8
+    drivers[2]["laps_completed"] = 1
+    drivers[2]["laps_started"] = 2
+    drivers[2]["lap_distance"] = 0.8
+    drivers[2]["car_number"] = "2"
+
+    drivers[3]["car_class_id"] = 2
+    drivers[3]["total_distance"] = 1.7
+    drivers[3]["laps_completed"] = 1
+    drivers[3]["laps_started"] = 2
+    drivers[3]["lap_distance"] = 0.7
+    drivers[3]["car_number"] = "3"
+
+    drivers[4]["car_class_id"] = 1
+    drivers[4]["total_distance"] = 3.5
+    drivers[4]["laps_completed"] = 3
+    drivers[4]["laps_started"] = 4
+    drivers[4]["lap_distance"] = 0.5
+    drivers[4]["car_number"] = "4"
+
+    drivers[5]["car_class_id"] = 2
+    drivers[5]["total_distance"] = 3.4
+    drivers[5]["laps_completed"] = 3
+    drivers[5]["laps_started"] = 4
+    drivers[5]["lap_distance"] = 0.4
+    drivers[5]["car_number"] = "5"
+
+    return (drivers, pace_car_idx)
+
+def test_wave_lapped_cars_both_lapped_and_ahead(setup_data_lapped_and_ahead):
+    drivers, pace_car_idx = setup_data_lapped_and_ahead
+    # Both A(1.8) and B(1.7) are 2 laps down from their class leads
+    expected = ['!w 2', '!w 3']
+    result = wave_lapped_cars(drivers, pace_car_idx)
+    assert result == expected
+
+def test_wave_ahead_of_class_lead_both_lapped_and_ahead(setup_data_lapped_and_ahead):
+    drivers, pace_car_idx = setup_data_lapped_and_ahead
+    # Both A(1.8) and B(1.7) are ahead of their class leads in running order
+    expected = ['!w 2', '!w 3']
+    result = wave_ahead_of_class_lead(drivers, pace_car_idx)
+    assert result == expected
+
+def test_wave_combined_true_deduplication(setup_data_lapped_and_ahead):
+    drivers, pace_car_idx = setup_data_lapped_and_ahead
+    # Same cars qualify for both methods - tests true deduplication
+    # Should be ['!w 2', '!w 3'] not ['!w 2', '!w 3', '!w 2', '!w 3']
+    expected = ['!w 2', '!w 3']
+    result = wave_combined(drivers, pace_car_idx)
+    assert result == expected
+
+"""
+## Same class, cars spread across laps ##
+
+             S/F
+<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+    PC(0.1)   |    A(2.9)  A(2.8)  A(1.7)  A(1.6)
+<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+
+Class leaders      X
+wave_lapped_cars   -       -       X       X
+wave_ahead_of_CL   -       -       -       -
+wave_combined      -       -       X       X
+"""
+@pytest.fixture
+def setup_data_single_class_spread(setup_data):
+    drivers, pace_car_idx = setup_data
+    # Reduce to 5 cars: PC, 4xA
+    drivers = drivers[:5]
+
+    # Setup: All class A at different positions
+    drivers[1]["car_class_id"] = 1
+    drivers[1]["total_distance"] = 2.9
+    drivers[1]["laps_completed"] = 2
+    drivers[1]["laps_started"] = 3
+    drivers[1]["lap_distance"] = 0.9
+    drivers[1]["car_number"] = "1"
+
+    drivers[2]["car_class_id"] = 1
+    drivers[2]["total_distance"] = 2.8
+    drivers[2]["laps_completed"] = 2
+    drivers[2]["laps_started"] = 3
+    drivers[2]["lap_distance"] = 0.8
+    drivers[2]["car_number"] = "2"
+
+    drivers[3]["car_class_id"] = 1
+    drivers[3]["total_distance"] = 1.7
+    drivers[3]["laps_completed"] = 1
+    drivers[3]["laps_started"] = 2
+    drivers[3]["lap_distance"] = 0.7
+    drivers[3]["car_number"] = "3"
+
+    drivers[4]["car_class_id"] = 1
+    drivers[4]["total_distance"] = 1.6
+    drivers[4]["laps_completed"] = 1
+    drivers[4]["laps_started"] = 2
+    drivers[4]["lap_distance"] = 0.6
+    drivers[4]["car_number"] = "4"
+
+    return (drivers, pace_car_idx)
+
+def test_wave_lapped_cars_single_class_spread(setup_data_single_class_spread):
+    drivers, pace_car_idx = setup_data_single_class_spread
+    # A(1.7) and A(1.6) are 1 lap down and behind on track
+    expected = ['!w 3', '!w 4']
+    result = wave_lapped_cars(drivers, pace_car_idx)
+    assert result == expected
+
+def test_wave_ahead_of_class_lead_single_class_spread(setup_data_single_class_spread):
+    drivers, pace_car_idx = setup_data_single_class_spread
+    # Nobody is ahead of class lead in running order
+    expected = []
+    result = wave_ahead_of_class_lead(drivers, pace_car_idx)
+    assert result == expected
+
+def test_wave_combined_single_class_spread(setup_data_single_class_spread):
+    drivers, pace_car_idx = setup_data_single_class_spread
+    # wave_lapped_cars returns ['!w 3', '!w 4']
+    # wave_ahead_of_class_lead returns []
+    expected = ['!w 3', '!w 4']
+    result = wave_combined(drivers, pace_car_idx)
+    assert result == expected
 
 """
 ## Two leaders lap ahead - B got lapped, A is ahead of lead ##
