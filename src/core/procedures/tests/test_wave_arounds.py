@@ -177,7 +177,8 @@ def test_wave_combined_combines_both_methods(setup_data_two_lap_ahead):
     drivers, pace_car_idx = setup_data_two_lap_ahead
     # wave_lapped_cars returns ['!w 5', '!w 6']
     # wave_ahead_of_class_lead returns ['!w 2', '!w 3']
-    expected = ['!w 5', '!w 6', '!w 2', '!w 3']
+    # Combined and sorted by running order (closest to SC first): 2, 3, 5, 6
+    expected = ['!w 2', '!w 3', '!w 5', '!w 6']
     result = wave_combined(drivers, pace_car_idx)
     assert result == expected
 
@@ -225,7 +226,8 @@ def test_wave_combined_deduplicates(setup_data_class_a_split):
     drivers, pace_car_idx = setup_data_class_a_split
     # wave_lapped_cars returns ["!w 4", "!w 5", "!w 6"]
     # wave_ahead_of_class_lead returns ["!w 2"]
-    expected = ["!w 4", "!w 5", "!w 6", "!w 2"]
+    # Combined and sorted by running order (closest to SC first): 2, 4, 5, 6
+    expected = ["!w 2", "!w 4", "!w 5", "!w 6"]
     result = wave_combined(drivers, pace_car_idx)
     assert result == expected
 
@@ -471,7 +473,8 @@ def test_wave_combined_skips_pitted_cars(setup_data_skip_pits):
     drivers, pace_car_idx = setup_data_skip_pits
     # wave_lapped_cars returns ['!w 6'] (5 is pitted)
     # wave_ahead_of_class_lead returns ['!w 2'] (3 is pitted)
-    expected = ['!w 6', '!w 2']
+    # Combined and sorted by running order (closest to SC first): 2, 6
+    expected = ['!w 2', '!w 6']
     result = wave_combined(drivers, pace_car_idx)
     assert result == expected
 
