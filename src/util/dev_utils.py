@@ -112,9 +112,10 @@ def parse_log_events_to_csv(log_file_path):
     
     # Dictionary to store events by timestamp
     events_by_time = defaultdict(lambda: {"off_track": 0, "stopped": 0})
-    
+
     # Pattern to match threshold checking log entries with events_dict
-    threshold_pattern = re.compile(r'Checking threshold, events_dict=\{<ThresholdCheckerEventTypes\.OFF_TRACK.*?>\: (\{[^}]*\}), <ThresholdCheckerEventTypes\.STOPPED.*?>\: (\{[^}]*\})\}')
+    # Updated to match DetectorEventTypes and include RANDOM event type
+    threshold_pattern = re.compile(r'Checking threshold, events_dict=\{<DetectorEventTypes\.OFF_TRACK.*?>\: (\{[^}]*\}), <DetectorEventTypes\.RANDOM.*?>\: (\{[^}]*\}), <DetectorEventTypes\.STOPPED.*?>\: (\{[^}]*\})\}')
     
     print(f"Processing {log_file_path}...")
     
@@ -132,15 +133,18 @@ def parse_log_events_to_csv(log_file_path):
                 threshold_match = threshold_pattern.search(line)
                 if threshold_match:
                     off_track_dict_str = threshold_match.group(1)
-                    stopped_dict_str = threshold_match.group(2)
-                    
+                    # random_dict_str = threshold_match.group(2)  # Ignored for CSV output
+                    stopped_dict_str = threshold_match.group(3)
+
                     # Count unique drivers for off track (number of keys in dict)
                     # Empty dict is "{}", non-empty will have driver IDs as keys
                     off_track_count = 0 if off_track_dict_str == '{}' else len([x for x in off_track_dict_str.split(',') if ':' in x])
-                    
+
                     # Count unique drivers for stopped cars
                     stopped_count = 0 if stopped_dict_str == '{}' else len([x for x in stopped_dict_str.split(',') if ':' in x])
-                    
+
+                    # Note: We ignore random events (group 2) for CSV output as they're not used for threshold calculations
+
                     # Record all threshold checking events, including when counts are 0
                     events_by_time[timestamp_str]["off_track"] = off_track_count
                     events_by_time[timestamp_str]["stopped"] = stopped_count
