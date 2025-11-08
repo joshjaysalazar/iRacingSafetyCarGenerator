@@ -114,7 +114,53 @@ class Settings:
     @off_track_message.setter
     def off_track_message(self, value: str) -> None:
         self._config.set("settings", "off_track_message", value)
-    
+
+    # Towing detector settings
+    @property
+    def towing_detector_enabled(self) -> bool:
+        """Enable safety car for cars towing to pits."""
+        return self._config["settings"].getboolean("towing_detector_enabled", fallback=True)
+
+    @towing_detector_enabled.setter
+    def towing_detector_enabled(self, value: bool) -> None:
+        self._config.set("settings", "towing_detector_enabled", str(int(value)))
+
+    @property
+    def towing_cars_threshold(self) -> int:
+        """Minimum towing cars to trigger safety car."""
+        return self._config["settings"].getint("towing_cars_threshold", fallback=1)
+
+    @towing_cars_threshold.setter
+    def towing_cars_threshold(self, value: int) -> None:
+        self._config.set("settings", "towing_cars_threshold", str(value))
+
+    @property
+    def towing_message(self) -> str:
+        """Message for towing cars safety car."""
+        return self._config["settings"].get("towing_message", fallback="Towing detected")
+
+    @towing_message.setter
+    def towing_message(self, value: str) -> None:
+        self._config.set("settings", "towing_message", value)
+
+    @property
+    def towing_max_pit_entry_delta(self) -> float:
+        """Maximum lap distance delta for normal pit entry (0.0-1.0)."""
+        return self._config["settings"].getfloat("towing_max_pit_entry_delta", fallback=0.05)
+
+    @towing_max_pit_entry_delta.setter
+    def towing_max_pit_entry_delta(self, value: float) -> None:
+        self._config.set("settings", "towing_max_pit_entry_delta", str(value))
+
+    @property
+    def towing_weight(self) -> float:
+        """Weight for towing events in combined calculation."""
+        return self._config["settings"].getfloat("towing_weight", fallback=2.0)
+
+    @towing_weight.setter
+    def towing_weight(self, value: float) -> None:
+        self._config.set("settings", "towing_weight", str(value))
+
     # Race start multiplier settings
     @property
     def race_start_threshold_multiplier(self) -> float:

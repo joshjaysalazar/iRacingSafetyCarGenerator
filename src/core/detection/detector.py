@@ -8,6 +8,7 @@ from core.detection.detector_common_types import DetectionResult, DetectorEventT
 from core.detection.off_track_detector import OffTrackDetector
 from core.detection.random_detector import RandomDetector
 from core.detection.stopped_detector import StoppedDetector
+from core.detection.towing_detector import TowingDetector
 from core.drivers import Drivers
 from typing import Dict
 
@@ -36,13 +37,17 @@ class DetectorSettings:
     random_start_minute: float = 3
     random_end_minute: float = 30
     random_max_safety_cars: int = 1
-    
+
     # StoppedDetector settings
     stopped_detector_enabled: bool = True
-    
+
     # OffTrackDetector settings
     off_track_detector_enabled: bool = True
-    
+
+    # TowingDetector settings
+    towing_detector_enabled: bool = True
+    towing_max_pit_entry_delta: float = 0.05  # 5% of track length
+
     @staticmethod
     def from_settings(settings):
         return DetectorSettings(
@@ -53,6 +58,8 @@ class DetectorSettings:
             random_max_safety_cars=settings.random_max_safety_cars,
             stopped_detector_enabled=settings.stopped_detector_enabled,
             off_track_detector_enabled=settings.off_track_detector_enabled,
+            towing_detector_enabled=getattr(settings, 'towing_detector_enabled', True),
+            towing_max_pit_entry_delta=getattr(settings, 'towing_max_pit_entry_delta', 0.05),
         )
 
     
@@ -91,7 +98,13 @@ class Detector:
 
         if settings.off_track_detector_enabled:
             detectors[DetectorEventTypes.OFF_TRACK] = OffTrackDetector(drivers)
-        
+
+        if settings.towing_detector_enabled:
+            detectors[DetectorEventTypes.TOWING] = TowingDetector(
+                drivers=drivers,
+                max_pit_entry_delta=settings.towing_max_pit_entry_delta
+            )
+
         return Detector(detectors)
     
 
