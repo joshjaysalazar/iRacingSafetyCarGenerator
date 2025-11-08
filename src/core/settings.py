@@ -92,28 +92,56 @@ class Settings:
     def off_track_detector_enabled(self) -> bool:
         """Enable safety car for cars off track."""
         return self._config["settings"].getboolean("off_track_detector_enabled", fallback=True)
-    
+
     @off_track_detector_enabled.setter
     def off_track_detector_enabled(self, value: bool) -> None:
         self._config.set("settings", "off_track_detector_enabled", str(int(value)))
-    
+
     @property
     def off_track_cars_threshold(self) -> int:
         """Minimum off-track cars to trigger safety car."""
         return self._config["settings"].getint("off_track_cars_threshold", fallback=4)
-    
+
     @off_track_cars_threshold.setter
     def off_track_cars_threshold(self, value: int) -> None:
         self._config.set("settings", "off_track_cars_threshold", str(value))
-    
+
     @property
     def off_track_message(self) -> str:
         """Message for off-track cars safety car."""
         return self._config["settings"].get("off_track_message", fallback="Multiple cars off track")
-    
+
     @off_track_message.setter
     def off_track_message(self, value: str) -> None:
         self._config.set("settings", "off_track_message", value)
+
+    # Driver flags (damage) settings
+    @property
+    def driver_flags_detector_enabled(self) -> bool:
+        """Enable safety car for drivers with damage flags."""
+        return self._config["settings"].getboolean("driver_flags_detector_enabled", fallback=True)
+
+    @driver_flags_detector_enabled.setter
+    def driver_flags_detector_enabled(self, value: bool) -> None:
+        self._config.set("settings", "driver_flags_detector_enabled", str(int(value)))
+
+    @property
+    def driver_flags_threshold(self) -> int:
+        """Minimum drivers with damage flags to trigger safety car."""
+        return self._config["settings"].getint("driver_flags_threshold", fallback=2)
+
+    @driver_flags_threshold.setter
+    def driver_flags_threshold(self, value: int) -> None:
+        self._config.set("settings", "driver_flags_threshold", str(value))
+
+    @property
+    def driver_flags_message(self) -> str:
+        """Message for driver flags safety car."""
+        return self._config["settings"].get("driver_flags_message", fallback="Damaged cars on track")
+
+    @driver_flags_message.setter
+    def driver_flags_message(self, value: str) -> None:
+        self._config.set("settings", "driver_flags_message", value)
     
     # Race start multiplier settings
     @property
@@ -264,6 +292,15 @@ class Settings:
     @stopped_weight.setter
     def stopped_weight(self, value: float) -> None:
         self._config.set("settings", "stopped_weight", str(value))
+
+    @property
+    def driver_flags_weight(self) -> float:
+        """Weight for driver flags in combined calculation."""
+        return self._config["settings"].getfloat("driver_flags_weight", fallback=2.5)
+
+    @driver_flags_weight.setter
+    def driver_flags_weight(self, value: float) -> None:
+        self._config.set("settings", "driver_flags_weight", str(value))
 
     # Accumulative detection settings
     @property

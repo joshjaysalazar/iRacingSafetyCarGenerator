@@ -17,6 +17,7 @@ class Driver(TypedDict):
     total_distance: float
     track_loc: TrkLoc
     on_pit_road: bool
+    session_flags: int
 
 class SessionInfo(TypedDict):
     """Session-level information from iRacing SDK."""
@@ -71,6 +72,7 @@ class Drivers:
         lap_distance = self.master.ir["CarIdxLapDistPct"]
         track_loc = self.master.ir["CarIdxTrackSurface"]
         on_pit_road = self.master.ir["CarIdxOnPitRoad"]
+        session_flags = self.master.ir["CarIdxSessionFlags"]
         driver_info = self.master.ir["DriverInfo"]["Drivers"]
 
         # Update session info
@@ -95,5 +97,6 @@ class Drivers:
                     "total_distance": laps_completed[car_idx] + lap_distance[car_idx],
                     "track_loc": track_loc[car_idx],
                     "on_pit_road": on_pit_road[car_idx],
+                    "session_flags": session_flags[car_idx],
                 }
             )
