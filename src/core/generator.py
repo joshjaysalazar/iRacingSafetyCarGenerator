@@ -444,6 +444,97 @@ class Generator:
             # Wait 1 second before checking again
             time.sleep(1)
 
+    def _is_race_active(self):
+        """Check if racing is actively underway using multiple heuristics.
+        
+        This is a reference implementation for detecting active racing state
+        when the green flag moment was missed. Uses multiple indicators:
+        - Multiple cars with completed laps
+        - Cars with recent lap times
+        - Cars spread around the track
+        
+        Returns:
+            bool: True if race appears to be actively underway
+        """
+        try:
+            # Get current session data
+            current_session_idx = self.ir["SessionNum"] 
+            session_info = self.ir["SessionInfo"]["Sessions"][current_session_idx]
+            results = session_info["ResultsPositions"]
+            
+            # Heuristic 1: Multiple cars with completed laps
+            cars_with_laps = sum(1 for pos in results if pos["LapsComplete"] > 0)
+            
+            # Heuristic 2: Cars with recent lap times  
+            cars_with_times = sum(1 for pos in results if pos["LastTime"] > 0)
+            
+            # Heuristic 3: Cars spread around track
+            lap_positions = self.ir["CarIdxLapDistPct"]
+            valid_positions = [pos for pos in lap_positions if pos >= 0.0]
+            cars_on_track = len(valid_positions)
+            position_spread = max(valid_positions) - min(valid_positions) if valid_positions else 0
+            
+            # Race is active if we meet multiple criteria
+            return (cars_with_laps >= 3 and cars_with_times >= 3 and 
+                    cars_on_track >= 5 and position_spread > 0.1)
+        except Exception as e:
+            logger.warning(f"Error checking race activity: {e}")
+            return False
+
+    def _wait_for_racing_state(self):
+        """Wait for session to be in racing state using SessionState field.
+        
+        Alternative to waiting for green flag moment. Uses SessionState to detect
+        when racing is active. More reliable for mid-race generator startup.
+        
+        SessionState values:
+        - irsdk_StateGetInCar (0x00000002): Session gridding
+        - irsdk_StateWarmup (0x00000004): Session warmup  
+        - irsdk_StateParadeLaps (0x00000008): Session pace lap(s)
+        - irsdk_StateRacing (0x00000010): Session racing (Green Flag)
+        - irsdk_StateCheckered (0x00000020): Session racing complete (Checkered Flag)
+        - irsdk_StateCoolDown (0x00000040): Session complete, no cars on track
+        
+        Available timing fields:
+        - SessionTime: Elapsed time since session start (double)
+        - SessionTimeRemain: Time remaining in session (int) 
+        - SessionTimeTotal: Total session duration (double)
+        """
+        logger.info("Waiting for racing state")
+        
+        while True:
+            # Break if shutting down or skipping
+            if self._is_shutting_down() or self._skip_waiting_for_green():
+                logger.debug("Skipping wait for racing state due to threading event")
+                break
+                
+            # Get session state and timing information
+            session_state = self.ir["SessionState"]
+            session_time = self.ir["SessionTime"]
+            session_time_remain = self.ir["SessionTimeRemain"] 
+            session_time_total = self.ir["SessionTimeTotal"]
+            
+            logger.debug(f"SessionState: 0x{session_state:08x}, "
+                        f"SessionTime: {session_time:.1f}s, "
+                        f"SessionTimeRemain: {session_time_remain}s, "
+                        f"SessionTimeTotal: {session_time_total:.1f}s")
+            
+            # Check if we're in racing state
+            if session_state & 0x00000010:  # irsdk_StateRacing
+                logger.info("Session is now in racing state")
+                break
+                
+            # Also accept if race is already finished but was racing
+            if session_state & 0x00000020:  # irsdk_StateCheckered  
+                logger.info("Session racing is complete")
+                break
+                
+            time.sleep(1)
+        
+        # Set start time if not set
+        if self.start_time is None:
+            self.start_time = time.time()
+
     def generator_thread_excepthook(self, args):
         logger.critical("Uncaught exception:", exc_info=args)
 
