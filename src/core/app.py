@@ -1260,7 +1260,9 @@ class App(tk.Tk):
             None
         """
         if not is_stopped_state(self.generator_state):
-            logger.info('Starting a manual safety car')
+            logger.info(f'Manual safety car requested while in state: {self.generator_state}')
+            # Set the event flag - the generator thread will handle it appropriately
+            # based on its current state
             self.generator.throw_manual_safety_car()
         else:
             logger.info('Tried to throw a manual SC, but generator not running')
