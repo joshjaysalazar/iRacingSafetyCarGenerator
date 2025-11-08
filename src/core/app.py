@@ -6,6 +6,7 @@ from tkinter import ttk, filedialog, messagebox
 from core import generator
 from core import tooltip
 from core.generator import GeneratorState
+from core.session_poller import SessionInfoPoller
 from core.settings import Settings
 from util.state_utils import generator_state_messages, is_stopped_state
 from util.dev_utils import copy_sdk_data_to_clipboard, send_test_commands
@@ -36,17 +37,24 @@ class App(tk.Tk):
 
         # Trace state variables
         self._generator_state = GeneratorState.STOPPED
+        self._track_length_km = None  # Store track length for proximity calculation
 
         # Create generator object
         self.generator = generator.Generator(arguments, self)
         self.shutdown_event = self.generator.shutdown_event
         self.skip_wait_for_green_event = self.generator.skip_wait_for_green_event
 
+        # Create and start session info poller
+        self.session_poller = SessionInfoPoller(self._session_info_callback)
+
         # Set handler for closing main window event
         self.protocol('WM_DELETE_WINDOW', self.handle_delete_window)
 
         # Create widgets
         self._create_widgets()
+
+        # Start session info poller after widgets are created
+        self.session_poller.start()
 
     # Advanced features toggle
     def _toggle_advanced_features(self):
@@ -71,12 +79,13 @@ class App(tk.Tk):
 
     def handle_delete_window(self):
         """ Event handler to trigger shutdown_event and destroy the main window
-        
+
         Args:
             None
         """
         logger.info("Closing main application window")
         self.shutdown_event.set()
+        self.session_poller.stop()
         self.destroy()
 
     def _create_widgets(self):
@@ -102,15 +111,107 @@ class App(tk.Tk):
         self.columnconfigure(1, weight=1)
         self.columnconfigure(2, weight=1)
         self.columnconfigure(3, weight=1)
-        self.rowconfigure(0, weight=1)
+        self.rowconfigure(0, weight=0)  # Session info panel (fixed height)
         self.rowconfigure(1, weight=1)
         self.rowconfigure(2, weight=1)
+        self.rowconfigure(3, weight=1)
+
+        # Create Session Info Panel
+        logger.debug("Creating Session Info Panel")
+        self.frm_session_info = ttk.LabelFrame(self, text="Session Information")
+        self.frm_session_info.grid(
+            row=0,
+            column=0,
+            columnspan=3,
+            sticky="ew",
+            padx=5,
+            pady=5
+        )
+
+        # Configure columns for session info panel
+        for i in range(8):
+            self.frm_session_info.columnconfigure(i, weight=1)
+
+        # Track Name
+        self.lbl_track_name_header = ttk.Label(
+            self.frm_session_info,
+            text="Track:",
+            font=("TkDefaultFont", 9, "bold")
+        )
+        self.lbl_track_name_header.grid(row=0, column=0, sticky="e", padx=(5, 2), pady=5)
+        self.lbl_track_name = ttk.Label(self.frm_session_info, text="---")
+        self.lbl_track_name.grid(row=0, column=1, sticky="w", padx=(2, 10), pady=5)
+
+        # Track Config
+        self.lbl_track_config_header = ttk.Label(
+            self.frm_session_info,
+            text="Config:",
+            font=("TkDefaultFont", 9, "bold")
+        )
+        self.lbl_track_config_header.grid(row=0, column=2, sticky="e", padx=(5, 2), pady=5)
+        self.lbl_track_config = ttk.Label(self.frm_session_info, text="---")
+        self.lbl_track_config.grid(row=0, column=3, sticky="w", padx=(2, 10), pady=5)
+
+        # Track Distance
+        self.lbl_track_distance_header = ttk.Label(
+            self.frm_session_info,
+            text="Distance:",
+            font=("TkDefaultFont", 9, "bold")
+        )
+        self.lbl_track_distance_header.grid(row=0, column=4, sticky="e", padx=(5, 2), pady=5)
+        self.lbl_track_distance = ttk.Label(self.frm_session_info, text="---")
+        self.lbl_track_distance.grid(row=0, column=5, sticky="w", padx=(2, 10), pady=5)
+
+        # Session Type
+        self.lbl_session_type_header = ttk.Label(
+            self.frm_session_info,
+            text="Session:",
+            font=("TkDefaultFont", 9, "bold")
+        )
+        self.lbl_session_type_header.grid(row=1, column=0, sticky="e", padx=(5, 2), pady=5)
+        self.lbl_session_type = ttk.Label(self.frm_session_info, text="---")
+        self.lbl_session_type.grid(row=1, column=1, sticky="w", padx=(2, 10), pady=5)
+
+        # Session State
+        self.lbl_session_state_header = ttk.Label(
+            self.frm_session_info,
+            text="State:",
+            font=("TkDefaultFont", 9, "bold")
+        )
+        self.lbl_session_state_header.grid(row=1, column=2, sticky="e", padx=(5, 2), pady=5)
+        self.lbl_session_state = ttk.Label(self.frm_session_info, text="---")
+        self.lbl_session_state.grid(row=1, column=3, sticky="w", padx=(2, 10), pady=5)
+
+        # Generator Status (will be populated later with lbl_status content)
+        self.lbl_generator_status_header = ttk.Label(
+            self.frm_session_info,
+            text="Generator:",
+            font=("TkDefaultFont", 9, "bold")
+        )
+        self.lbl_generator_status_header.grid(row=1, column=4, sticky="e", padx=(5, 2), pady=5)
+        self.lbl_generator_status = ttk.Label(
+            self.frm_session_info,
+            text="Ready",
+            anchor=tk.W
+        )
+        self.lbl_generator_status.grid(row=1, column=5, sticky="w", padx=(2, 10), pady=5)
+
+        # Buttons on the right side
+        self.btn_save_settings_session = ttk.Button(
+            self.frm_session_info,
+            text="Save Settings",
+            command=self._save_settings
+        )
+        self.btn_save_settings_session.grid(row=0, column=6, sticky="ew", padx=5, pady=5)
+
+        # We'll create the run button after loading icons
+        # Placeholder for now - will be created after icons are loaded
 
         # Create Safety Car Types frame
         logger.debug("Creating Safety Car Types frame")
         self.frm_sc_types = ttk.LabelFrame(self, text="Safety Car Types")
         self.frm_sc_types.grid(
-            row=0,
+            row=1,
             column=0,
             rowspan=3,
             sticky="nesw",
@@ -408,7 +509,7 @@ class App(tk.Tk):
         # Create Safety Car Settings frame
         logger.debug("Creating Safety Car Settings frame")
         self.frm_sc_settings = ttk.LabelFrame(self, text="Safety Car Threshold checks")
-        self.frm_sc_settings.grid(row=0, column=1, sticky="nesw", padx=5, pady=5, rowspan=3)
+        self.frm_sc_settings.grid(row=1, column=1, sticky="nesw", padx=5, pady=5, rowspan=3)
         settings_row = 0
 
         # Create Event Time Window spinbox
@@ -587,7 +688,8 @@ class App(tk.Tk):
             increment=0.01,
             from_=0,
             to=1,
-            width=5
+            width=5,
+            command=self._update_proximity_label
         )
         self.spn_proximity_dist.grid(
             row=settings_row,
@@ -596,6 +698,8 @@ class App(tk.Tk):
             padx=5,
             pady=5
         )
+        # Also bind to key release for manual typing
+        self.spn_proximity_dist.bind('<KeyRelease>', self._update_proximity_label)
         tooltip.CreateToolTip(
             self.lbl_proximity_dist,
             self.tooltips_text.get("proximity_yellows_distance")
@@ -770,7 +874,7 @@ class App(tk.Tk):
         # Create General frame
         logger.debug("Creating General frame")
         self.frm_general = ttk.LabelFrame(self, text="Eligibility window")
-        self.frm_general.grid(row=0, column=2, sticky="nesw", padx=5, pady=5)
+        self.frm_general.grid(row=1, column=2, sticky="nesw", padx=5, pady=5)
 
         # Create variable to hold the current row in the frame
         general_row = 0
@@ -903,7 +1007,7 @@ class App(tk.Tk):
         # Safety car procedure specifics
         logger.debug("Creating SC procedure settings frame")
         self.frm_procedures = ttk.LabelFrame(self, text="Safety Car Procedures")
-        self.frm_procedures.grid(row=1, column=2, sticky="nesw", padx=5, pady=5)
+        self.frm_procedures.grid(row=2, column=2, sticky="nesw", padx=5, pady=5)
 
         # Create laps under safety car entry
         logger.debug("Creating laps under safety car entry")
@@ -1013,27 +1117,11 @@ class App(tk.Tk):
         # Create Controls frame
         logger.debug("Creating Controls frame")
         self.frm_controls = ttk.Frame(self)
-        self.frm_controls.grid(row=2, column=2, sticky="nesw", padx=5, pady=5)
+        self.frm_controls.grid(row=3, column=2, sticky="nesw", padx=5, pady=5)
         self.frm_controls.columnconfigure(0, weight=1)
 
         # Create variable to hold the current row in the frame
         controls_row = 0
-
-        # Create save settings button
-        logger.debug("Creating save settings button")
-        self.btn_save_settings = ttk.Button(
-            self.frm_controls,
-            text="Save Settings",
-            command=self._save_settings
-        )
-        self.btn_save_settings.grid(
-            row=controls_row,
-            column=0,
-            sticky="ew",
-            padx=5,
-            pady=5
-        )
-        controls_row += 1
 
         ### put visual warning here about dev mode if in dev mode
         if self.arguments.dry_run:
@@ -1055,7 +1143,7 @@ class App(tk.Tk):
             )
             controls_row += 1
 
-        # Create run button
+        # Create run button (moved to session info panel)
         logger.debug("Creating run button")
 
         play_icon = tk.PhotoImage(file='assets/play.png')
@@ -1066,20 +1154,19 @@ class App(tk.Tk):
         self.generator_state_messages = generator_state_messages(play_icon, stop_icon)
 
         self.btn_run = ttk.Button(
-            self.frm_controls,
+            self.frm_session_info,
             text=self.generator_state_messages[GeneratorState.STOPPED]['btn_run_text'],
             image=self.generator_state_messages[GeneratorState.STOPPED]['btn_run_icon'],
             compound=tk.LEFT,
             command=self._save_and_run
         )
         self.btn_run.grid(
-            row=controls_row,
-            column=0,
+            row=1,
+            column=6,
             sticky="ew",
             padx=5,
             pady=5
         )
-        controls_row += 1
 
     
 
@@ -1122,22 +1209,6 @@ class App(tk.Tk):
             text="Throw Double Yellows",
             command=self._start_safety_car,
         )
-        
-        # Create status label
-        logger.debug("Creating status label")
-        self.lbl_status = ttk.Label(
-            self.frm_controls,
-            text="Ready\n",
-            anchor=tk.CENTER
-        )
-        self.lbl_status.grid(
-            row=controls_row,
-            column=0,
-            sticky="ew",
-            padx=5,
-            pady=5
-        )
-        controls_row += 1
 
         # Add dev mode controls
         if self.arguments.developer_mode:
@@ -1209,7 +1280,7 @@ class App(tk.Tk):
         self.frm_drivers_info.grid(
             row=0,
             column=3,
-            rowspan=3,
+            rowspan=4,
             sticky="nesw",
             padx=5,
             pady=5
@@ -1440,14 +1511,75 @@ class App(tk.Tk):
         self.settings.save()
 
     def set_message(self, message):
-        """Set the status label to a message.
+        """Set the generator status label to a message.
 
         Args:
             message (str): The message to set the status label to.
         """
-        logger.debug(f"Setting status label to: {message}")
-        self.lbl_status["text"] = message
+        logger.debug(f"Setting generator status label to: {message}")
+        self.lbl_generator_status["text"] = message
         self.update_idletasks()
+
+    def _session_info_callback(self, data):
+        """Callback for SessionInfoPoller to update UI with session data.
+
+        This is called from the poller thread, so we use after() to update UI
+        from the main thread.
+
+        Args:
+            data: Dictionary with session info or None if disconnected
+        """
+        # Schedule UI update on main thread
+        self.after(0, lambda: self._update_session_info_ui(data))
+
+    def _update_session_info_ui(self, data):
+        """Update session info UI labels with data (must be called from main thread).
+
+        Args:
+            data: Dictionary with session info or None to clear
+        """
+        if data is None:
+            self._clear_session_info()
+        else:
+            logger.debug(f"Updating session info UI: {data}")
+            self.lbl_track_name["text"] = data.get('track_name', '---')
+            self.lbl_track_distance["text"] = data.get('track_length', '---')
+            self.lbl_track_config["text"] = data.get('track_config', '---') or '---'
+            self.lbl_session_type["text"] = data.get('session_type', '---')
+            self.lbl_session_state["text"] = data.get('session_state', '---')
+
+            # Store and update proximity distance label
+            self._track_length_km = data.get('track_length_km')
+            self._update_proximity_label()
+
+    def _clear_session_info(self):
+        """Clear all session info labels."""
+        logger.debug("Clearing session info UI")
+        self.lbl_track_name["text"] = "---"
+        self.lbl_track_distance["text"] = "---"
+        self.lbl_track_config["text"] = "---"
+        self.lbl_session_type["text"] = "---"
+        self.lbl_session_state["text"] = "---"
+        self._track_length_km = None
+        self._update_proximity_label()
+
+    def _update_proximity_label(self, *args):
+        """Update proximity distance label to show meters based on track length.
+
+        This can be called either from session info updates or from the spinbox trace.
+
+        Args:
+            *args: Arguments from trace callback (unused)
+        """
+        if self._track_length_km is None:
+            self.lbl_proximity_dist["text"] = "Proximity distance"
+        else:
+            try:
+                proximity_fraction = float(self.spn_proximity_dist.get())
+                distance_meters = self._track_length_km * 1000 * proximity_fraction
+                self.lbl_proximity_dist["text"] = f"Proximity distance (~{distance_meters:.0f} m)"
+            except (ValueError, tk.TclError):
+                self.lbl_proximity_dist["text"] = "Proximity distance"
 
     @property
     def generator_state(self):
