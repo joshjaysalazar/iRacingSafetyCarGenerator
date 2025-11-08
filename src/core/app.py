@@ -91,11 +91,17 @@ class App(tk.Tk):
         self.var_advanced_features = tk.IntVar()
         self.var_advanced_features.set(0)
 
+        # Checkbox for showing driver information
+        self.var_show_drivers_info = tk.IntVar()
+        self.var_show_drivers_info.set(0)
+        self.var_show_drivers_info.trace_add("write", self._toggle_drivers_info)
+
         # Configure
         logger.debug("Configuring main application window")
         self.columnconfigure(0, weight=1)
         self.columnconfigure(1, weight=1)
         self.columnconfigure(2, weight=1)
+        self.columnconfigure(3, weight=1)
         self.rowconfigure(0, weight=1)
         self.rowconfigure(1, weight=1)
         self.rowconfigure(2, weight=1)
@@ -1092,6 +1098,20 @@ class App(tk.Tk):
         )
         controls_row += 1
 
+        self.chk_show_drivers_info = ttk.Checkbutton(
+            self.frm_controls,
+            text="Show Drivers Info",
+            variable=self.var_show_drivers_info
+        )
+        self.chk_show_drivers_info.grid(
+            row=controls_row,
+            column=0,
+            sticky="w",
+            padx=5,
+            pady=5
+        )
+        controls_row += 1
+
         self._throw_yellow_row = controls_row
         controls_row += 1
 
@@ -1183,6 +1203,86 @@ class App(tk.Tk):
                 pady=5
             )
 
+        # Create Driver Information frame
+        logger.debug("Creating Driver Information frame")
+        self.frm_drivers_info = ttk.LabelFrame(self, text="Driver Information")
+        self.frm_drivers_info.grid(
+            row=0,
+            column=3,
+            rowspan=3,
+            sticky="nesw",
+            padx=5,
+            pady=5
+        )
+        # Initially hidden - will be shown when checkbox is checked
+        self.frm_drivers_info.grid_remove()
+
+        # Create Treeview for driver table
+        logger.debug("Creating driver table Treeview")
+
+        # Define columns
+        columns = (
+            "pos", "car_num", "driver", "idx", "class", "pace",
+            "laps_done", "laps_start", "lap_pct", "total_dist",
+            "delta", "track_loc", "pit"
+        )
+
+        self.tree_drivers = ttk.Treeview(
+            self.frm_drivers_info,
+            columns=columns,
+            show="headings",
+            height=20
+        )
+
+        # Define column headings
+        self.tree_drivers.heading("pos", text="Pos")
+        self.tree_drivers.heading("car_num", text="Car #")
+        self.tree_drivers.heading("driver", text="Driver")
+        self.tree_drivers.heading("idx", text="Idx")
+        self.tree_drivers.heading("class", text="Class")
+        self.tree_drivers.heading("pace", text="Pace")
+        self.tree_drivers.heading("laps_done", text="Laps")
+        self.tree_drivers.heading("laps_start", text="L.Start")
+        self.tree_drivers.heading("lap_pct", text="Lap %")
+        self.tree_drivers.heading("total_dist", text="Total Dist")
+        self.tree_drivers.heading("delta", text="\u0394")
+        self.tree_drivers.heading("track_loc", text="Track Loc")
+        self.tree_drivers.heading("pit", text="Pit")
+
+        # Configure column widths
+        self.tree_drivers.column("pos", width=40, anchor="center")
+        self.tree_drivers.column("car_num", width=50, anchor="center")
+        self.tree_drivers.column("driver", width=150, anchor="w")
+        self.tree_drivers.column("idx", width=40, anchor="center")
+        self.tree_drivers.column("class", width=50, anchor="center")
+        self.tree_drivers.column("pace", width=50, anchor="center")
+        self.tree_drivers.column("laps_done", width=50, anchor="center")
+        self.tree_drivers.column("laps_start", width=60, anchor="center")
+        self.tree_drivers.column("lap_pct", width=60, anchor="center")
+        self.tree_drivers.column("total_dist", width=80, anchor="center")
+        self.tree_drivers.column("delta", width=60, anchor="center")
+        self.tree_drivers.column("track_loc", width=80, anchor="center")
+        self.tree_drivers.column("pit", width=40, anchor="center")
+
+        # Add scrollbar
+        scrollbar = ttk.Scrollbar(
+            self.frm_drivers_info,
+            orient="vertical",
+            command=self.tree_drivers.yview
+        )
+        self.tree_drivers.configure(yscrollcommand=scrollbar.set)
+
+        # Grid the table and scrollbar
+        self.tree_drivers.grid(row=0, column=0, sticky="nesw", padx=(5, 0), pady=5)
+        scrollbar.grid(row=0, column=1, sticky="ns", padx=(0, 5), pady=5)
+
+        # Configure grid weights for driver frame
+        self.frm_drivers_info.columnconfigure(0, weight=1)
+        self.frm_drivers_info.rowconfigure(0, weight=1)
+
+        # Initialize update timer variable
+        self._driver_table_update_timer = None
+
         # Fill in the widgets with the settings from the config file
         logger.debug("Filling in widgets with settings from config file")
         self.var_random.set(self.settings.random_detector_enabled)
@@ -1234,6 +1334,7 @@ class App(tk.Tk):
         self.spn_stopped_weight.insert(0, str(self.settings.stopped_weight))
         self.ent_combined_message.delete(0, "end")
         self.ent_combined_message.insert(0, self.settings.accumulative_message)
+        self.var_show_drivers_info.set(self.settings.show_drivers_info)
 
         # self.ent_laps_before_wave_arounds.config(state="disabled")
 
@@ -1302,6 +1403,7 @@ class App(tk.Tk):
         stopped_weight = self.spn_stopped_weight.get()
         off_weight = self.spn_off_weight.get()
         combined_message = self.ent_combined_message.get()
+        show_drivers_info = self.var_show_drivers_info.get()
 
         # Save the settings to the config file
         # IntVar.get() returns int (0 or 1), bool() converts correctly
@@ -1333,6 +1435,7 @@ class App(tk.Tk):
         self.settings.off_track_weight = float(off_weight)
         self.settings.accumulative_detector_enabled = bool(combined)
         self.settings.accumulative_message = str(combined_message)
+        self.settings.show_drivers_info = bool(show_drivers_info)
 
         self.settings.save()
 
@@ -1381,6 +1484,97 @@ class App(tk.Tk):
             self.lbl_laps_before_wave_arounds.config(state="disabled")
             self.ent_laps_before_wave_arounds.config(state="disabled")
             self.cmb_wave_around_rules.config(state="disabled")
+
+    def _toggle_drivers_info(self, *args):
+        """Toggle the visibility of the driver information panel.
+
+        Args:
+            *args: Arguments from trace callback (unused)
+        """
+        logger.debug("Toggling driver information panel")
+        if self.var_show_drivers_info.get() == 1:
+            self.frm_drivers_info.grid()
+            # Start updating the table if generator is running
+            if hasattr(self.generator, 'drivers') and self._driver_table_update_timer is None:
+                self.update_driver_table()
+        else:
+            self.frm_drivers_info.grid_remove()
+            # Stop updating the table
+            if self._driver_table_update_timer is not None:
+                self.after_cancel(self._driver_table_update_timer)
+                self._driver_table_update_timer = None
+
+    def update_driver_table(self):
+        """Update the driver information table with current data.
+
+        This method is called periodically to refresh the table with live driver data.
+        It calculates running order, delta from previous lap, and displays all driver fields.
+        """
+        # Only update if the frame is visible and generator has driver data
+        if self.var_show_drivers_info.get() == 0 or not hasattr(self.generator, 'drivers'):
+            self._driver_table_update_timer = None
+            return
+
+        try:
+            # Get current and previous driver data
+            current_drivers = self.generator.drivers.current_drivers
+            previous_drivers = self.generator.drivers.previous_drivers
+
+            # Sort drivers by total_distance (descending - leader first)
+            sorted_drivers = sorted(
+                current_drivers,
+                key=lambda d: d["total_distance"],
+                reverse=True
+            )
+
+            # Create a lookup for previous driver data by driver_idx
+            prev_lookup = {d["driver_idx"]: d for d in previous_drivers}
+
+            # Clear existing table data
+            for item in self.tree_drivers.get_children():
+                self.tree_drivers.delete(item)
+
+            # Populate table with sorted driver data
+            for pos, driver in enumerate(sorted_drivers, start=1):
+                # Calculate delta from previous
+                prev_driver = prev_lookup.get(driver["driver_idx"])
+                if prev_driver:
+                    delta = driver["total_distance"] - prev_driver["total_distance"]
+                    delta_str = f"{delta:+.3f}"
+                else:
+                    delta_str = "---"
+
+                # Format track location
+                track_loc_str = str(driver["track_loc"]).split(".")[-1] if hasattr(driver["track_loc"], 'name') else str(driver["track_loc"])
+
+                # Format pace car boolean
+                pace_str = "Y" if driver["is_pace_car"] else "N"
+                pit_str = "Y" if driver["on_pit_road"] else "N"
+
+                # Insert row into table
+                values = (
+                    str(pos),                                # Position
+                    driver["car_number"],                    # Car #
+                    driver["driver_name"],                   # Driver name
+                    str(driver["driver_idx"]),               # Driver index
+                    str(driver["car_class_id"]),             # Class ID
+                    pace_str,                                # Pace car
+                    str(driver["laps_completed"]),           # Laps completed
+                    str(driver["laps_started"]),             # Laps started
+                    f"{driver['lap_distance']:.3f}",         # Lap distance %
+                    f"{driver['total_distance']:.3f}",       # Total distance
+                    delta_str,                               # Delta
+                    track_loc_str,                           # Track location
+                    pit_str                                  # On pit road
+                )
+
+                self.tree_drivers.insert("", "end", values=values)
+
+        except Exception as e:
+            logger.error(f"Error updating driver table: {e}")
+
+        # Schedule next update (1 second)
+        self._driver_table_update_timer = self.after(1000, self.update_driver_table)
 
     def _skip_wait_for_green(self):
         """Move from waiting for green to monitoring session state.
