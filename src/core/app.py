@@ -397,7 +397,153 @@ class App(tk.Tk):
         tooltip.CreateToolTip(
             self.ent_off_message,
             self.tooltips_text.get("message")
-        )        
+        )
+        sc_types_row += 1
+
+        # Create horizontal separator
+        logger.debug("Creating horizontal separator")
+        separator = ttk.Separator(self.frm_sc_types, orient="horizontal")
+        separator.grid(
+            row=sc_types_row,
+            column=0,
+            columnspan=2,
+            sticky="ew",
+            padx=5,
+            pady=5
+        )
+        sc_types_row += 1
+
+        # Create towing detector checkbox
+        logger.debug("Creating towing detector checkbox")
+        self.var_towing = tk.IntVar()
+        self.var_towing.set(1)
+        self.chk_towing = ttk.Checkbutton(
+            self.frm_sc_types,
+            text="Cars towing to pits",
+            variable=self.var_towing
+        )
+        self.chk_towing.grid(
+            row=sc_types_row,
+            column=0,
+            sticky="w",
+            padx=5,
+            pady=5
+        )
+        tooltip.CreateToolTip(self.chk_towing, self.tooltips_text.get("towing", "Detect when cars tow to pits instead of driving there"))
+        sc_types_row += 1
+
+        # Create minimum to trigger spinbox
+        logger.debug("Creating towing minimum to trigger spinbox")
+        self.lbl_towing_min = ttk.Label(
+            self.frm_sc_types,
+            text="Minimum to trigger"
+        )
+        self.lbl_towing_min.grid(
+            row=sc_types_row,
+            column=0,
+            sticky="w",
+            padx=5,
+            pady=5
+        )
+        self.spn_towing_min = ttk.Spinbox(
+            self.frm_sc_types,
+            from_=0,
+            to=100,
+            width=5
+        )
+        self.spn_towing_min.grid(
+            row=sc_types_row,
+            column=1,
+            sticky="e",
+            padx=5,
+            pady=5
+        )
+        tooltip.CreateToolTip(
+            self.lbl_towing_min,
+            self.tooltips_text.get("towing_min", "Minimum number of cars towing to trigger safety car")
+        )
+        tooltip.CreateToolTip(
+            self.spn_towing_min,
+            self.tooltips_text.get("towing_min", "Minimum number of cars towing to trigger safety car")
+        )
+        sc_types_row += 1
+
+        # Create towing message entry
+        logger.debug("Creating towing message entry")
+        self.ent_towing_message = ttk.Entry(
+            self.frm_sc_types,
+            width=32
+        )
+        self.ent_towing_message.grid(
+            row=sc_types_row,
+            column=0,
+            columnspan=2,
+            sticky="w",
+            padx=5,
+            pady=5
+        )
+        tooltip.CreateToolTip(
+            self.ent_towing_message,
+            self.tooltips_text.get("message")
+        )
+        sc_types_row += 1
+
+        # Create max pit entry delta spinbox
+        logger.debug("Creating max pit entry delta spinbox")
+        self.lbl_towing_max_delta = ttk.Label(
+            self.frm_sc_types,
+            text="Max pit entry delta"
+        )
+        self.lbl_towing_max_delta.grid(
+            row=sc_types_row,
+            column=0,
+            sticky="w",
+            padx=5,
+            pady=5
+        )
+        self.spn_towing_max_delta = ttk.Spinbox(
+            self.frm_sc_types,
+            from_=0.01,
+            to=0.5,
+            increment=0.01,
+            width=5
+        )
+        self.spn_towing_max_delta.grid(
+            row=sc_types_row,
+            column=1,
+            sticky="e",
+            padx=5,
+            pady=5
+        )
+        tooltip.CreateToolTip(
+            self.lbl_towing_max_delta,
+            self.tooltips_text.get("towing_max_delta", "Maximum lap distance delta (0.0-1.0) for normal pit entry")
+        )
+        tooltip.CreateToolTip(
+            self.spn_towing_max_delta,
+            self.tooltips_text.get("towing_max_delta", "Maximum lap distance delta (0.0-1.0) for normal pit entry")
+        )
+        sc_types_row += 1
+
+        # Create pit entry statistics display
+        logger.debug("Creating pit entry statistics display")
+        self.lbl_pit_entry_stats = ttk.Label(
+            self.frm_sc_types,
+            text="Pit entry: No data",
+            font=("TkDefaultFont", 8)
+        )
+        self.lbl_pit_entry_stats.grid(
+            row=sc_types_row,
+            column=0,
+            columnspan=2,
+            sticky="w",
+            padx=5,
+            pady=5
+        )
+        tooltip.CreateToolTip(
+            self.lbl_pit_entry_stats,
+            "Estimated pit entry location and confidence interval based on observed entries"
+        )
 
         # Create Safety Car Settings frame
         logger.debug("Creating Safety Car Settings frame")
@@ -740,6 +886,42 @@ class App(tk.Tk):
         tooltip.CreateToolTip(
             self.spn_stopped_weight,
             self.tooltips_text.get("stopped_weight")
+        )
+        settings_row += 1
+
+        logger.debug("Creating towing weight spinbox")
+        self.lbl_towing_weight = ttk.Label(
+            self.frm_sc_settings,
+            text="Towing weight"
+        )
+        self.lbl_towing_weight.grid(
+            row=settings_row,
+            column=0,
+            sticky="w",
+            padx=5,
+            pady=5
+        )
+        self.spn_towing_weight = ttk.Spinbox(
+            self.frm_sc_settings,
+            increment=1,
+            from_=1,
+            to=10,
+            width=5
+        )
+        self.spn_towing_weight.grid(
+            row=settings_row,
+            column=1,
+            sticky="e",
+            padx=5,
+            pady=5
+        )
+        tooltip.CreateToolTip(
+            self.lbl_towing_weight,
+            self.tooltips_text.get("towing_weight", "Weight for towing events in combined threshold")
+        )
+        tooltip.CreateToolTip(
+            self.spn_towing_weight,
+            self.tooltips_text.get("towing_weight", "Weight for towing events in combined threshold")
         )
         settings_row += 1
 
@@ -1232,6 +1414,15 @@ class App(tk.Tk):
         self.spn_off_weight.insert(0, str(self.settings.off_track_weight))
         self.spn_stopped_weight.delete(0, "end")
         self.spn_stopped_weight.insert(0, str(self.settings.stopped_weight))
+        self.var_towing.set(getattr(self.settings, 'towing_detector_enabled', True))
+        self.spn_towing_min.delete(0, "end")
+        self.spn_towing_min.insert(0, str(getattr(self.settings, 'towing_cars_threshold', 1)))
+        self.ent_towing_message.delete(0, "end")
+        self.ent_towing_message.insert(0, getattr(self.settings, 'towing_message', 'Towing detected'))
+        self.spn_towing_max_delta.delete(0, "end")
+        self.spn_towing_max_delta.insert(0, str(getattr(self.settings, 'towing_max_pit_entry_delta', 0.05)))
+        self.spn_towing_weight.delete(0, "end")
+        self.spn_towing_weight.insert(0, str(getattr(self.settings, 'towing_weight', 2.0)))
         self.ent_combined_message.delete(0, "end")
         self.ent_combined_message.insert(0, self.settings.accumulative_message)
 
@@ -1301,6 +1492,11 @@ class App(tk.Tk):
         combined_min = self.spn_combined_min.get()
         stopped_weight = self.spn_stopped_weight.get()
         off_weight = self.spn_off_weight.get()
+        towing = self.var_towing.get()
+        towing_min = self.spn_towing_min.get()
+        towing_message = self.ent_towing_message.get()
+        towing_max_delta = self.spn_towing_max_delta.get()
+        towing_weight = self.spn_towing_weight.get()
         combined_message = self.ent_combined_message.get()
 
         # Save the settings to the config file
@@ -1331,6 +1527,11 @@ class App(tk.Tk):
         self.settings.accumulative_threshold = float(combined_min)
         self.settings.stopped_weight = float(stopped_weight)
         self.settings.off_track_weight = float(off_weight)
+        self.settings.towing_detector_enabled = bool(towing)
+        self.settings.towing_cars_threshold = int(towing_min)
+        self.settings.towing_message = str(towing_message)
+        self.settings.towing_max_pit_entry_delta = float(towing_max_delta)
+        self.settings.towing_weight = float(towing_weight)
         self.settings.accumulative_detector_enabled = bool(combined)
         self.settings.accumulative_message = str(combined_message)
 
@@ -1344,6 +1545,20 @@ class App(tk.Tk):
         """
         logger.debug(f"Setting status label to: {message}")
         self.lbl_status["text"] = message
+        self.update_idletasks()
+
+    def update_pit_entry_stats(self, statistics):
+        """Update the pit entry statistics display.
+
+        Args:
+            statistics (PitEntryStatistics): The pit entry statistics to display.
+        """
+        if statistics.estimated_location is None:
+            self.lbl_pit_entry_stats["text"] = "Pit entry: No data"
+        else:
+            location_pct = statistics.estimated_location * 100
+            ci_pct = statistics.confidence_interval * 100
+            self.lbl_pit_entry_stats["text"] = f"Pit entry: {location_pct:.1f}% ±{ci_pct:.1f}% (n={statistics.observation_count})"
         self.update_idletasks()
 
     @property
