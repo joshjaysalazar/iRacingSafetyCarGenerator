@@ -195,6 +195,13 @@ class Generator:
                             if detection_result:
                                 self.threshold_checker.register_detection_result(detection_result)
 
+                        # Update pit entry statistics display
+                        if DetectorEventTypes.TOWING in self.detector.detectors:
+                            towing_detector = self.detector.detectors[DetectorEventTypes.TOWING]
+                            pit_entry_stats = towing_detector.get_statistics()
+                            if self.master:
+                                self.master.update_pit_entry_stats(pit_entry_stats)
+
                         if self.threshold_checker.threshold_met():
                             logger.info("Threshold met, starting safety car")
                             self._start_safety_car("Incident on track")

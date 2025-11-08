@@ -29,16 +29,18 @@ class ThresholdCheckerSettings:
     accumulative_threshold: float = 10.0
     accumulative_weights: dict = field(
         default_factory=lambda: {
-            DetectorEventTypes.OFF_TRACK: 1.0, 
+            DetectorEventTypes.OFF_TRACK: 1.0,
             DetectorEventTypes.RANDOM: 0.0, # Random events do not contribute to the accumulative threshold
             DetectorEventTypes.STOPPED: 2.0,
+            DetectorEventTypes.TOWING: 2.0,
         }
-    ) 
+    )
     event_type_threshold: dict = field(
         default_factory=lambda: {
             DetectorEventTypes.OFF_TRACK: 4.0,
-            DetectorEventTypes.RANDOM: 1.0, 
+            DetectorEventTypes.RANDOM: 1.0,
             DetectorEventTypes.STOPPED: 2.0,
+            DetectorEventTypes.TOWING: 1.0,
         }
     )
     proximity_yellows_enabled: bool = False
@@ -61,11 +63,13 @@ class ThresholdCheckerSettings:
                 DetectorEventTypes.OFF_TRACK: settings.off_track_weight,
                 DetectorEventTypes.RANDOM: 0.0, # Random events do not contribute to the accumulative threshold
                 DetectorEventTypes.STOPPED: settings.stopped_weight,
+                DetectorEventTypes.TOWING: getattr(settings, 'towing_weight', 2.0),
             },
             event_type_threshold={
                 DetectorEventTypes.OFF_TRACK: settings.off_track_cars_threshold,
                 DetectorEventTypes.RANDOM: 1.0, # Random does not have a threshold, it is just a flag
                 DetectorEventTypes.STOPPED: settings.stopped_cars_threshold,
+                DetectorEventTypes.TOWING: getattr(settings, 'towing_cars_threshold', 1.0),
             },
             proximity_yellows_enabled=settings.proximity_filter_enabled,
             proximity_yellows_distance=settings.proximity_filter_distance_percentage,
