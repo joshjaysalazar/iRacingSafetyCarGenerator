@@ -397,7 +397,82 @@ class App(tk.Tk):
         tooltip.CreateToolTip(
             self.ent_off_message,
             self.tooltips_text.get("message")
-        )        
+        )
+        sc_types_row += 1
+
+        # Create driver flags (damage) checkbox
+        logger.debug("Creating driver flags checkbox")
+        self.var_driver_flags = tk.IntVar()
+        self.var_driver_flags.set(1)
+        self.chk_driver_flags = ttk.Checkbutton(
+            self.frm_sc_types,
+            text="Drivers with damage flags",
+            variable=self.var_driver_flags
+        )
+        self.chk_driver_flags.grid(
+            row=sc_types_row,
+            column=0,
+            sticky="w",
+            padx=5,
+            pady=5
+        )
+        tooltip.CreateToolTip(self.chk_driver_flags, self.tooltips_text.get("driver_flags"))
+        sc_types_row += 1
+
+        # Create minimum to trigger spinbox
+        logger.debug("Creating minimum to trigger spinbox")
+        self.lbl_driver_flags_min = ttk.Label(
+            self.frm_sc_types,
+            text="Minimum to trigger"
+        )
+        self.lbl_driver_flags_min.grid(
+            row=sc_types_row,
+            column=0,
+            sticky="w",
+            padx=5,
+            pady=5
+        )
+        self.spn_driver_flags_min = ttk.Spinbox(
+            self.frm_sc_types,
+            from_=0,
+            to=100,
+            width=5
+        )
+        self.spn_driver_flags_min.grid(
+            row=sc_types_row,
+            column=1,
+            sticky="e",
+            padx=5,
+            pady=5
+        )
+        tooltip.CreateToolTip(
+            self.lbl_driver_flags_min,
+            self.tooltips_text.get("driver_flags_min")
+        )
+        tooltip.CreateToolTip(
+            self.spn_driver_flags_min,
+            self.tooltips_text.get("driver_flags_min")
+        )
+        sc_types_row += 1
+
+        # Create message entry
+        logger.debug("Creating message entry")
+        self.ent_driver_flags_message = ttk.Entry(
+            self.frm_sc_types,
+            width=32
+        )
+        self.ent_driver_flags_message.grid(
+            row=sc_types_row,
+            column=0,
+            columnspan=2,
+            sticky="w",
+            padx=5,
+            pady=5
+        )
+        tooltip.CreateToolTip(
+            self.ent_driver_flags_message,
+            self.tooltips_text.get("message")
+        )
 
         # Create Safety Car Settings frame
         logger.debug("Creating Safety Car Settings frame")
@@ -740,6 +815,42 @@ class App(tk.Tk):
         tooltip.CreateToolTip(
             self.spn_stopped_weight,
             self.tooltips_text.get("stopped_weight")
+        )
+        settings_row += 1
+
+        logger.debug("Creating driver flags weight spinbox")
+        self.lbl_driver_flags_weight = ttk.Label(
+            self.frm_sc_settings,
+            text="Driver flags weight"
+        )
+        self.lbl_driver_flags_weight.grid(
+            row=settings_row,
+            column=0,
+            sticky="w",
+            padx=5,
+            pady=5
+        )
+        self.spn_driver_flags_weight = ttk.Spinbox(
+            self.frm_sc_settings,
+            increment=0.5,
+            from_=0,
+            to=10,
+            width=5
+        )
+        self.spn_driver_flags_weight.grid(
+            row=settings_row,
+            column=1,
+            sticky="e",
+            padx=5,
+            pady=5
+        )
+        tooltip.CreateToolTip(
+            self.lbl_driver_flags_weight,
+            self.tooltips_text.get("driver_flags_weight")
+        )
+        tooltip.CreateToolTip(
+            self.spn_driver_flags_weight,
+            self.tooltips_text.get("driver_flags_weight")
         )
         settings_row += 1
 
@@ -1202,6 +1313,11 @@ class App(tk.Tk):
         self.spn_off_min.insert(0, str(self.settings.off_track_cars_threshold))
         self.ent_off_message.delete(0, "end")
         self.ent_off_message.insert(0, self.settings.off_track_message)
+        self.var_driver_flags.set(self.settings.driver_flags_detector_enabled)
+        self.spn_driver_flags_min.delete(0, "end")
+        self.spn_driver_flags_min.insert(0, str(self.settings.driver_flags_threshold))
+        self.ent_driver_flags_message.delete(0, "end")
+        self.ent_driver_flags_message.insert(0, self.settings.driver_flags_message)
         self.spn_time_range.delete(0, "end")
         self.spn_time_range.insert(0, str(self.settings.event_time_window_seconds))
         self.spn_start_multi_time.delete(0, "end")
@@ -1232,6 +1348,8 @@ class App(tk.Tk):
         self.spn_off_weight.insert(0, str(self.settings.off_track_weight))
         self.spn_stopped_weight.delete(0, "end")
         self.spn_stopped_weight.insert(0, str(self.settings.stopped_weight))
+        self.spn_driver_flags_weight.delete(0, "end")
+        self.spn_driver_flags_weight.insert(0, str(self.settings.driver_flags_weight))
         self.ent_combined_message.delete(0, "end")
         self.ent_combined_message.insert(0, self.settings.accumulative_message)
 
@@ -1287,6 +1405,9 @@ class App(tk.Tk):
         off = self.var_off.get()
         off_min = self.spn_off_min.get()
         off_message = self.ent_off_message.get()
+        driver_flags = self.var_driver_flags.get()
+        driver_flags_min = self.spn_driver_flags_min.get()
+        driver_flags_message = self.ent_driver_flags_message.get()
         max_safety_cars = self.ent_max_safety_cars.get()
         start_minute = self.ent_start_minute.get()
         end_minute = self.ent_end_minute.get()
@@ -1301,6 +1422,7 @@ class App(tk.Tk):
         combined_min = self.spn_combined_min.get()
         stopped_weight = self.spn_stopped_weight.get()
         off_weight = self.spn_off_weight.get()
+        driver_flags_weight = self.spn_driver_flags_weight.get()
         combined_message = self.ent_combined_message.get()
 
         # Save the settings to the config file
@@ -1318,6 +1440,9 @@ class App(tk.Tk):
         self.settings.off_track_detector_enabled = bool(off)
         self.settings.off_track_cars_threshold = int(off_min)
         self.settings.off_track_message = str(off_message)
+        self.settings.driver_flags_detector_enabled = bool(driver_flags)
+        self.settings.driver_flags_threshold = int(driver_flags_min)
+        self.settings.driver_flags_message = str(driver_flags_message)
         self.settings.max_safety_cars = int(max_safety_cars)
         self.settings.detection_start_minute = float(start_minute)
         self.settings.detection_end_minute = float(end_minute)
@@ -1331,6 +1456,7 @@ class App(tk.Tk):
         self.settings.accumulative_threshold = float(combined_min)
         self.settings.stopped_weight = float(stopped_weight)
         self.settings.off_track_weight = float(off_weight)
+        self.settings.driver_flags_weight = float(driver_flags_weight)
         self.settings.accumulative_detector_enabled = bool(combined)
         self.settings.accumulative_message = str(combined_message)
 
