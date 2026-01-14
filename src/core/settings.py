@@ -283,3 +283,13 @@ class Settings:
     @accumulative_message.setter
     def accumulative_message(self, value: str) -> None:
         self._config.set("settings", "accumulative_message", value)
+
+    # UI display settings
+    @property
+    def show_drivers_info(self) -> bool:
+        """Show driver information table in UI."""
+        return self._config["settings"].getboolean("show_drivers_info", fallback=False)
+
+    @show_drivers_info.setter
+    def show_drivers_info(self, value: bool) -> None:
+        self._config.set("settings", "show_drivers_info", str(int(value)))

@@ -9,6 +9,7 @@ class Driver(TypedDict):
     """Driver state containing all relevant iRacing SDK data for a single driver."""
     driver_idx: int
     car_number: str
+    driver_name: str
     car_class_id: int
     is_pace_car: bool
     laps_completed: int
@@ -87,6 +88,7 @@ class Drivers:
                 {
                     "driver_idx": car_idx,
                     "car_number": driver_details["CarNumber"],
+                    "driver_name": driver_details["UserName"],
                     "car_class_id": driver_details["CarClassID"],
                     "is_pace_car": driver_details["CarIsPaceCar"] == 1,
                     "laps_completed": laps_completed[car_idx],
