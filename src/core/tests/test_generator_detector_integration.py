@@ -242,6 +242,7 @@ class TestGeneratorThresholdCheckerIntegration:
     def test_threshold_met_triggers_safety_car(self, generator_with_mocks, mock_drivers, mocker, caplog):
         """Test that when threshold is met, logs properly and calls _start_safety_car."""
         generator = generator_with_mocks
+        generator.dry_run = False
         generator.drivers = mock_drivers
         generator.threshold_checker = Mock(spec=ThresholdChecker)
         generator.detector = Mock(spec=Detector)
@@ -299,6 +300,38 @@ class TestGeneratorThresholdCheckerIntegration:
 
         # Verify no safety car log message
         assert "Threshold met, starting safety car" not in caplog.text
+
+        # Verify _start_safety_car was NOT called
+        start_safety_car_spy.assert_not_called()
+
+    def test_threshold_met_dry_run_skips_safety_car(self, generator_with_mocks, mock_drivers, mocker, caplog):
+        """Test that in dry run mode, threshold met logs but does not start safety car."""
+        generator = generator_with_mocks
+        generator.drivers = mock_drivers
+        generator.threshold_checker = Mock(spec=ThresholdChecker)
+        generator.detector = Mock(spec=Detector)
+
+        # Mock other dependencies
+        mocker.patch.object(generator, '_wait_for_green_flag')
+        mocker.patch.object(generator, '_is_shutting_down', side_effect=[False, True])
+        mocker.patch.object(generator.drivers, 'update')
+        start_safety_car_spy = mocker.patch.object(generator, '_start_safety_car')
+        mocker.patch('time.sleep', return_value=None)
+
+        # Mock detector results
+        mock_results = Mock(spec=BundledDetectedEvents)
+        mock_results.get_events.return_value = None
+        generator.detector.detect.return_value = mock_results
+
+        # Configure threshold_checker to return True for threshold_met
+        generator.threshold_checker.threshold_met.return_value = True
+
+        # Run the loop
+        with caplog.at_level('INFO'):
+            generator._loop()
+
+        # Verify the dry run log message
+        assert "Threshold met (dry run, skipping safety car procedure)" in caplog.text
 
         # Verify _start_safety_car was NOT called
         start_safety_car_spy.assert_not_called()

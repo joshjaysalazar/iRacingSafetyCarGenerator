@@ -44,6 +44,7 @@ class Generator:
         logger.debug("Initializing SDK and CommandSender")
         self.ir = irsdk.IRSDK()
         self.command_sender = CommandSenderFactory(arguments, self.ir)
+        self.dry_run = arguments.dry_run if arguments else False
 
         # The threshold_checker will be configured on start
         self.threshold_checker = None
@@ -129,7 +130,10 @@ class Generator:
         """
         try:
             if self._throw_manual_safety_car():
-                self._start_safety_car()
+                if self.dry_run:
+                    logger.info("Manual SC triggered (dry run, skipping safety car procedure)")
+                else:
+                    self._start_safety_car()
         finally:
             # we always want to clear the threading flag, so adding in finally clause
             self.throw_manual_sc_event.clear()
@@ -223,8 +227,11 @@ class Generator:
                                 self.threshold_checker.register_detection_result(detection_result)
 
                         if self.threshold_checker.threshold_met():
-                            logger.info("Threshold met, starting safety car")
-                            self._start_safety_car("Incident on track")
+                            if self.dry_run:
+                                logger.info("Threshold met (dry run, skipping safety car procedure)")
+                            else:
+                                logger.info("Threshold met, starting safety car")
+                                self._start_safety_car("Incident on track")
 
                     except Exception as e:
                         logger.error(f"Detection system failed: {e}", exc_info=True)
