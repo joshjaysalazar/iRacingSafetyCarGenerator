@@ -350,22 +350,25 @@ class TestGeneratorDetectorEndToEndIntegration:
         assert threshold_spy.call_count > 0
 
     def test_detector_settings_disabled_detectors_not_called(self, generator_with_mocks, mock_drivers, mocker):
-        """Test that disabled detectors are not included in the detector."""
+        """Test that disabled detectors with zero weight are not included in the detector."""
         generator = generator_with_mocks
 
-        # Disable some detectors in settings
+        # Disable some detectors in settings AND zero out their weights
         generator.master.settings.random_detector_enabled = False
         generator.master.settings.off_track_detector_enabled = False
-        
+        generator.master.settings.off_track_weight = 0.0
+
         generator.drivers = mock_drivers
-        
+
         # Initialize detector with disabled settings
         detector_settings = DetectorSettings.from_settings(generator.master.settings)
         generator.detector = Detector.build_detector(detector_settings, mock_drivers)
-        
-        # Check that only stopped detector is enabled
+
+        # Stopped is enabled, so it should be present
         assert DetectorEventTypes.STOPPED in generator.detector.detectors
+        # Random is disabled with weight 0 (always), so not present
         assert DetectorEventTypes.RANDOM not in generator.detector.detectors
+        # Off-track is disabled AND weight is 0, so not present
         assert DetectorEventTypes.OFF_TRACK not in generator.detector.detectors
 
 

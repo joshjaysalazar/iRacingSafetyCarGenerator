@@ -130,22 +130,24 @@ Detector (Composite)
 
 **Builder Pattern:**
 ```python
-# src/core/detection/detector.py:35-50
+# src/core/detection/detector.py — build_detector()
 @staticmethod
-def build_detector(settings: DetectorSettings, drivers: Drivers) -> "Detector":
-    detectors: list[SupportsDetect] = []
+def build_detector(settings: DetectorSettings, drivers: Drivers):
+    """Each detector is instantiated if individually enabled OR if its
+    accumulative weight is non-zero (contributes to weighted thresholds)."""
+    detectors = {}
 
-    if settings.random_detector_enabled:
-        detectors.append(RandomDetector(settings.random_detector_settings))
+    if settings.random_detector_enabled or settings.accumulative_weights.get(DetectorEventTypes.RANDOM, 0) > 0:
+        detectors[DetectorEventTypes.RANDOM] = RandomDetector(...)
 
-    if settings.stopped_detector_enabled:
-        detectors.append(StoppedDetector(drivers, settings.stopped_detector_settings))
+    if settings.stopped_detector_enabled or settings.accumulative_weights.get(DetectorEventTypes.STOPPED, 0) > 0:
+        detectors[DetectorEventTypes.STOPPED] = StoppedDetector(drivers)
 
-    if settings.off_track_detector_enabled:
-        detectors.append(OffTrackDetector(drivers, settings.off_track_detector_settings))
+    if settings.off_track_detector_enabled or settings.accumulative_weights.get(DetectorEventTypes.OFF_TRACK, 0) > 0:
+        detectors[DetectorEventTypes.OFF_TRACK] = OffTrackDetector(drivers)
 
-    if settings.meatball_detector_enabled:
-        detectors.append(MeatballDetector(drivers))
+    if settings.meatball_detector_enabled or settings.accumulative_weights.get(DetectorEventTypes.MEATBALL, 0) > 0:
+        detectors[DetectorEventTypes.MEATBALL] = MeatballDetector(drivers)
 
     return Detector(detectors)
 ```
@@ -652,8 +654,9 @@ threshold_checker.threshold_met()
     └─► _cluster_meets_threshold(cluster, dynamic_multiplier)
         ├─ Count events per type in cluster: {STOPPED: 2, OFF_TRACK: 1}
         │
-        ├─► Check per-event-type thresholds
-        │   └─ For each event type: count >= (threshold * multiplier)?
+        ├─► Check per-event-type thresholds (only for individually enabled detectors)
+        │   └─ For each individually-enabled event type: count >= (threshold * multiplier)?
+        │       (Detectors running only for accumulative weight skip this check)
         │
         ├─► Check accumulative threshold (per-driver max weight)
         │   ├─ For each driver, use only the highest-weighted event type

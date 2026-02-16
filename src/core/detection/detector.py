@@ -1,7 +1,7 @@
 
 import logging
 import time
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from enum import Enum
 
 from core.detection.detector_common_types import DetectionResult, DetectorEventTypes, DetectorState, SupportsDetect
@@ -47,6 +47,10 @@ class DetectorSettings:
     # MeatballDetector settings
     meatball_detector_enabled: bool = True
 
+    # Accumulative weights from threshold settings — used to decide whether
+    # a detector should be instantiated even when individually disabled.
+    accumulative_weights: dict = field(default_factory=dict)
+
     @staticmethod
     def from_settings(settings):
         return DetectorSettings(
@@ -58,6 +62,12 @@ class DetectorSettings:
             stopped_detector_enabled=settings.stopped_detector_enabled,
             off_track_detector_enabled=settings.off_track_detector_enabled,
             meatball_detector_enabled=settings.meatball_detector_enabled,
+            accumulative_weights={
+                DetectorEventTypes.OFF_TRACK: settings.off_track_weight,
+                DetectorEventTypes.MEATBALL: settings.meatball_weight,
+                DetectorEventTypes.RANDOM: 0.0,
+                DetectorEventTypes.STOPPED: settings.stopped_weight,
+            },
         )
 
     
@@ -84,20 +94,20 @@ class Detector:
             Detector: An instance of Detector with the enabled detectors based on settings.
         """
         detectors = {}
-        if settings.random_detector_enabled:
+        if settings.random_detector_enabled or settings.accumulative_weights.get(DetectorEventTypes.RANDOM, 0) > 0:
             detectors[DetectorEventTypes.RANDOM] = RandomDetector(
                 chance=settings.random_probability,
                 start_minute=settings.random_start_minute,
                 end_minute=settings.random_end_minute,
                 max_occurrences=settings.random_max_safety_cars
             )
-        if settings.stopped_detector_enabled:
+        if settings.stopped_detector_enabled or settings.accumulative_weights.get(DetectorEventTypes.STOPPED, 0) > 0:
             detectors[DetectorEventTypes.STOPPED] = StoppedDetector(drivers)
 
-        if settings.off_track_detector_enabled:
+        if settings.off_track_detector_enabled or settings.accumulative_weights.get(DetectorEventTypes.OFF_TRACK, 0) > 0:
             detectors[DetectorEventTypes.OFF_TRACK] = OffTrackDetector(drivers)
 
-        if settings.meatball_detector_enabled:
+        if settings.meatball_detector_enabled or settings.accumulative_weights.get(DetectorEventTypes.MEATBALL, 0) > 0:
             detectors[DetectorEventTypes.MEATBALL] = MeatballDetector(drivers)
 
         return Detector(detectors)

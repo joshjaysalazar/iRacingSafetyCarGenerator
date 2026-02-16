@@ -43,6 +43,9 @@ class ThresholdCheckerSettings:
             DetectorEventTypes.STOPPED: 2.0,
         }
     )
+    individually_enabled_event_types: set = field(
+        default_factory=lambda: set(DetectorEventTypes)
+    )
     proximity_yellows_enabled: bool = False
     proximity_yellows_distance: float = 0.05
     dynamic_threshold_enabled: bool = False
@@ -59,9 +62,20 @@ class ThresholdCheckerSettings:
 
     @staticmethod
     def from_settings(settings):
+        individually_enabled = set()
+        if settings.random_detector_enabled:
+            individually_enabled.add(DetectorEventTypes.RANDOM)
+        if settings.stopped_detector_enabled:
+            individually_enabled.add(DetectorEventTypes.STOPPED)
+        if settings.off_track_detector_enabled:
+            individually_enabled.add(DetectorEventTypes.OFF_TRACK)
+        if settings.meatball_detector_enabled:
+            individually_enabled.add(DetectorEventTypes.MEATBALL)
+
         return ThresholdCheckerSettings(
             time_range=settings.event_time_window_seconds,
             accumulative_threshold=settings.accumulative_threshold,
+            individually_enabled_event_types=individually_enabled,
             accumulative_weights={
                 DetectorEventTypes.OFF_TRACK: settings.off_track_weight,
                 DetectorEventTypes.MEATBALL: settings.meatball_weight,
@@ -351,11 +365,14 @@ class ThresholdChecker:
         for driver_idx, event_type, driver_obj in cluster:
             event_counts[event_type] += 1
             
-        # Check per-event-type thresholds
+        # Check per-event-type thresholds (only for individually enabled detectors)
         for det in DetectorEventTypes:
+            if det not in self._settings.individually_enabled_event_types:
+                logger.debug(f"Skipping event type {det} for individual threshold check (not enabled)")
+                continue
             event_type_count = event_counts[det]
             threshold = self._settings.event_type_threshold[det] * dynamic_multiplier
-                
+
             if event_type_count >= threshold:
                 logger.info(f"Cluster threshold met for event type={det} with cluster_count={event_type_count} and threshold={threshold}")
                 return True

@@ -34,3 +34,8 @@ Read these files for full project context:
 ## Documentation Updates
 
 After implementing changes, **always review and update** the documentation files listed above (plus `README.md` and this file) when relevant. See the Post-Implementation Checklist in `.ai-context.md` for the full list and criteria. Skipping documentation updates causes knowledge drift.
+
+## Planning Requirements
+
+Every plan MUST include a final step: "Review and update documentation" referencing
+the Post-Implementation Checklist in `.ai-context.md`. Do not skip this step.

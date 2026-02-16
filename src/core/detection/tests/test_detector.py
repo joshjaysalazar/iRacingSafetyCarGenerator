@@ -294,6 +294,65 @@ def test_detected_events_from_detector_results():
     assert detected.events == events
 
 
+def test_build_detector_disabled_but_has_accumulative_weight():
+    """Detector disabled individually but has accumulative weight > 0 → still instantiated."""
+    drivers = MagicMock()
+    settings = DetectorSettings(
+        random_detector_enabled=False,
+        stopped_detector_enabled=False,
+        off_track_detector_enabled=False,
+        meatball_detector_enabled=False,
+        accumulative_weights={
+            DetectorEventTypes.STOPPED: 2.0,
+            DetectorEventTypes.OFF_TRACK: 0.0,
+            DetectorEventTypes.MEATBALL: 0.0,
+            DetectorEventTypes.RANDOM: 0.0,
+        },
+    )
+    with patch("core.detection.detector.RandomDetector") as mock_random, \
+            patch("core.detection.detector.StoppedDetector") as mock_stopped, \
+            patch("core.detection.detector.OffTrackDetector") as mock_offtrack, \
+            patch("core.detection.detector.MeatballDetector") as mock_meatball:
+        detector = Detector.build_detector(settings, drivers)
+        # STOPPED should be instantiated because its weight > 0
+        assert DetectorEventTypes.STOPPED in detector.detectors
+        mock_stopped.assert_called_once_with(drivers)
+        # Others should NOT be instantiated (disabled + zero weight)
+        assert DetectorEventTypes.OFF_TRACK not in detector.detectors
+        assert DetectorEventTypes.MEATBALL not in detector.detectors
+        assert DetectorEventTypes.RANDOM not in detector.detectors
+        mock_offtrack.assert_not_called()
+        mock_meatball.assert_not_called()
+        mock_random.assert_not_called()
+
+
+def test_build_detector_disabled_and_zero_weight():
+    """Detector disabled individually and accumulative weight is 0 → NOT instantiated."""
+    drivers = MagicMock()
+    settings = DetectorSettings(
+        random_detector_enabled=False,
+        stopped_detector_enabled=False,
+        off_track_detector_enabled=False,
+        meatball_detector_enabled=False,
+        accumulative_weights={
+            DetectorEventTypes.STOPPED: 0.0,
+            DetectorEventTypes.OFF_TRACK: 0.0,
+            DetectorEventTypes.MEATBALL: 0.0,
+            DetectorEventTypes.RANDOM: 0.0,
+        },
+    )
+    with patch("core.detection.detector.RandomDetector") as mock_random, \
+            patch("core.detection.detector.StoppedDetector") as mock_stopped, \
+            patch("core.detection.detector.OffTrackDetector") as mock_offtrack, \
+            patch("core.detection.detector.MeatballDetector") as mock_meatball:
+        detector = Detector.build_detector(settings, drivers)
+        assert detector.detectors == {}
+        mock_random.assert_not_called()
+        mock_stopped.assert_not_called()
+        mock_offtrack.assert_not_called()
+        mock_meatball.assert_not_called()
+
+
 def test_detector_detect_warning_before_race_started(caplog):
     """Test WARNING log when detect() called before race_started()"""
     detector = Detector({})

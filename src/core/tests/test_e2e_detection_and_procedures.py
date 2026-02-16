@@ -618,6 +618,8 @@ class TestMeatballDetection:
             stopped_detector_enabled=False,
             off_track_detector_enabled=False,
             random_detector_enabled=False,
+            stopped_weight=0.0,
+            off_track_weight=0.0,
             proximity_filter_enabled=False,
             race_start_threshold_multiplier=1.0,
             event_time_window_seconds=5.0,

@@ -8,6 +8,7 @@ from core.tests.test_utils import make_driver, dict_to_config
 STOPPED = DetectorEventTypes.STOPPED
 RANDOM = DetectorEventTypes.RANDOM
 OFF_TRACK = DetectorEventTypes.OFF_TRACK
+MEATBALL = DetectorEventTypes.MEATBALL
 
 @pytest.fixture
 def threshold_checker():
@@ -815,3 +816,68 @@ def test_from_settings_complete_integration_with_realistic_scenario(mocker):
         event_type = STOPPED if i % 2 == 0 else OFF_TRACK
         checker_4._register_event(event_type, drivers_large[i], 1000.0 + i*0.001)
     assert checker_4.threshold_met(), "30 cars @ 0.5 weight (15 points) should trigger with threshold 15"
+
+
+def test_per_event_type_threshold_skipped_when_not_individually_enabled(mocker):
+    """Per-event-type threshold should NOT trigger for event types that are not individually enabled."""
+    mocker.patch("time.time", return_value=1000.0)
+
+    # STOPPED is NOT individually enabled, but has a low per-event-type threshold
+    checker = ThresholdChecker(ThresholdCheckerSettings(
+        time_range=10.0,
+        accumulative_threshold=1000,  # High, won't trigger via accumulative
+        accumulative_weights={OFF_TRACK: 1.0, STOPPED: 2.0},
+        event_type_threshold={OFF_TRACK: 1000, STOPPED: 2},  # Low threshold for STOPPED
+        individually_enabled_event_types={OFF_TRACK, RANDOM, MEATBALL},  # STOPPED excluded
+    ))
+
+    # Register enough STOPPED events to exceed the per-event-type threshold
+    driver1 = make_driver(track_loc=0, driver_idx=1, lap_distance=0.1)
+    driver2 = make_driver(track_loc=0, driver_idx=2, lap_distance=0.2)
+    driver3 = make_driver(track_loc=0, driver_idx=3, lap_distance=0.3)
+    checker._register_event(STOPPED, driver1, 1000.0)
+    checker._register_event(STOPPED, driver2, 1000.1)
+    checker._register_event(STOPPED, driver3, 1000.2)
+
+    # Should NOT trigger because STOPPED per-event-type check is skipped
+    assert not checker.threshold_met()
+
+
+def test_accumulative_still_counts_non_individually_enabled_events(mocker):
+    """Accumulative scoring should still include events from non-individually-enabled detectors."""
+    mocker.patch("time.time", return_value=1000.0)
+
+    # STOPPED is NOT individually enabled, but has accumulative weight
+    checker = ThresholdChecker(ThresholdCheckerSettings(
+        time_range=10.0,
+        accumulative_threshold=5.0,
+        accumulative_weights={OFF_TRACK: 1.0, STOPPED: 2.0},
+        event_type_threshold={OFF_TRACK: 1000, STOPPED: 1000},  # High, won't trigger individually
+        individually_enabled_event_types={OFF_TRACK, RANDOM, MEATBALL},  # STOPPED excluded
+    ))
+
+    # Register events: 1 OFF_TRACK (1.0) + 2 STOPPED (2*2.0=4.0) = 5.0 >= threshold
+    driver1 = make_driver(track_loc=0, driver_idx=1, lap_distance=0.1)
+    driver2 = make_driver(track_loc=0, driver_idx=2, lap_distance=0.2)
+    driver3 = make_driver(track_loc=0, driver_idx=3, lap_distance=0.3)
+    checker._register_event(OFF_TRACK, driver1, 1000.0)
+    checker._register_event(STOPPED, driver2, 1000.1)
+    checker._register_event(STOPPED, driver3, 1000.2)
+
+    # Should trigger via accumulative even though STOPPED is not individually enabled
+    assert checker.threshold_met()
+
+
+def test_from_settings_populates_individually_enabled():
+    """Verify from_settings builds individually_enabled_event_types from detector enabled flags."""
+    settings = dict_to_config({
+        "settings": {
+            "random_detector_enabled": "1",
+            "stopped_detector_enabled": "0",
+            "off_track_detector_enabled": "1",
+            "meatball_detector_enabled": "0",
+        }
+    })
+
+    tcs = ThresholdCheckerSettings.from_settings(settings)
+    assert tcs.individually_enabled_event_types == {RANDOM, OFF_TRACK}
