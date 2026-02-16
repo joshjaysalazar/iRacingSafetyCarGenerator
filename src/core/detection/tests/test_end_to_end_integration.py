@@ -122,7 +122,7 @@ class TestEndToEndDetectionPipeline:
                 threshold_checker.register_detection_result(detection_result)
         
         # Step 3: Check if threshold is met
-        assert threshold_checker.threshold_met() == True
+        assert threshold_checker.threshold_met()[0] == True
         
         # Verify the detection pipeline worked correctly
         off_track_result = detector_results.get_events(DetectorEventTypes.OFF_TRACK)
@@ -157,7 +157,7 @@ class TestEndToEndDetectionPipeline:
                 threshold_checker.register_detection_result(detection_result)
         
         # Should meet threshold due to mixed events in proximity cluster 1
-        assert threshold_checker.threshold_met() == True
+        assert threshold_checker.threshold_met()[0] == True
         
         # Verify both detector types detected events
         off_track_result = detector_results.get_events(DetectorEventTypes.OFF_TRACK)
@@ -194,7 +194,7 @@ class TestEndToEndDetectionPipeline:
                 threshold_checker.register_detection_result(detection_result)
         
         # Should NOT meet threshold due to proximity filtering
-        assert threshold_checker.threshold_met() == False
+        assert threshold_checker.threshold_met()[0] == False
         
         # Verify events were detected but proximity prevented threshold
         off_track_result = detector_results.get_events(DetectorEventTypes.OFF_TRACK)
@@ -239,7 +239,7 @@ class TestEndToEndDetectionPipeline:
         
         # Should meet threshold due to accumulative weight calculation with dynamic scaling
         # Note: This depends on your exact accumulative threshold settings
-        assert threshold_checker.threshold_met() == True
+        assert threshold_checker.threshold_met()[0] == True
         
         # Verify mixed event types were detected
         off_track_result = detector_results.get_events(DetectorEventTypes.OFF_TRACK)
@@ -297,7 +297,7 @@ class TestEndToEndDetectionPipeline:
                 threshold_checker.register_detection_result(detection_result)
         
         # Should meet threshold due to dynamic scaling
-        assert threshold_checker.threshold_met() == True
+        assert threshold_checker.threshold_met()[0] == True
         
     def test_random_detector_integration_workflow(self, mocker):
         """Test random detector integration with threshold system."""
@@ -342,7 +342,7 @@ class TestEndToEndDetectionPipeline:
                 threshold_checker.register_detection_result(detection_result)
         
         # Random events have threshold of 1.0, so any detection should trigger
-        assert threshold_checker.threshold_met() == True
+        assert threshold_checker.threshold_met()[0] == True
         
         # Verify random detection occurred
         random_result = detector_results.get_events(DetectorEventTypes.RANDOM)
@@ -411,13 +411,13 @@ class TestEndToEndDetectionPipeline:
             if detection_result:
                 threshold_checker.register_detection_result(detection_result)
         
-        threshold_met = threshold_checker.threshold_met()
+        threshold_met, _ = threshold_checker.threshold_met()
         end_time = time.time()
-        
+
         # Verify performance (should complete quickly even with 40 cars)
         processing_time = end_time - start_time
         assert processing_time < 0.1  # Should complete in < 100ms
-        
+
         # Verify correct detection with large grid
         assert threshold_met == True
         
@@ -448,7 +448,7 @@ class TestEndToEndDetectionPipeline:
             if detection_result:
                 threshold_checker.register_detection_result(detection_result)
         
-        cycle0_threshold_met = threshold_checker.threshold_met()
+        cycle0_threshold_met = threshold_checker.threshold_met()[0]
         
         # Cycle 1: Two incidents in proximity - should meet threshold (2 >= 1.5 with dynamic scaling)
         drivers.current_drivers[1]["track_loc"] = TrkLoc.off_track
@@ -460,7 +460,7 @@ class TestEndToEndDetectionPipeline:
             if detection_result:
                 threshold_checker.register_detection_result(detection_result)
         
-        cycle1_threshold_met = threshold_checker.threshold_met()
+        cycle1_threshold_met = threshold_checker.threshold_met()[0]
         
         # Cycle 2: Add more incidents (simulate time progression)
         mocker.patch("time.time", return_value=1001.0)
@@ -473,7 +473,7 @@ class TestEndToEndDetectionPipeline:
             if detection_result:
                 threshold_checker.register_detection_result(detection_result)
         
-        cycle2_threshold_met = threshold_checker.threshold_met()
+        cycle2_threshold_met = threshold_checker.threshold_met()[0]
         
         # Cycle 3: Incidents clear (cars return to track)
         mocker.patch("time.time", return_value=1002.0)
@@ -488,7 +488,7 @@ class TestEndToEndDetectionPipeline:
             if detection_result:
                 threshold_checker.register_detection_result(detection_result)
         
-        cycle3_threshold_met = threshold_checker.threshold_met()
+        cycle3_threshold_met = threshold_checker.threshold_met()[0]
         
         # Verify state consistency across cycles
         # With dynamic threshold scaling (0.5x), OFF_TRACK threshold becomes 1.5
@@ -500,7 +500,7 @@ class TestEndToEndDetectionPipeline:
         # Cycle 4: Wait for event cleanup (simulate time passing beyond time_range)
         mocker.patch("time.time", return_value=1020.0)  # 20 seconds later
         threshold_checker.clean_up_events()
-        cycle4_threshold_met = threshold_checker.threshold_met()
+        cycle4_threshold_met = threshold_checker.threshold_met()[0]
         
         assert cycle4_threshold_met == False  # Events should be cleaned up
         
@@ -525,7 +525,7 @@ class TestEndToEndDetectionPipeline:
             if detection_result:
                 threshold_checker.register_detection_result(detection_result)
         
-        phase1_threshold_met = threshold_checker.threshold_met()
+        phase1_threshold_met = threshold_checker.threshold_met()[0]
         
         # Reset cars to on-track
         drivers.current_drivers[0]["track_loc"] = TrkLoc.on_track  
@@ -548,7 +548,7 @@ class TestEndToEndDetectionPipeline:
             if detection_result:
                 threshold_checker.register_detection_result(detection_result)
         
-        phase2_threshold_met = threshold_checker.threshold_met()
+        phase2_threshold_met = threshold_checker.threshold_met()[0]
         
         # Phase 3: Add third car to meet full threshold
         drivers.current_drivers[2]["track_loc"] = TrkLoc.off_track
@@ -560,7 +560,7 @@ class TestEndToEndDetectionPipeline:
             if detection_result:
                 threshold_checker.register_detection_result(detection_result)
         
-        phase3_threshold_met = threshold_checker.threshold_met()
+        phase3_threshold_met = threshold_checker.threshold_met()[0]
         
         # Verify dynamic threshold behavior
         assert phase1_threshold_met == True   # 2 cars meet reduced threshold (1.5) 

@@ -2,6 +2,7 @@ import pytest
 from unittest.mock import patch
 
 from core.detection.threshold_checker import ThresholdChecker, DetectorEventTypes, ThresholdCheckerSettings
+from core.detection.detector_common_types import ThresholdResult
 from core.tests.test_utils import make_driver, dict_to_config
 
 # Define a little shorthand
@@ -24,9 +25,11 @@ def test_off_track_threshold(threshold_checker, mocker):
     driver2 = make_driver(track_loc=0, driver_idx=2, lap_distance=0.2)
     threshold_checker._register_event(OFF_TRACK, driver1, 1000.1)
     threshold_checker._register_event(OFF_TRACK, driver1, 1000.2)  # should not count
-    assert not threshold_checker.threshold_met()
+    assert threshold_checker.threshold_met() == (False, None)
     threshold_checker._register_event(OFF_TRACK, driver2, 1000.3)
-    assert threshold_checker.threshold_met()
+    met, msg = threshold_checker.threshold_met()
+    assert met
+    assert msg == "Multiple cars off track"
 
 def test_stopped_threshold(threshold_checker, mocker):
     mocker.patch("time.time", return_value=1000.0)
@@ -35,12 +38,14 @@ def test_stopped_threshold(threshold_checker, mocker):
     driver3 = make_driver(track_loc=0, driver_idx=3, lap_distance=0.3)
     threshold_checker._register_event(STOPPED, driver1, 1000.1)
     threshold_checker._register_event(STOPPED, driver1, 1000.2)  # should not count
-    assert not threshold_checker.threshold_met()
+    assert threshold_checker.threshold_met() == (False, None)
     threshold_checker._register_event(STOPPED, driver2, 1000.3)
     threshold_checker._register_event(STOPPED, driver2, 1000.4)  # should not count
-    assert not threshold_checker.threshold_met()
+    assert threshold_checker.threshold_met() == (False, None)
     threshold_checker._register_event(STOPPED, driver3, 1000.5)
-    assert threshold_checker.threshold_met()
+    met, msg = threshold_checker.threshold_met()
+    assert met
+    assert msg == "Cars stopped on track"
 
 def test_mixed_threshold(threshold_checker, mocker):
     mocker.patch("time.time", return_value=1000.0)
@@ -50,12 +55,14 @@ def test_mixed_threshold(threshold_checker, mocker):
     threshold_checker._register_event(STOPPED, driver1, 1000.1)
     threshold_checker._register_event(STOPPED, driver1, 1000.2) # should not count
     threshold_checker._register_event(OFF_TRACK, driver1, 1000.1)
-    assert not threshold_checker.threshold_met()
+    assert threshold_checker.threshold_met() == (False, None)
     threshold_checker._register_event(STOPPED, driver2, 1000.3)
     threshold_checker._register_event(STOPPED, driver2, 1000.4) # should not count
-    assert not threshold_checker.threshold_met()
+    assert threshold_checker.threshold_met() == (False, None)
     threshold_checker._register_event(STOPPED, driver3, 1000.5)
-    assert threshold_checker.threshold_met()
+    met, msg = threshold_checker.threshold_met()
+    assert met
+    assert msg == "Cars stopped on track"
 
 @pytest.fixture
 def accumulative_threshold_checker():
@@ -75,9 +82,11 @@ def test_accumulative_threshold_offtracks(accumulative_threshold_checker, mocker
     threshold_checker._register_event(OFF_TRACK, drivers[1], 1000.3)
     threshold_checker._register_event(OFF_TRACK, drivers[2], 1000.4)
     threshold_checker._register_event(OFF_TRACK, drivers[3], 1000.5)
-    assert not threshold_checker.threshold_met()
+    assert threshold_checker.threshold_met() == (False, None)
     threshold_checker._register_event(OFF_TRACK, drivers[4], 1000.6)
-    assert threshold_checker.threshold_met()
+    met, msg = threshold_checker.threshold_met()
+    assert met
+    assert msg == "Multiple hazards detected"
 
 def test_accumulative_threshold_stopped(accumulative_threshold_checker, mocker):
     threshold_checker = accumulative_threshold_checker
@@ -88,9 +97,11 @@ def test_accumulative_threshold_stopped(accumulative_threshold_checker, mocker):
     threshold_checker._register_event(STOPPED, driver1, 1000.1)
     threshold_checker._register_event(STOPPED, driver1, 1000.2) # should not count
     threshold_checker._register_event(STOPPED, driver2, 1000.3)
-    assert not threshold_checker.threshold_met()
+    assert threshold_checker.threshold_met() == (False, None)
     threshold_checker._register_event(STOPPED, driver3, 1000.4)
-    assert threshold_checker.threshold_met()
+    met, msg = threshold_checker.threshold_met()
+    assert met
+    assert msg == "Multiple hazards detected"
 
 # Each of these sequences will trigger the threshold on the last event
 @pytest.mark.parametrize("events", [
@@ -108,9 +119,11 @@ def test_accumulative_threshold_mix(events, accumulative_threshold_checker, mock
         driver = make_driver(track_loc=0, driver_idx=idx, lap_distance=0.1 + idx*0.01)
         threshold_checker._register_event(event, driver, 1000.0 + (idx/10.0))
         if idx == len(events) - 1:
-            assert threshold_checker.threshold_met()
+            met, msg = threshold_checker.threshold_met()
+            assert met
+            assert msg == "Multiple hazards detected"
         else:
-            assert not threshold_checker.threshold_met()
+            assert threshold_checker.threshold_met() == (False, None)
 
 def test_cleanup(threshold_checker, mocker):
     # The time range is one, so we are going to add events with 0.1 increments
@@ -123,24 +136,24 @@ def test_cleanup(threshold_checker, mocker):
     threshold_checker._register_event(OFF_TRACK, driver1, 1000.01)
     threshold_checker._register_event(OFF_TRACK, driver1, 1000.02)
     threshold_checker._register_event(OFF_TRACK, driver1, 1000.03)
-    assert not threshold_checker.threshold_met()
+    assert threshold_checker.threshold_met() == (False, None)
     threshold_checker._register_event(OFF_TRACK, driver2, 1000.2)
-    assert threshold_checker.threshold_met()
+    assert threshold_checker.threshold_met()[0]
     threshold_checker._register_event(OFF_TRACK, driver3, 1000.3)
     threshold_checker.clean_up_events() # does not clean up anything
-    assert threshold_checker.threshold_met()
+    assert threshold_checker.threshold_met()[0]
 
     mocker.patch("time.time", return_value=1001.0)
     threshold_checker.clean_up_events() # does not clean up anything
-    assert threshold_checker.threshold_met()
-    
+    assert threshold_checker.threshold_met()[0]
+
     mocker.patch("time.time", return_value=1001.1)
     threshold_checker.clean_up_events() # should clean up events from driver 1
-    assert threshold_checker.threshold_met() # still two off tracks in last second
+    assert threshold_checker.threshold_met()[0] # still two off tracks in last second
 
     mocker.patch("time.time", return_value=1001.2)
     threshold_checker.clean_up_events() # should clean up second event
-    assert not threshold_checker.threshold_met() # now there's only one off track in last second
+    assert threshold_checker.threshold_met() == (False, None) # now there's only one off track in last second
     
 def test_threshold_checker_settings_from_settings():
     # Mock settings object with the typed wrapper interface
@@ -154,6 +167,10 @@ def test_threshold_checker_settings_from_settings():
             self.stopped_weight = 2.0
             self.proximity_filter_enabled = False
             self.proximity_filter_distance_percentage = 0.05
+            self.off_track_message = "Multiple cars off track"
+            self.random_message = "Hazard on track"
+            self.stopped_message = "Cars stopped on track"
+            self.accumulative_message = "Multiple hazards detected"
             self.race_start_threshold_multiplier = 1.0
             self.race_start_threshold_multiplier_time_seconds = 300.0
 
@@ -293,9 +310,9 @@ def test_cluster_meets_threshold_individual(proximity_threshold_checker):
         (1, OFF_TRACK, make_driver(track_loc=0, driver_idx=1)),
         (2, OFF_TRACK, make_driver(track_loc=0, driver_idx=2)),
     ]
-    
+
     result = proximity_threshold_checker._cluster_meets_threshold(cluster, 1.0)
-    assert result == True
+    assert result == ThresholdResult.OFF_TRACK
 
 def test_cluster_meets_threshold_accumulative():
     """Test _cluster_meets_threshold for accumulative threshold"""
@@ -313,9 +330,9 @@ def test_cluster_meets_threshold_accumulative():
         (1, OFF_TRACK, make_driver(track_loc=0, driver_idx=1)),
         (2, STOPPED, make_driver(track_loc=0, driver_idx=2)),
     ]
-    
+
     result = checker._cluster_meets_threshold(cluster, 1.0)
-    assert result == True
+    assert result == ThresholdResult.ACCUMULATIVE
 
 def test_threshold_met_with_proximity_clusters(proximity_threshold_checker, mocker):
     """Test threshold_met using proximity clustering approach"""
@@ -329,7 +346,9 @@ def test_threshold_met_with_proximity_clusters(proximity_threshold_checker, mock
     proximity_threshold_checker._register_event(OFF_TRACK, driver2, 1000.0)
     
     # Should meet OFF_TRACK threshold (2 cars in proximity)
-    assert proximity_threshold_checker.threshold_met() == True
+    met, msg = proximity_threshold_checker.threshold_met()
+    assert met
+    assert msg == "Multiple cars off track"
 
 def test_threshold_met_proximity_prevents_false_positive(proximity_threshold_checker, mocker):
     """Test that proximity clustering prevents false positives from spread out cars"""
@@ -343,7 +362,7 @@ def test_threshold_met_proximity_prevents_false_positive(proximity_threshold_che
     proximity_threshold_checker._register_event(OFF_TRACK, driver2, 1000.0)
     
     # Should NOT meet threshold because cars are not in proximity
-    assert proximity_threshold_checker.threshold_met() == False
+    assert proximity_threshold_checker.threshold_met() == (False, None)
 
 def test_threshold_met_dynamic_threshold_with_proximity(mocker):
     """Test threshold_met with both dynamic thresholds and proximity clustering"""
@@ -368,8 +387,8 @@ def test_threshold_met_dynamic_threshold_with_proximity(mocker):
     
     checker._register_event(OFF_TRACK, driver1, 1000.0)
     checker._register_event(OFF_TRACK, driver2, 1000.0)
-    
-    assert checker.threshold_met() == True
+
+    assert checker.threshold_met()[0] == True
 
 
 def test_threshold_checker_race_started():
@@ -389,10 +408,11 @@ def test_threshold_met_warning_before_race_started(caplog):
     checker = ThresholdChecker(ThresholdCheckerSettings())
     
     with caplog.at_level('WARNING'):
-        result = checker.threshold_met()
-    
+        met, msg = checker.threshold_met()
+
     assert "Threshold checking attempted before race_started() was called" in caplog.text
-    assert result is False  # Should still return sensible result
+    assert met is False
+    assert msg is None
 
 def test_dynamic_threshold_without_race_started_and_after():
     """Test dynamic threshold behavior when race hasn't started yet"""
@@ -441,13 +461,13 @@ def test_accumulative_threshold_no_double_count_same_driver(mocker):
 
     # Without fix: acc = 2*2.0 + 1*1.0 = 5.0 (would trigger)
     # With fix: driver1 contributes max(2.0, 1.0) = 2.0, driver2 contributes 2.0, total = 4.0
-    assert not checker.threshold_met(), "Should not trigger: driver1=2.0 (max of stopped/off_track) + driver2=2.0 = 4.0 < 5.0"
+    assert not checker.threshold_met()[0], "Should not trigger: driver1=2.0 (max of stopped/off_track) + driver2=2.0 = 4.0 < 5.0"
 
     # Add another driver to push over threshold
     driver3 = make_driver(track_loc=0, driver_idx=3, lap_distance=0.3)
     checker._register_event(OFF_TRACK, driver3, 1000.3)
     # Now: driver1=2.0 + driver2=2.0 + driver3=1.0 = 5.0
-    assert checker.threshold_met(), "Should trigger: 2.0 + 2.0 + 1.0 = 5.0 >= 5.0"
+    assert checker.threshold_met()[0], "Should trigger: 2.0 + 2.0 + 1.0 = 5.0 >= 5.0"
 
 
 def test_accumulative_threshold_per_event_type_still_counts_both(mocker):
@@ -471,7 +491,7 @@ def test_accumulative_threshold_per_event_type_still_counts_both(mocker):
     checker._register_event(STOPPED, driver1, 1000.2)
 
     # OFF_TRACK threshold of 2 is met (driver1 + driver2)
-    assert checker.threshold_met(), "Per-event-type threshold should still count both drivers for OFF_TRACK"
+    assert checker.threshold_met()[0], "Per-event-type threshold should still count both drivers for OFF_TRACK"
 
 
 def test_from_settings_off_weight_affects_threshold_behavior(mocker):
@@ -502,7 +522,7 @@ def test_from_settings_off_weight_affects_threshold_behavior(mocker):
     checker_low._register_event(OFF_TRACK, driver1, 1000.0)
     checker_low._register_event(OFF_TRACK, driver2, 1000.1)
 
-    assert not checker_low.threshold_met(), "Should not trigger with 2 off-track @ weight 1.0 (total 2.0 < 3.0)"
+    assert not checker_low.threshold_met()[0], "Should not trigger with 2 off-track @ weight 1.0 (total 2.0 < 3.0)"
 
     # Now test with off_weight = 2.0
     settings_high_weight = dict_to_config({
@@ -526,7 +546,7 @@ def test_from_settings_off_weight_affects_threshold_behavior(mocker):
     checker_high._register_event(OFF_TRACK, driver1, 1000.0)
     checker_high._register_event(OFF_TRACK, driver2, 1000.1)
 
-    assert checker_high.threshold_met(), "Should trigger with 2 off-track @ weight 2.0 (total 4.0 >= 3.0)"
+    assert checker_high.threshold_met()[0], "Should trigger with 2 off-track @ weight 2.0 (total 4.0 >= 3.0)"
 
 
 def test_from_settings_stopped_weight_affects_threshold_behavior(mocker):
@@ -557,7 +577,7 @@ def test_from_settings_stopped_weight_affects_threshold_behavior(mocker):
     checker_low._register_event(STOPPED, driver1, 1000.0)
     checker_low._register_event(STOPPED, driver2, 1000.1)
 
-    assert not checker_low.threshold_met(), "Should not trigger with 2 stopped @ weight 1.0 (total 2.0 < 5.0)"
+    assert not checker_low.threshold_met()[0], "Should not trigger with 2 stopped @ weight 1.0 (total 2.0 < 5.0)"
 
     # Now test with stopped_weight = 3.0
     settings_high_weight = dict_to_config({
@@ -581,7 +601,7 @@ def test_from_settings_stopped_weight_affects_threshold_behavior(mocker):
     checker_high._register_event(STOPPED, driver1, 1000.0)
     checker_high._register_event(STOPPED, driver2, 1000.1)
 
-    assert checker_high.threshold_met(), "Should trigger with 2 stopped @ weight 3.0 (total 6.0 >= 5.0)"
+    assert checker_high.threshold_met()[0], "Should trigger with 2 stopped @ weight 3.0 (total 6.0 >= 5.0)"
 
 
 def test_from_settings_combined_min_affects_threshold_behavior(mocker):
@@ -614,7 +634,7 @@ def test_from_settings_combined_min_affects_threshold_behavior(mocker):
     checker_high_threshold._register_event(OFF_TRACK, driver2, 1000.1)
     checker_high_threshold._register_event(STOPPED, driver3, 1000.2)
 
-    assert not checker_high_threshold.threshold_met(), "Should not trigger with total 6.0 < combined_min 10.0"
+    assert not checker_high_threshold.threshold_met()[0], "Should not trigger with total 6.0 < combined_min 10.0"
 
     # Now test with combined_min = 5 (low threshold)
     settings_low_threshold = dict_to_config({
@@ -639,7 +659,7 @@ def test_from_settings_combined_min_affects_threshold_behavior(mocker):
     checker_low_threshold._register_event(OFF_TRACK, driver2, 1000.1)
     checker_low_threshold._register_event(STOPPED, driver3, 1000.2)
 
-    assert checker_low_threshold.threshold_met(), "Should trigger with total 6.0 >= combined_min 5.0"
+    assert checker_low_threshold.threshold_met()[0], "Should trigger with total 6.0 >= combined_min 5.0"
 
 
 def test_from_settings_complete_integration_with_realistic_scenario(mocker):
@@ -674,11 +694,11 @@ def test_from_settings_complete_integration_with_realistic_scenario(mocker):
     drivers = [make_driver(track_loc=0, driver_idx=i, lap_distance=0.1 + i*0.01) for i in range(6)]
     for i in range(5):
         checker_1._register_event(OFF_TRACK, drivers[i], 1000.0 + i*0.01)
-    assert not checker_1.threshold_met(), "5 off-track (5 points) should not trigger with threshold 8"
+    assert not checker_1.threshold_met()[0], "5 off-track (5 points) should not trigger with threshold 8"
 
     # Test case 2: Add 1 stopped car = 5 + 3 = 8 points (exactly threshold)
     checker_1._register_event(STOPPED, drivers[5], 1000.05)
-    assert checker_1.threshold_met(), "5 off-track + 1 stopped (8 points) should trigger with threshold 8"
+    assert checker_1.threshold_met()[0], "5 off-track + 1 stopped (8 points) should trigger with threshold 8"
 
     # Now race director changes mind - wants equal weighting
     # UI Configuration: stopped_weight=2, off_weight=2, combined_min=10
@@ -705,7 +725,7 @@ def test_from_settings_complete_integration_with_realistic_scenario(mocker):
         checker_2._register_event(OFF_TRACK, drivers[i], 1000.0 + i*0.01)
     for i in range(3, 5):
         checker_2._register_event(STOPPED, drivers[i], 1000.0 + i*0.01)
-    assert checker_2.threshold_met(), "3 off-track + 2 stopped (10 points) should trigger with threshold 10"
+    assert checker_2.threshold_met()[0], "3 off-track + 2 stopped (10 points) should trigger with threshold 10"
 
     # Test case 3: Just 2 stopped + 2 off-track = 8 points (not enough with threshold 10)
     checker_3 = ThresholdChecker(ThresholdCheckerSettings.from_settings(settings_config_2))
@@ -713,7 +733,7 @@ def test_from_settings_complete_integration_with_realistic_scenario(mocker):
         checker_3._register_event(OFF_TRACK, drivers[i], 1000.0 + i*0.01)
     for i in range(2, 4):
         checker_3._register_event(STOPPED, drivers[i], 1000.0 + i*0.01)
-    assert not checker_3.threshold_met(), "2 off-track + 2 stopped (8 points) should not trigger with threshold 10"
+    assert not checker_3.threshold_met()[0], "2 off-track + 2 stopped (8 points) should not trigger with threshold 10"
 
     # Race director goes conservative - very low weights but high threshold
     # UI Configuration: stopped_weight=0.5, off_weight=0.5, combined_min=15
@@ -740,10 +760,10 @@ def test_from_settings_complete_integration_with_realistic_scenario(mocker):
     for i in range(20):
         event_type = STOPPED if i % 2 == 0 else OFF_TRACK
         checker_4._register_event(event_type, drivers_large[i], 1000.0 + i*0.001)
-    assert not checker_4.threshold_met(), "20 cars @ 0.5 weight (10 points) should not trigger with threshold 15"
+    assert not checker_4.threshold_met()[0], "20 cars @ 0.5 weight (10 points) should not trigger with threshold 15"
 
     # Add 10 more cars to reach 30 total = 15 points
     for i in range(20, 30):
         event_type = STOPPED if i % 2 == 0 else OFF_TRACK
         checker_4._register_event(event_type, drivers_large[i], 1000.0 + i*0.001)
-    assert checker_4.threshold_met(), "30 cars @ 0.5 weight (15 points) should trigger with threshold 15"
+    assert checker_4.threshold_met()[0], "30 cars @ 0.5 weight (15 points) should trigger with threshold 15"

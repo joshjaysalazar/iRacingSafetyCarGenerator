@@ -339,13 +339,14 @@ class DumpReplayer:
                             log_entry.random_triggered = True
 
                 # Check threshold
-                if threshold_checker.threshold_met():
+                met, message = threshold_checker.threshold_met()
+                if met:
                     log_entry.threshold_met = True
 
                     sc_event = SafetyCarEvent(
                         frame_index=i,
                         timestamp=frame_time,
-                        reason="Threshold met",
+                        reason=message or "Threshold met",
                     )
 
                     if self.compute_waves:

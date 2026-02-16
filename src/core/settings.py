@@ -53,7 +53,7 @@ class Settings:
     @property
     def random_message(self) -> str:
         """Message for random safety car events."""
-        return self._config["settings"].get("random_message", fallback="Hazard on track.")
+        return self._config["settings"].get("random_message", fallback="Hazard on track")
     
     @random_message.setter
     def random_message(self, value: str) -> None:

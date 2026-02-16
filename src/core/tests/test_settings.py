@@ -26,7 +26,7 @@ class TestSettings:
         assert settings.random_detector_enabled is True
         assert settings.random_max_safety_cars == 1
         assert settings.random_probability == 0.1
-        assert settings.random_message == "Hazard on track."
+        assert settings.random_message == "Hazard on track"
         assert settings.stopped_detector_enabled is True
         assert settings.stopped_cars_threshold == 2
         assert settings.stopped_message == "Cars stopped on track"

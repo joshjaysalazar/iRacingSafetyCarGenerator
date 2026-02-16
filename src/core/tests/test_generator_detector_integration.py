@@ -258,8 +258,8 @@ class TestGeneratorThresholdCheckerIntegration:
         mock_results.get_events.return_value = None
         generator.detector.detect.return_value = mock_results
 
-        # Configure threshold_checker to return True for threshold_met
-        generator.threshold_checker.threshold_met.return_value = True
+        # Configure threshold_checker to return (True, message) for threshold_met
+        generator.threshold_checker.threshold_met.return_value = (True, "Cars stopped on track")
 
         # Run the loop
         with caplog.at_level('INFO'):
@@ -269,7 +269,7 @@ class TestGeneratorThresholdCheckerIntegration:
         assert "Threshold met, starting safety car" in caplog.text
 
         # Verify _start_safety_car was called with correct message
-        start_safety_car_spy.assert_called_once_with("Incident on track")
+        start_safety_car_spy.assert_called_once_with("Cars stopped on track")
 
     def test_threshold_not_met_no_safety_car_log(self, generator_with_mocks, mock_drivers, mocker, caplog):
         """Test that when threshold is not met, no safety car log message is generated."""
@@ -290,8 +290,8 @@ class TestGeneratorThresholdCheckerIntegration:
         mock_results.get_events.return_value = None
         generator.detector.detect.return_value = mock_results
 
-        # Configure threshold_checker to return False for threshold_met
-        generator.threshold_checker.threshold_met.return_value = False
+        # Configure threshold_checker to return (False, None) for threshold_met
+        generator.threshold_checker.threshold_met.return_value = (False, None)
 
         # Run the loop
         with caplog.at_level('INFO'):

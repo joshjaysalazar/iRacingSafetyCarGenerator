@@ -8,8 +8,10 @@ from collections import deque
 from dataclasses import dataclass, field
 from enum import Enum
 
+from typing import Optional, Tuple
+
 from core.detection.detector import DetectorEventTypes
-from core.detection.detector_common_types import DetectionResult
+from core.detection.detector_common_types import DetectionResult, ThresholdResult
 from core.drivers import Driver
 
 logger = logging.getLogger(__name__)
@@ -46,6 +48,12 @@ class ThresholdCheckerSettings:
     dynamic_threshold_enabled: bool = False
     dynamic_threshold_multiplier: float = 1.0
     dynamic_threshold_time: float = 300.0
+    messages: dict = field(default_factory=lambda: {
+        ThresholdResult.OFF_TRACK: "Multiple cars off track",
+        ThresholdResult.RANDOM: "Hazard on track",
+        ThresholdResult.STOPPED: "Cars stopped on track",
+        ThresholdResult.ACCUMULATIVE: "Multiple hazards detected",
+    })
     
     def __post_init__(self):
         # Ensure RANDOM event type is always present with correct defaults
@@ -72,6 +80,12 @@ class ThresholdCheckerSettings:
             dynamic_threshold_enabled=True,
             dynamic_threshold_multiplier=settings.race_start_threshold_multiplier,
             dynamic_threshold_time=settings.race_start_threshold_multiplier_time_seconds,
+            messages={
+                ThresholdResult.OFF_TRACK: settings.off_track_message,
+                ThresholdResult.RANDOM: settings.random_message,
+                ThresholdResult.STOPPED: settings.stopped_message,
+                ThresholdResult.ACCUMULATIVE: settings.accumulative_message,
+            },
         )
 
 class ThresholdChecker:
@@ -183,33 +197,35 @@ class ThresholdChecker:
             self._register_events(detection_result.event_type, [dummy_driver])
 
 
-    def threshold_met(self):
+    def threshold_met(self) -> Tuple[bool, Optional[str]]:
         """ Check if the event threshold is met.
 
         Returns:
-            bool: True if either an individual event type threshold is met or if 
-             the weighted sum of event types is over the accumulative threshold.
+            Tuple of (bool, Optional[str]): (True, message) if threshold is met,
+             (False, None) otherwise.
         """
         if self.race_start_time is None:
             logger.warning("Threshold checking attempted before race_started() was called. Dynamic thresholds will not work correctly.")
-        
+
         logger.debug(f"Checking threshold, events_dict={self._events_dict}, settings={self._settings}")
-        
+
         # Get proximity clusters (single cluster if proximity disabled)
         clusters = self._get_proximity_clusters()
-        
+
         # Calculate dynamic threshold multiplier once
         dynamic_multiplier = 1.0
         if self._settings.dynamic_threshold_enabled:
             # Use a base threshold of 1.0 to get the multiplier
             dynamic_multiplier = self._calc_dynamic_threshold(1.0)
-            
+
         # Check each cluster against thresholds
         for cluster in clusters:
-            if self._cluster_meets_threshold(cluster, dynamic_multiplier):
-                return True
-                
-        return False
+            result = self._cluster_meets_threshold(cluster, dynamic_multiplier)
+            if result is not None:
+                message = self._settings.messages.get(result, "Incident on track")
+                return True, message
+
+        return False, None
 
     def _get_proximity_clusters(self) -> list:
         """Get proximity clusters of events.
@@ -313,32 +329,32 @@ class ThresholdChecker:
         logger.debug(f"Created {len(clusters)} proximity clusters from {len(latest_events)} events")
         return clusters
         
-    def _cluster_meets_threshold(self, cluster: list, dynamic_multiplier: float) -> bool:
+    def _cluster_meets_threshold(self, cluster: list, dynamic_multiplier: float) -> Optional[ThresholdResult]:
         """Check if a proximity cluster meets threshold requirements.
-        
+
         Args:
             cluster: List of (driver_idx, event_type, driver_obj) tuples
             dynamic_multiplier: Pre-calculated dynamic threshold multiplier
-            
+
         Returns:
-            True if cluster meets either per-event-type or accumulative thresholds
+            ThresholdResult indicating which threshold was met, or None if no threshold met.
         """
         logger.debug(f"Checking if cluster meets threshold {cluster}")
-        
+
         # Count events per type in this cluster
         event_counts = {det: 0 for det in DetectorEventTypes}
         for driver_idx, event_type, driver_obj in cluster:
             event_counts[event_type] += 1
-            
+
         # Check per-event-type thresholds
         for det in DetectorEventTypes:
             event_type_count = event_counts[det]
             threshold = self._settings.event_type_threshold[det] * dynamic_multiplier
-                
+
             if event_type_count >= threshold:
                 logger.info(f"Cluster threshold met for event type={det} with cluster_count={event_type_count} and threshold={threshold}")
-                return True
-                
+                return ThresholdResult.from_event_type(det)
+
         # Check accumulative threshold
         # Each driver only contributes their highest-weighted event type
         # to avoid double-counting (e.g. a driver both stopped and off-track)
@@ -349,12 +365,12 @@ class ThresholdChecker:
                 driver_max_weights[driver_idx] = weight
         acc = sum(driver_max_weights.values())
         acc_threshold = self._settings.accumulative_threshold * dynamic_multiplier
-            
+
         if acc >= acc_threshold:
             logger.info(f"Cluster accumulative threshold met with acc={acc} and threshold={acc_threshold}")
-            return True
-            
-        return False
+            return ThresholdResult.ACCUMULATIVE
+
+        return None
         
     def _calc_dynamic_threshold(self, base_threshold: float) -> float:
         """Calculate dynamic threshold based on session time.

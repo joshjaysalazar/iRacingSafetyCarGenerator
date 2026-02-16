@@ -222,9 +222,10 @@ class Generator:
                             if detection_result:
                                 self.threshold_checker.register_detection_result(detection_result)
 
-                        if self.threshold_checker.threshold_met():
+                        threshold_met, message = self.threshold_checker.threshold_met()
+                        if threshold_met:
                             logger.info("Threshold met, starting safety car")
-                            self._start_safety_car("Incident on track")
+                            self._start_safety_car(message)
 
                     except Exception as e:
                         logger.error(f"Detection system failed: {e}", exc_info=True)

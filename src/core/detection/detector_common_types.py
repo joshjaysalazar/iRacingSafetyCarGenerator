@@ -12,6 +12,18 @@ class DetectorEventTypes(Enum):
     RANDOM = "random"
     STOPPED = "stopped"
 
+
+class ThresholdResult(Enum):
+    """The cause that triggered a threshold being met."""
+    OFF_TRACK = "off_track"
+    RANDOM = "random"
+    STOPPED = "stopped"
+    ACCUMULATIVE = "accumulative"
+
+    @staticmethod
+    def from_event_type(event_type: DetectorEventTypes) -> 'ThresholdResult':
+        return ThresholdResult(event_type.value)
+
 class DetectionResult:
     """We are using a wrapper class for our Detector classes because we need to support multiple return types:
     - A list of drivers for events like OFF_TRACK and STOPPED.
