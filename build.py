@@ -181,6 +181,31 @@ class Builder:
             except Exception as e:
                 print(f"Error copying {src_path} to {dest_path}: {e}")
 
+    def create_dev_shortcuts(self):
+        """Create a 'dev' folder with Windows batch file shortcuts for dev mode."""
+        print("Creating dev shortcuts...")
+        dev_dir = self.dist_dir / "dev"
+        dev_dir.mkdir(parents=True, exist_ok=True)
+
+        exe_relative_path = f"..\\{self.exe_name}.exe"
+
+        # Shortcut for --developer-mode
+        dev_bat = dev_dir / f"{self.exe_name}-dev.bat"
+        dev_bat.write_text(
+            f"@echo off\r\n"
+            f"start \"\" \"%~dp0{exe_relative_path}\" -dev\r\n"
+        )
+
+        # Shortcut for --dry-run --developer-mode
+        dry_dev_bat = dev_dir / f"{self.exe_name}-dry-dev.bat"
+        dry_dev_bat.write_text(
+            f"@echo off\r\n"
+            f"start \"\" \"%~dp0{exe_relative_path}\" -dry -dev\r\n"
+        )
+
+        print(f"  Created: {dev_bat.name}")
+        print(f"  Created: {dry_dev_bat.name}")
+
     def create_zip_archive(self):
         """Create a ZIP archive of the distribution directory."""
         if not self.args.zip:
@@ -222,6 +247,7 @@ class Builder:
         self.install_dependencies()
         self.create_executable()
         self.copy_assets()
+        self.create_dev_shortcuts()
 
         # List files in dist directory to verify contents
         print("\nVerifying build contents:")
