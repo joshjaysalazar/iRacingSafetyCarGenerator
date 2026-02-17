@@ -12,6 +12,7 @@ class DetectorEventTypes(Enum):
     MEATBALL = "meatball"
     RANDOM = "random"
     STOPPED = "stopped"
+    TOWING = "towing"
 
 class DetectionResult:
     """We are using a wrapper class for our Detector classes because we need to support multiple return types:

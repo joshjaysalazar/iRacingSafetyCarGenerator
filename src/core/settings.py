@@ -152,6 +152,43 @@ class Settings:
     def meatball_weight(self, value: float) -> None:
         self._config.set("settings", "meatball_weight", str(value))
 
+    # Tow detection settings
+    @property
+    def tow_detector_enabled(self) -> bool:
+        """Enable tow (teleport to pit) detection."""
+        return self._config["settings"].getboolean("tow_detector_enabled", fallback=True)
+
+    @tow_detector_enabled.setter
+    def tow_detector_enabled(self, value: bool) -> None:
+        self._config.set("settings", "tow_detector_enabled", str(int(value)))
+
+    @property
+    def tow_cars_threshold(self) -> int:
+        """Minimum towed cars to trigger safety car."""
+        return self._config["settings"].getint("tow_cars_threshold", fallback=99999)
+
+    @tow_cars_threshold.setter
+    def tow_cars_threshold(self, value: int) -> None:
+        self._config.set("settings", "tow_cars_threshold", str(value))
+
+    @property
+    def tow_message(self) -> str:
+        """Message for tow safety car."""
+        return self._config["settings"].get("tow_message", fallback="Major incident detected")
+
+    @tow_message.setter
+    def tow_message(self, value: str) -> None:
+        self._config.set("settings", "tow_message", value)
+
+    @property
+    def tow_weight(self) -> float:
+        """Weight for towed cars in combined calculation."""
+        return self._config["settings"].getfloat("tow_weight", fallback=0.0)
+
+    @tow_weight.setter
+    def tow_weight(self, value: float) -> None:
+        self._config.set("settings", "tow_weight", str(value))
+
     # Race start multiplier settings
     @property
     def race_start_threshold_multiplier(self) -> float:

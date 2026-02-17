@@ -47,6 +47,7 @@ class DetectionLogEntry:
     stopped_drivers: list[int] = field(default_factory=list)
     off_track_drivers: list[int] = field(default_factory=list)
     meatball_drivers: list[int] = field(default_factory=list)
+    towing_drivers: list[int] = field(default_factory=list)
     random_triggered: bool = False
     threshold_met: bool = False
 
@@ -340,6 +341,8 @@ class DumpReplayer:
                                 log_entry.off_track_drivers = driver_idxs
                             elif event_type == DetectorEventTypes.MEATBALL:
                                 log_entry.meatball_drivers = driver_idxs
+                            elif event_type == DetectorEventTypes.TOWING:
+                                log_entry.towing_drivers = driver_idxs
                         elif detection_result.has_detected_flag() and detection_result.detected_flag:
                             log_entry.random_triggered = True
 

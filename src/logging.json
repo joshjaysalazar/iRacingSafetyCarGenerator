@@ -56,6 +56,12 @@
 				"file"
 			]
 		},
+		"core.detection.tow_detector": {
+			"level": "DEBUG",
+			"handlers": [
+				"file"
+			]
+		},
 		"core.detection.random_detector": {
 			"level": "DEBUG",
 			"handlers": [

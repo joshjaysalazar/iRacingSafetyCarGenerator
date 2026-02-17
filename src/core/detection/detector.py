@@ -9,6 +9,7 @@ from core.detection.meatball_detector import MeatballDetector
 from core.detection.off_track_detector import OffTrackDetector
 from core.detection.random_detector import RandomDetector
 from core.detection.stopped_detector import StoppedDetector
+from core.detection.tow_detector import TowDetector
 from core.drivers import Drivers
 from typing import Dict
 
@@ -47,6 +48,9 @@ class DetectorSettings:
     # MeatballDetector settings
     meatball_detector_enabled: bool = True
 
+    # TowDetector settings
+    tow_detector_enabled: bool = True
+
     @staticmethod
     def from_settings(settings):
         return DetectorSettings(
@@ -58,6 +62,7 @@ class DetectorSettings:
             stopped_detector_enabled=settings.stopped_detector_enabled,
             off_track_detector_enabled=settings.off_track_detector_enabled,
             meatball_detector_enabled=settings.meatball_detector_enabled,
+            tow_detector_enabled=settings.tow_detector_enabled,
         )
 
     
@@ -99,6 +104,9 @@ class Detector:
 
         if settings.meatball_detector_enabled:
             detectors[DetectorEventTypes.MEATBALL] = MeatballDetector(drivers)
+
+        if settings.tow_detector_enabled:
+            detectors[DetectorEventTypes.TOWING] = TowDetector(drivers)
 
         return Detector(detectors)
     

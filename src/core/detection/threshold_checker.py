@@ -33,6 +33,7 @@ class ThresholdCheckerSettings:
             DetectorEventTypes.MEATBALL: 0.0,
             DetectorEventTypes.RANDOM: 0.0, # Random events do not contribute to the accumulative threshold
             DetectorEventTypes.STOPPED: 2.0,
+            DetectorEventTypes.TOWING: 0.0,
         }
     )
     event_type_threshold: dict = field(
@@ -41,6 +42,7 @@ class ThresholdCheckerSettings:
             DetectorEventTypes.MEATBALL: 99999,
             DetectorEventTypes.RANDOM: 1.0,
             DetectorEventTypes.STOPPED: 2.0,
+            DetectorEventTypes.TOWING: 99999,
         }
     )
     proximity_yellows_enabled: bool = False
@@ -56,6 +58,9 @@ class ThresholdCheckerSettings:
         # Ensure MEATBALL event type is always present with correct defaults
         self.accumulative_weights.setdefault(DetectorEventTypes.MEATBALL, 0.0)
         self.event_type_threshold.setdefault(DetectorEventTypes.MEATBALL, 99999)
+        # Ensure TOWING event type is always present with correct defaults
+        self.accumulative_weights.setdefault(DetectorEventTypes.TOWING, 0.0)
+        self.event_type_threshold.setdefault(DetectorEventTypes.TOWING, 99999)
 
     @staticmethod
     def from_settings(settings):
@@ -67,12 +72,14 @@ class ThresholdCheckerSettings:
                 DetectorEventTypes.MEATBALL: settings.meatball_weight,
                 DetectorEventTypes.RANDOM: 0.0, # Random events do not contribute to the accumulative threshold
                 DetectorEventTypes.STOPPED: settings.stopped_weight,
+                DetectorEventTypes.TOWING: settings.tow_weight,
             },
             event_type_threshold={
                 DetectorEventTypes.OFF_TRACK: settings.off_track_cars_threshold,
                 DetectorEventTypes.MEATBALL: settings.meatball_cars_threshold,
                 DetectorEventTypes.RANDOM: 1.0, # Random does not have a threshold, it is just a flag
                 DetectorEventTypes.STOPPED: settings.stopped_cars_threshold,
+                DetectorEventTypes.TOWING: settings.tow_cars_threshold,
             },
             proximity_yellows_enabled=settings.proximity_filter_enabled,
             proximity_yellows_distance=settings.proximity_filter_distance_percentage,

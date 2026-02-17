@@ -73,18 +73,21 @@ def test_build_detector_all_enabled():
     with patch("core.detection.detector.RandomDetector") as mock_random, \
             patch("core.detection.detector.StoppedDetector") as mock_stopped, \
             patch("core.detection.detector.OffTrackDetector") as mock_offtrack, \
-            patch("core.detection.detector.MeatballDetector") as mock_meatball:
+            patch("core.detection.detector.MeatballDetector") as mock_meatball, \
+            patch("core.detection.detector.TowDetector") as mock_tow:
         detector = Detector.build_detector(settings, drivers)
         assert set(detector.detectors.keys()) == {
             DetectorEventTypes.RANDOM,
             DetectorEventTypes.STOPPED,
             DetectorEventTypes.OFF_TRACK,
             DetectorEventTypes.MEATBALL,
+            DetectorEventTypes.TOWING,
         }
         mock_random.assert_called_once()
         mock_stopped.assert_called_once()
         mock_offtrack.assert_called_once()
         mock_meatball.assert_called_once()
+        mock_tow.assert_called_once()
 
 def test_build_detector_none_enabled():
     drivers = MagicMock()
@@ -93,17 +96,20 @@ def test_build_detector_none_enabled():
         stopped_detector_enabled=False,
         off_track_detector_enabled=False,
         meatball_detector_enabled=False,
+        tow_detector_enabled=False,
     )
     with patch("core.detection.detector.RandomDetector") as mock_random, \
             patch("core.detection.detector.StoppedDetector") as mock_stopped, \
             patch("core.detection.detector.OffTrackDetector") as mock_offtrack, \
-            patch("core.detection.detector.MeatballDetector") as mock_meatball:
+            patch("core.detection.detector.MeatballDetector") as mock_meatball, \
+            patch("core.detection.detector.TowDetector") as mock_tow:
         detector = Detector.build_detector(settings, drivers)
         assert detector.detectors == {}
         mock_random.assert_not_called()
         mock_stopped.assert_not_called()
         mock_offtrack.assert_not_called()
         mock_meatball.assert_not_called()
+        mock_tow.assert_not_called()
 
 def test_detector_detect_calls_all_detectors():
     dummy1 = DummyDetector(result=DetectionResult(

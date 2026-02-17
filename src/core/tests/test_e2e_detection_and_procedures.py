@@ -693,3 +693,166 @@ class TestMeatballDetection:
             f"Expected at least 1 SC via accumulative meatball scoring, "
             f"got {result.total_safety_cars()}"
         )
+
+
+# ---------------------------------------------------------------------------
+# Test: Tow (teleport to pit) detection
+# ---------------------------------------------------------------------------
+
+class TestTowDetection:
+    """Tests for the tow detector using dumps where cars teleport to pits.
+
+    Tow signature: car jumps from on_track/off_track directly to in_pit_stall
+    in a single frame, skipping aproaching_pits.
+
+    Dump files:
+    - local_session_tow_midway_through.ndjson: car idx=0 tows at frame 15
+      from on_track (lap_distance ~0.53) to in_pit_stall
+    - local_session_tow_around_start_finish.ndjson: car idx=0 tows at frame 20
+      from on_track (lap_distance ~0.05) to in_pit_stall
+    - local_session_regular_pitstop.ndjson: car idx=0 enters pits normally
+      through aproaching_pits → in_pit_stall (no tow)
+    - local_session_race_start_meatbal_and_tow.ndjson: car idx=0 tows at
+      frame 42 from off_track, and cars idx 0, 13 get meatball flags
+    """
+
+    base_settings = dict(
+        tow_detector_enabled=True,
+        stopped_detector_enabled=False,
+        off_track_detector_enabled=False,
+        random_detector_enabled=False,
+        meatball_detector_enabled=False,
+        proximity_filter_enabled=False,
+        race_start_threshold_multiplier=1.0,
+        race_start_threshold_multiplier_time_seconds=0.0,
+        event_time_window_seconds=5.0,
+        detection_start_minute=0.0,
+        detection_end_minute=60.0,
+        max_safety_cars=10,
+    )
+
+    def test_tow_midway_through_detected(self):
+        """Car idx=0 in local_session_tow_midway_through.ndjson tows from
+        on_track to in_pit_stall at frame 15. Should be detected."""
+        dump = DUMPS_DIR / "local_session_tow_midway_through.ndjson"
+        replayer = DumpReplayer(dump, settings=make_settings(**self.base_settings))
+        result = replayer.run()
+
+        frames_with_tow = [
+            entry for entry in result.detection_log
+            if entry.towing_drivers
+        ]
+        assert len(frames_with_tow) > 0, "Expected tow detection in midway-through dump"
+
+        all_tow_idxs = set()
+        for entry in frames_with_tow:
+            all_tow_idxs.update(entry.towing_drivers)
+        assert 0 in all_tow_idxs, (
+            f"Expected car idx=0 to be detected as towing, got {all_tow_idxs}"
+        )
+
+    def test_tow_around_start_finish_detected(self):
+        """Car idx=0 in local_session_tow_around_start_finish.ndjson tows from
+        near start/finish line. Should be detected."""
+        dump = DUMPS_DIR / "local_session_tow_around_start_finish.ndjson"
+        replayer = DumpReplayer(dump, settings=make_settings(**self.base_settings))
+        result = replayer.run()
+
+        frames_with_tow = [
+            entry for entry in result.detection_log
+            if entry.towing_drivers
+        ]
+        assert len(frames_with_tow) > 0, "Expected tow detection near start/finish"
+
+        all_tow_idxs = set()
+        for entry in frames_with_tow:
+            all_tow_idxs.update(entry.towing_drivers)
+        assert 0 in all_tow_idxs, (
+            f"Expected car idx=0 to be detected as towing, got {all_tow_idxs}"
+        )
+
+    def test_regular_pitstop_not_detected_as_tow(self):
+        """Car idx=0 in local_session_regular_pitstop.ndjson enters pits normally
+        through aproaching_pits. Should NOT be detected as a tow."""
+        dump = DUMPS_DIR / "local_session_regular_pitstop.ndjson"
+        replayer = DumpReplayer(dump, settings=make_settings(**self.base_settings))
+        result = replayer.run()
+
+        frames_with_tow = [
+            entry for entry in result.detection_log
+            if entry.towing_drivers
+        ]
+        tow_idx_0_frames = [
+            entry for entry in frames_with_tow
+            if 0 in entry.towing_drivers
+        ]
+        assert len(tow_idx_0_frames) == 0, (
+            f"Regular pitstop for idx=0 was incorrectly detected as tow "
+            f"at frames {[e.frame_index for e in tow_idx_0_frames]}"
+        )
+
+    def test_meatball_and_tow_both_detected(self):
+        """local_session_race_start_meatbal_and_tow.ndjson should detect both
+        meatball events (idx 0, 13) and a tow event (idx 0 at frame 42)."""
+        dump = DUMPS_DIR / "local_session_race_start_meatbal_and_tow.ndjson"
+        replayer = DumpReplayer(dump, settings=make_settings(
+            **{**self.base_settings, "meatball_detector_enabled": True},
+        ))
+        result = replayer.run()
+
+        # Check meatball detections
+        frames_with_meatball = [
+            entry for entry in result.detection_log
+            if entry.meatball_drivers
+        ]
+        all_meatball_idxs = set()
+        for entry in frames_with_meatball:
+            all_meatball_idxs.update(entry.meatball_drivers)
+        assert {0, 13}.issubset(all_meatball_idxs), (
+            f"Expected meatball for idx 0 and 13, got {all_meatball_idxs}"
+        )
+
+        # Check tow detections
+        frames_with_tow = [
+            entry for entry in result.detection_log
+            if entry.towing_drivers
+        ]
+        assert len(frames_with_tow) > 0, "Expected tow detection in meatball+tow dump"
+
+        all_tow_idxs = set()
+        for entry in frames_with_tow:
+            all_tow_idxs.update(entry.towing_drivers)
+        assert 0 in all_tow_idxs, (
+            f"Expected car idx=0 to be detected as towing, got {all_tow_idxs}"
+        )
+
+    def test_tow_shadow_mode_no_sc_triggered(self):
+        """With default shadow mode settings (threshold=99999, weight=0.0),
+        tow events should be detected but no SC should trigger."""
+        dump = DUMPS_DIR / "local_session_tow_midway_through.ndjson"
+        replayer = DumpReplayer(dump, settings=make_settings(**self.base_settings))
+        result = replayer.run()
+
+        # Tow should be detected
+        frames_with_tow = [
+            entry for entry in result.detection_log
+            if entry.towing_drivers
+        ]
+        assert len(frames_with_tow) > 0, "Expected tow detection"
+
+        # But no SC should trigger (shadow mode)
+        assert result.total_safety_cars() == 0, (
+            f"Expected 0 SCs in shadow mode, got {result.total_safety_cars()}"
+        )
+
+    def test_tow_triggers_sc_with_threshold_1(self):
+        """With tow_cars_threshold=1, a single tow should trigger a SC."""
+        dump = DUMPS_DIR / "local_session_tow_midway_through.ndjson"
+        replayer = DumpReplayer(dump, settings=make_settings(
+            **{**self.base_settings, "tow_cars_threshold": 1},
+        ))
+        result = replayer.run()
+
+        assert result.total_safety_cars() >= 1, (
+            f"Expected at least 1 SC with tow_threshold=1, got {result.total_safety_cars()}"
+        )
