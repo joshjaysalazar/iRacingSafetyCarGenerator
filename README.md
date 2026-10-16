@@ -125,6 +125,11 @@ The **Advanced Features** checkbox in the controls panel reveals additional opti
 
 - **Throw Double Yellows** - Manually trigger a safety car event while the generator is running.
 
+## Troubleshooting
+
+- **A dialog says settings were not saved:** one or more fields contain a value that is not a valid number. The dialog lists the fields to correct; the generator only starts once all values are valid.
+- **Something else went wrong:** the app shows an error dialog. Every session writes a log file to the `logs` folder next to the executable. Please attach it when [reporting an issue](https://github.com/joshjaysalazar/iRacingSafetyCarGenerator/issues).
+
 ## Documentation
 
 This project includes documentation for different audiences:

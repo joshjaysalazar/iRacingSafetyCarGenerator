@@ -13,6 +13,20 @@ from util.dev_utils import copy_sdk_data_to_clipboard, send_test_commands
 
 logger = logging.getLogger(__name__)
 
+def _parse_int(value: str) -> int:
+    """Parse a whole number typed into a widget, ignoring surrounding whitespace."""
+    return int(value.strip())
+
+def _parse_float(value: str) -> float:
+    """Parse a number typed into a widget, also accepting a decimal comma (e.g. "0,5")."""
+    return float(value.strip().replace(",", "."))
+
+def _parse_selection(index: int) -> int:
+    """Validate a combobox selection index; current() returns -1 when nothing is selected."""
+    if index < 0:
+        raise ValueError(f"No option selected (index {index})")
+    return index
+
 class App(tk.Tk):
     """Main application window for the safety car generator."""
     def __init__(self, arguments):
@@ -79,6 +93,26 @@ class App(tk.Tk):
         logger.info("Closing main application window")
         self.shutdown_event.set()
         self.destroy()
+
+    def report_callback_exception(self, exc, val, tb):
+        """Log exceptions raised in Tkinter callbacks and tell the user about them.
+
+        Tkinter's default handler prints to stderr, which does not exist in the packaged
+        (--noconsole) build, so errors in e.g. button handlers would otherwise vanish.
+
+        Args:
+            exc: The exception type
+            val: The exception instance
+            tb: The traceback
+        """
+        logger.error("Unhandled exception in UI callback", exc_info=(exc, val, tb))
+        try:
+            messagebox.showerror(
+                "Unexpected error",
+                f"Something went wrong:\n\n{val}\n\nMore details can be found in the log file."
+            )
+        except Exception:
+            logger.exception("Could not show the error dialog")
 
     def _create_widgets(self):
         """Create widgets for the main application window.
@@ -1269,10 +1303,17 @@ class App(tk.Tk):
         self.ent_min_time_between.insert(0, str(self.settings.min_time_between_safety_cars_minutes))
         self.ent_laps_under_sc.delete(0, "end")
         self.ent_laps_under_sc.insert(0, str(self.settings.laps_under_safety_car))
-        self.var_wave_arounds.set(self.settings.wave_arounds_enabled)
         self.ent_laps_before_wave_arounds.delete(0, "end")
         self.ent_laps_before_wave_arounds.insert(0, str(self.settings.laps_before_wave_arounds))
-        self.cmb_wave_around_rules.current(self.settings.wave_around_rules_index)
+        wave_around_rules_index = self.settings.wave_around_rules_index
+        if not 0 <= wave_around_rules_index < len(self.cmb_wave_around_rules['values']):
+            logger.warning(f"Invalid wave_around_rules_index {wave_around_rules_index} in settings, using 0")
+            wave_around_rules_index = 0
+        self.cmb_wave_around_rules.current(wave_around_rules_index)
+        # Set the checkbox only after filling the wave around fields: its trace disables those
+        # fields when wave arounds are off, and disabled ttk widgets silently ignore
+        # delete/insert, which would leave them empty and break saving the settings.
+        self.var_wave_arounds.set(self.settings.wave_arounds_enabled)
         self.var_class_split.set(self.settings.class_split_enabled)
         self.var_proximity_yellows.set(self.settings.proximity_filter_enabled)
         self.spn_proximity_dist.delete(0, "end")
@@ -1295,7 +1336,9 @@ class App(tk.Tk):
         """
         if is_stopped_state(self.generator_state):
             logger.info('Saving settings and starting the generator')
-            self._save_settings()
+            if not self._save_settings():
+                logger.info('Not starting generator because the settings are invalid')
+                return
             started = self.generator.run()
             if not started:
                 logger.info('Could not start generator')
@@ -1316,77 +1359,78 @@ class App(tk.Tk):
             logger.info('Tried to throw a manual SC, but generator not running')
 
     def _save_settings(self):
-        """Save the settings to the config file.
+        """Validate the values in the widgets and save them to the config file.
+
+        Nothing is saved if any value is invalid. Instead, an error dialog lists the
+        fields that need to be corrected.
 
         Args:
             None
+
+        Returns:
+            bool: True if the settings were saved, False if any value was invalid.
         """
         logger.info("Saving settings to config file")
 
-        # Get all the settings from the widgets
-        random = self.var_random.get()
-        random_max_occ = self.spn_random_max_occ.get()
-        random_prob = self.ent_random_prob.get()
-        random_message = self.ent_random_message.get()
-        stopped = self.var_stopped.get()
-        stopped_min = self.spn_stopped_min.get()
-        stopped_message = self.ent_stopped_message.get()
-        time_range = self.spn_time_range.get()
-        start_multi_val = self.spn_start_multiplier.get()
-        start_multi_time = self.spn_start_multi_time.get()
-        off = self.var_off.get()
-        off_min = self.spn_off_min.get()
-        off_message = self.ent_off_message.get()
-        max_safety_cars = self.ent_max_safety_cars.get()
-        start_minute = self.ent_start_minute.get()
-        end_minute = self.ent_end_minute.get()
-        min_time_between = self.ent_min_time_between.get()
-        laps_under_sc = self.ent_laps_under_sc.get()
-        wave_arounds = self.var_wave_arounds.get()
-        laps_before_wave_arounds = self.ent_laps_before_wave_arounds.get()
-        wave_around_rules = self.cmb_wave_around_rules.current()
-        class_split = self.var_class_split.get()
-        proximity_yellows = self.var_proximity_yellows.get()
-        proximity_yellows_distance = self.spn_proximity_dist.get()
-        combined = self.var_combined.get()
-        combined_min = self.spn_combined_min.get()
-        stopped_weight = self.spn_stopped_weight.get()
-        off_weight = self.spn_off_weight.get()
-        combined_message = self.ent_combined_message.get()
-
-        # Save the settings to the config file
+        # Each row: (Settings attribute, label shown in the UI, widget value, parser)
         # IntVar.get() returns int (0 or 1), bool() converts correctly
-        self.settings.random_detector_enabled = bool(random)
-        self.settings.random_max_safety_cars = int(random_max_occ)
-        self.settings.random_probability = float(random_prob)
-        self.settings.random_message = str(random_message)
-        self.settings.stopped_detector_enabled = bool(stopped)
-        self.settings.stopped_cars_threshold = int(stopped_min)
-        self.settings.stopped_message = str(stopped_message)
-        self.settings.event_time_window_seconds = float(time_range)
-        self.settings.race_start_threshold_multiplier = float(start_multi_val)
-        self.settings.race_start_threshold_multiplier_time_seconds = float(start_multi_time)
-        self.settings.off_track_detector_enabled = bool(off)
-        self.settings.off_track_cars_threshold = int(off_min)
-        self.settings.off_track_message = str(off_message)
-        self.settings.max_safety_cars = int(max_safety_cars)
-        self.settings.detection_start_minute = float(start_minute)
-        self.settings.detection_end_minute = float(end_minute)
-        self.settings.min_time_between_safety_cars_minutes = float(min_time_between)
-        self.settings.laps_under_safety_car = int(laps_under_sc)
-        self.settings.wave_arounds_enabled = bool(wave_arounds)
-        self.settings.laps_before_wave_arounds = int(laps_before_wave_arounds)
-        self.settings.wave_around_rules_index = int(wave_around_rules)
-        self.settings.class_split_enabled = bool(class_split)
-        self.settings.proximity_filter_enabled = bool(proximity_yellows)
-        self.settings.proximity_filter_distance_percentage = float(proximity_yellows_distance)
-        self.settings.accumulative_threshold = float(combined_min)
-        self.settings.stopped_weight = float(stopped_weight)
-        self.settings.off_track_weight = float(off_weight)
-        self.settings.accumulative_detector_enabled = bool(combined)
-        self.settings.accumulative_message = str(combined_message)
+        fields = [
+            ("random_detector_enabled", "Random", self.var_random.get(), bool),
+            ("random_max_safety_cars", "Maximum occurences (Random)", self.spn_random_max_occ.get(), _parse_int),
+            ("random_probability", "Probability (Random)", self.ent_random_prob.get(), _parse_float),
+            ("random_message", "Message (Random)", self.ent_random_message.get(), str),
+            ("stopped_detector_enabled", "Cars stopped on track", self.var_stopped.get(), bool),
+            ("stopped_cars_threshold", "Minimum to trigger (Cars stopped on track)", self.spn_stopped_min.get(), _parse_int),
+            ("stopped_message", "Message (Cars stopped on track)", self.ent_stopped_message.get(), str),
+            ("event_time_window_seconds", "Event Time Window (s)", self.spn_time_range.get(), _parse_float),
+            ("race_start_threshold_multiplier", "Race Start multiplier", self.spn_start_multiplier.get(), _parse_float),
+            ("race_start_threshold_multiplier_time_seconds", "Multiplier active time", self.spn_start_multi_time.get(), _parse_float),
+            ("off_track_detector_enabled", "Cars off track", self.var_off.get(), bool),
+            ("off_track_cars_threshold", "Minimum to trigger (Cars off track)", self.spn_off_min.get(), _parse_int),
+            ("off_track_message", "Message (Cars off track)", self.ent_off_message.get(), str),
+            ("max_safety_cars", "Maximum safety cars", self.ent_max_safety_cars.get(), _parse_int),
+            ("detection_start_minute", "Earliest possible minute", self.ent_start_minute.get(), _parse_float),
+            ("detection_end_minute", "Latest possible minute", self.ent_end_minute.get(), _parse_float),
+            ("min_time_between_safety_cars_minutes", "Minimum minutes between", self.ent_min_time_between.get(), _parse_float),
+            ("laps_under_safety_car", "Laps under safety car", self.ent_laps_under_sc.get(), _parse_int),
+            ("wave_arounds_enabled", "Automatic wave arounds", self.var_wave_arounds.get(), bool),
+            ("laps_before_wave_arounds", "Laps before wave arounds", self.ent_laps_before_wave_arounds.get(), _parse_int),
+            ("wave_around_rules_index", "Wave around rules", self.cmb_wave_around_rules.current(), _parse_selection),
+            ("class_split_enabled", "Split classes", self.var_class_split.get(), bool),
+            ("proximity_filter_enabled", "Proximity-based yellows", self.var_proximity_yellows.get(), bool),
+            ("proximity_filter_distance_percentage", "Proximity distance", self.spn_proximity_dist.get(), _parse_float),
+            ("accumulative_threshold", "Combined threshold", self.spn_combined_min.get(), _parse_float),
+            ("stopped_weight", "Stopped weight", self.spn_stopped_weight.get(), _parse_float),
+            ("off_track_weight", "Off-track weight", self.spn_off_weight.get(), _parse_float),
+            ("accumulative_detector_enabled", "Combined/Weighted Yellows", self.var_combined.get(), bool),
+            ("accumulative_message", "Message (Combined/Weighted Yellows)", self.ent_combined_message.get(), str),
+        ]
+
+        # Parse everything before changing any setting, so invalid input never leaves
+        # the settings partially updated
+        values = {}
+        invalid_fields = []
+        for name, label, raw_value, parse in fields:
+            try:
+                values[name] = parse(raw_value)
+            except ValueError:
+                invalid_fields.append(f"{label}: '{raw_value}'")
+
+        if invalid_fields:
+            logger.warning(f"Not saving settings, invalid values: {invalid_fields}")
+            messagebox.showerror(
+                "Invalid settings",
+                "Settings were not saved because these fields have invalid values:\n\n"
+                + "\n".join(invalid_fields)
+                + "\n\nPlease correct them and try again."
+            )
+            return False
+
+        for name, value in values.items():
+            setattr(self.settings, name, value)
 
         self.settings.save()
+        return True
 
     def set_message(self, message):
         """Set the status label to a message.
@@ -1428,7 +1472,8 @@ class App(tk.Tk):
         if self.var_wave_arounds.get() == 1:
             self.lbl_laps_before_wave_arounds.config(state="normal")
             self.ent_laps_before_wave_arounds.config(state="normal")
-            self.cmb_wave_around_rules.config(state="normal")
+            # readonly (not normal) so users can only pick one of the listed options
+            self.cmb_wave_around_rules.config(state="readonly")
         else:
             self.lbl_laps_before_wave_arounds.config(state="disabled")
             self.ent_laps_before_wave_arounds.config(state="disabled")
