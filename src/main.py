@@ -52,7 +52,19 @@ def main(arguments):
         app.mainloop()
     except Exception as e:
         logging.exception("A fatal error has occurred")
+        show_fatal_error(e)
         raise e
+
+def show_fatal_error(error):
+    """Tell the user about a fatal error, as the packaged (--noconsole) build has no console to print it to."""
+    try:
+        from tkinter import messagebox
+        messagebox.showerror(
+            "iRacing Safety Car Generator",
+            f"A fatal error has occurred:\n\n{error}\n\nMore details can be found in the log file."
+        )
+    except Exception:
+        logging.exception("Could not show the fatal error dialog")
 
 if __name__ == "__main__":
     arguments = parse_arguments()

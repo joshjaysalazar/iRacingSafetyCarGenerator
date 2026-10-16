@@ -193,3 +193,14 @@ def test_wave_around_rules_stay_readonly_after_toggling_wave_arounds(make_app):
 
     assert str(app.cmb_wave_around_rules["state"]) == "readonly"
 
+
+def test_exception_in_button_callback_is_logged_and_shown(make_app, showerror, mocker, caplog):
+    app = make_app(UI_SETTINGS)
+    mocker.patch.object(app, "_save_settings", side_effect=RuntimeError("boom"))
+
+    app.btn_run.invoke()
+
+    assert "Unhandled exception in UI callback" in caplog.text
+    assert "RuntimeError: boom" in caplog.text
+    showerror.assert_called_once()
+    assert "boom" in showerror.call_args.args[1]

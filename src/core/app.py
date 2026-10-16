@@ -94,6 +94,26 @@ class App(tk.Tk):
         self.shutdown_event.set()
         self.destroy()
 
+    def report_callback_exception(self, exc, val, tb):
+        """Log exceptions raised in Tkinter callbacks and tell the user about them.
+
+        Tkinter's default handler prints to stderr, which does not exist in the packaged
+        (--noconsole) build, so errors in e.g. button handlers would otherwise vanish.
+
+        Args:
+            exc: The exception type
+            val: The exception instance
+            tb: The traceback
+        """
+        logger.error("Unhandled exception in UI callback", exc_info=(exc, val, tb))
+        try:
+            messagebox.showerror(
+                "Unexpected error",
+                f"Something went wrong:\n\n{val}\n\nMore details can be found in the log file."
+            )
+        except Exception:
+            logger.exception("Could not show the error dialog")
+
     def _create_widgets(self):
         """Create widgets for the main application window.
 

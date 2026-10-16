@@ -2,7 +2,7 @@
 	"version": 1,
 	"disable_existing_loggers": false,
 	"formatters": {
-		"simple": { 
+		"simple": {
 			"format": "%(asctime)s (%(name)s) [%(levelname)s] %(message)s"
 		}
 	},
@@ -13,102 +13,60 @@
 			"filename": "logs/{current_datetime}.log"
 		}
 	},
+	"root": {
+		"level": "WARNING",
+		"handlers": [
+			"file"
+		]
+	},
 	"loggers": {
 		"__main__": {
-			"level": "INFO",
-			"handlers": [
-				"file"
-			]
+			"level": "INFO"
 		},
 		"core.app": {
-			"level": "INFO",
-			"handlers": [
-				"file"
-			]
+			"level": "INFO"
 		},
 		"core.detection.threshold_checker": {
-			"level": "DEBUG",
-			"handlers": [
-				"file"
-			]
+			"level": "DEBUG"
 		},
 		"core.detection.detector": {
-			"level": "DEBUG",
-			"handlers": [
-				"file"
-			]
+			"level": "DEBUG"
 		},
 		"core.detection.off_track_detector": {
-			"level": "DEBUG",
-			"handlers": [
-				"file"
-			]
+			"level": "DEBUG"
 		},
 		"core.detection.stopped_detector": {
-			"level": "DEBUG",
-			"handlers": [
-				"file"
-			]
+			"level": "DEBUG"
 		},
 		"core.detection.meatball_detector": {
-			"level": "DEBUG",
-			"handlers": [
-				"file"
-			]
+			"level": "DEBUG"
 		},
 		"core.detection.random_detector": {
-			"level": "DEBUG",
-			"handlers": [
-				"file"
-			]
+			"level": "DEBUG"
 		},
 		"core.drivers": {
-			"level": "INFO",
-			"handlers": [
-				"file"
-			]
+			"level": "INFO"
 		},
 		"core.generator": {
-			"level": "INFO",
-			"handlers": [
-				"file"
-			]
+			"level": "INFO"
 		},
 		"core.interactions.command_sender": {
-			"level": "INFO",
-			"handlers": [
-				"file"
-			]
+			"level": "INFO"
 		},
 		"core.interactions.mock_sender": {
-			"level": "DEBUG",
-			"handlers": [
-				"file"
-			]
+			"level": "DEBUG"
 		},
 		"core.interactions.iracing_window": {
-			"level": "INFO",
-			"handlers": [
-				"file"
-			]
+			"level": "INFO"
 		},
 		"core.interactions.mock_window": {
-			"level": "DEBUG",
-			"handlers": [
-				"file"
-			]
+			"level": "DEBUG"
 		},
 		"core.procedures.wave_arounds": {
-			"level": "DEBUG",
-			"handlers": [
-				"file"
-			]
+			"level": "DEBUG"
 		},
 		"core.procedures.class_split": {
-			"level": "DEBUG",
-			"handlers": [
-				"file"
-			]
+			"level": "DEBUG"
 		}
 	}
 }
