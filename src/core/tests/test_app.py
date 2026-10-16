@@ -259,17 +259,27 @@ def test_class_split_request_is_answered_through_a_dialog(make_app, mocker):
     confirm.assert_called_once_with(True)
 
 
-def test_generator_events_are_still_processed_after_an_error(make_app, mocker):
+def test_generator_events_are_still_processed_after_an_error(make_app, showerror, mocker):
+    """An error while applying an event must not end the polling, or the UI would freeze on that state."""
     app = make_app(UI_SETTINGS)
     mocker.patch.object(app, "on_generator_state_change", side_effect=[RuntimeError("boom"), None])
+
+    # The scheduled poll fails on this event (reported via report_callback_exception)...
     app.generator.ui_events.put(generator.StateChanged(GeneratorState.CONNECTING_TO_IRACING))
+    pump_until(app, lambda: showerror.called)
 
-    with pytest.raises(RuntimeError):
-        app._process_generator_events()
-
-    # The next poll is still scheduled, so later events reach the UI
+    # ...and keeps polling, so later events still reach the UI
     app.generator.ui_events.put(generator.StateChanged(GeneratorState.CONNECTED))
     pump_until(app, lambda: app.generator_state == GeneratorState.CONNECTED)
+
+
+def test_skip_wait_for_green_button_signals_the_generator(make_app, mocker):
+    app = make_app(UI_SETTINGS)
+    skip_wait_for_green = mocker.patch.object(app.generator, "skip_wait_for_green")
+
+    app._skip_wait_for_green()
+
+    skip_wait_for_green.assert_called_once_with()
 
 
 @pytest.mark.parametrize("state, expected_calls", [

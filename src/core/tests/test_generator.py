@@ -260,15 +260,21 @@ class TestSplitClasses:
         """The confirmation request reaches the UI as an event and the answer comes back through confirm_class_split()."""
         result = []
         requester = threading.Thread(
-            target=lambda: result.append(generator._request_class_split_confirmation(["!eol #1"]))
+            target=lambda: result.append(generator._request_class_split_confirmation(["!eol #1"])),
+            daemon=True,
         )
         requester.start()
 
-        event = generator.ui_events.get(timeout=5)
-        assert event == ClassSplitConfirmationRequested(["!eol #1"])
+        try:
+            event = generator.ui_events.get(timeout=5)
+            assert event == ClassSplitConfirmationRequested(["!eol #1"])
 
-        generator.confirm_class_split(True)
-        requester.join(timeout=5)
+            generator.confirm_class_split(True)
+            requester.join(timeout=5)
+        finally:
+            # Never leave the requester waiting if the test fails
+            generator.stop()
+            requester.join(timeout=5)
 
         assert result == [True]
 
@@ -530,6 +536,97 @@ def test_manual_safety_car_is_thrown_right_away_regardless_of_eligibility_window
 
     start_safety_car.assert_called_once_with()
     assert not generator.throw_manual_sc_event.is_set()
+
+
+def test_start_safety_car_runs_the_procedure(generator, mocker):
+    generator.ir = FakeIRSDK(RACING_FRAME)
+    generator.ir.startup()
+    send_command = mocker.patch.object(generator.command_sender, "send_command")
+    mocker.patch.object(generator.drivers, "update", create=True)
+    send_wave_arounds = mocker.patch.object(generator, "_send_wave_arounds", return_value=True)
+    send_pacelaps = mocker.patch.object(generator, "_send_pacelaps", return_value=True)
+    split_classes = mocker.patch.object(generator, "_split_classes", return_value=True)
+    wait_for_green_flag = mocker.patch.object(generator, "_wait_for_green_flag")
+    mocker.patch("time.sleep", return_value=None)
+
+    generator._start_safety_car("Debris on track")
+
+    send_command.assert_called_once_with("!y Debris on track")
+    assert generator.ui_events.get_nowait() == StateChanged(GeneratorState.SAFETY_CAR_DEPLOYED)
+    assert generator.state == GeneratorState.SAFETY_CAR_DEPLOYED
+    assert generator.total_sc_events == 1
+    assert generator.last_sc_time is not None
+    assert generator.lap_at_sc == max(RACING_FRAME["telemetry"]["CarIdxLap"])
+    send_wave_arounds.assert_called_once()
+    send_pacelaps.assert_called_once()
+    split_classes.assert_called_once()
+    wait_for_green_flag.assert_called_once_with(require_race_session=False)
+
+
+class TestSendPacelaps:
+    """Tests for _send_pacelaps(), which reads laps_under_safety_car from the settings snapshot."""
+
+    @pytest.fixture
+    def pacelaps_generator(self, generator, mocker):
+        mocker.patch("time.sleep", return_value=None)
+        generator.lap_at_sc = 5
+        generator.ir = MagicMock()
+        generator.ir.__getitem__.side_effect = lambda key: {
+            "CarIdxLap": [7, 7, 6],
+            "CarIdxLapDistPct": [0.6, 0.4, 0.9],
+        }[key]
+        return generator
+
+    def test_fewer_than_two_laps_under_safety_car_sends_nothing(self, pacelaps_generator, mocker):
+        configure(pacelaps_generator, laps_under_safety_car=1)
+        pacelaps_generator.current_lap_under_sc = 7
+        send_command = mocker.patch.object(pacelaps_generator.command_sender, "send_command")
+
+        assert pacelaps_generator._send_pacelaps() is True
+        send_command.assert_not_called()
+
+    def test_waits_until_two_laps_after_the_safety_car(self, pacelaps_generator, mocker):
+        configure(pacelaps_generator, laps_under_safety_car=4)
+        pacelaps_generator.current_lap_under_sc = 6
+        send_command = mocker.patch.object(pacelaps_generator.command_sender, "send_command")
+
+        assert pacelaps_generator._send_pacelaps() is False
+        send_command.assert_not_called()
+
+    def test_sends_pace_laps_once_the_leader_is_halfway_around(self, pacelaps_generator, mocker):
+        configure(pacelaps_generator, laps_under_safety_car=4)
+        pacelaps_generator.current_lap_under_sc = 7
+        send_command = mocker.patch.object(pacelaps_generator.command_sender, "send_command")
+
+        assert pacelaps_generator._send_pacelaps() is True
+        send_command.assert_called_once_with("!p 3")
+
+
+def test_generator_settings_from_settings_maps_every_field():
+    """Each field comes from its own setting (distinct values, so swapped fields are caught)."""
+    settings = dict_to_config({"settings": {
+        "detection_start_minute": "1.5",
+        "detection_end_minute": "45.5",
+        "max_safety_cars": "5",
+        "min_time_between_safety_cars_minutes": "6.5",
+        "laps_under_safety_car": "4",
+        "wave_arounds_enabled": "0",
+        "laps_before_wave_arounds": "3",
+        "wave_around_rules_index": "2",
+        "class_split_enabled": "1",
+    }})
+
+    assert GeneratorSettings.from_settings(settings) == GeneratorSettings(
+        detection_start_minute=1.5,
+        detection_end_minute=45.5,
+        max_safety_cars=5,
+        min_time_between_safety_cars_minutes=6.5,
+        laps_under_safety_car=4,
+        wave_arounds_enabled=False,
+        laps_before_wave_arounds=3,
+        wave_around_rules_index=2,
+        class_split_enabled=True,
+    )
 
 
 def test_generator_settings_defaults_match_settings_fallbacks():
