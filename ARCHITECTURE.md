@@ -361,6 +361,18 @@ class Settings:
 - `getfloat()` for floats
 - `get()` for strings
 
+**Interpolation is disabled** (`ConfigParser(interpolation=None)`), so a `%` in a message is stored literally.
+
+**Saving from the UI:** `App._save_settings()` parses every widget value through a table of `(setting, UI label, value, parser)` rows before changing anything. If any value is invalid (e.g. text in a number field), nothing is written and an error dialog lists the offending fields by their UI label; `_save_and_run()` then does not start the generator. Decimal commas (`0,5`) are accepted for float fields.
+
+#### Logging and Error Reporting
+
+The packaged build is created with `--noconsole`, so `sys.stderr` is `None` and anything printed to it is lost. Errors therefore always go to the log file and, where the user needs to act, to a dialog:
+
+- `src/logging.json` attaches the file handler to the **root** logger (level `WARNING`). Per-module loggers only set their level and propagate to root, so every record is written exactly once and unconfigured loggers (new modules, third-party libraries) still log warnings and errors.
+- `App.report_callback_exception()` logs exceptions raised in Tkinter callbacks (button handlers, `after()` callbacks) and shows an error dialog. Tkinter's default handler would print to the missing stderr.
+- `main.show_fatal_error()` shows a dialog when the app fails to start; the exception is logged via the root logger.
+
 #### Settings Dataclasses
 
 Configuration objects built from Settings:
@@ -471,7 +483,8 @@ User clicks "Start SC Generator" button
 │
 ├─► App._start_generator()
 │   ├─ App._save_and_run()
-│   │   ├─ Save settings from GUI to settings.ini
+│   │   ├─ Validate and save settings from GUI to settings.ini
+│   │   │   (invalid values → error dialog, generator is not started)
 │   │   └─ Generator.start()
 │   │
 │   └─► Generator.start()
