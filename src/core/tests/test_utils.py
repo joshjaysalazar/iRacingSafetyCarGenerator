@@ -160,6 +160,14 @@ _SETTINGS_DEFAULTS = {
     "proximity_filter_distance_percentage": "0.05",
     "race_start_threshold_multiplier": "1.0",
     "race_start_threshold_multiplier_time_seconds": "300.0",
+    # Generator (GeneratorSettings)
+    "max_safety_cars": "2",
+    "min_time_between_safety_cars_minutes": "3.0",
+    "laps_under_safety_car": "2",
+    "wave_arounds_enabled": "1",
+    "laps_before_wave_arounds": "0",
+    "wave_around_rules_index": "0",
+    "class_split_enabled": "0",
 }
 
 
@@ -184,3 +192,53 @@ def dict_to_config(settings_dict):
         setattr(mock_settings, key, _convert_value(value))
 
     return mock_settings
+
+
+DUMPS_DIR = Path(__file__).resolve().parents[3] / "docs" / "dumps"
+
+
+def load_dump_frame(dump_name: str, frame_index: int = -1) -> dict:
+    """Load one frame of an NDJSON SDK dump from docs/dumps/.
+
+    Args:
+        dump_name: File name of the dump in docs/dumps/.
+        frame_index: Index of the frame to load; defaults to the last frame.
+
+    Returns:
+        The frame as a dict with "telemetry" and "session_info" keys.
+    """
+    with open(DUMPS_DIR / dump_name, "r") as f:
+        lines = f.readlines()
+    return json.loads(lines[frame_index])
+
+
+class FakeIRSDK:
+    """Stand-in for irsdk.IRSDK that serves a single frame of an SDK dump.
+
+    Like pyirsdk, reading values after shutdown() fails, so tests catch code that uses
+    an SDK connection after it was closed.
+    """
+
+    def __init__(self, frame: dict, startup_result: bool = True):
+        self.frame = frame
+        self.startup_result = startup_result
+        self.is_connected = False
+        self.shutdown_calls = 0
+
+    def startup(self) -> bool:
+        self.is_connected = self.startup_result
+        return self.startup_result
+
+    def shutdown(self) -> None:
+        self.is_connected = False
+        self.shutdown_calls += 1
+
+    def chat_command(self, *args) -> None:
+        pass
+
+    def __getitem__(self, key):
+        if not self.is_connected:
+            raise AttributeError("'NoneType' object has no attribute 'var_buf' (SDK used while not connected)")
+        if key in self.frame["telemetry"]:
+            return self.frame["telemetry"][key]
+        return self.frame["session_info"].get(key)

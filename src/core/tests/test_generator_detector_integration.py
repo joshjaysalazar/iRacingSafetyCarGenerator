@@ -7,7 +7,7 @@ from unittest.mock import Mock, MagicMock, patch
 from core.detection.detector import Detector, DetectorSettings, BundledDetectedEvents
 from core.detection.detector_common_types import DetectionResult, DetectorEventTypes
 from core.detection.threshold_checker import ThresholdChecker, ThresholdCheckerSettings
-from core.generator import Generator
+from core.generator import Generator, GeneratorSettings
 from core.tests.test_utils import create_mock_drivers
 
 
@@ -21,12 +21,11 @@ def mock_arguments():
 
 
 @pytest.fixture
-def mock_master():
-    """Mock master object with settings for Generator."""
+def mock_settings():
+    """Mock settings for Generator."""
     from core.tests.test_utils import dict_to_config
-    
-    mock_master = Mock()
-    mock_master.settings = dict_to_config({
+
+    return dict_to_config({
         "settings": {
             # Detector settings
             "random_detector_enabled": "1",
@@ -49,10 +48,9 @@ def mock_master():
             "proximity_filter_enabled": "0",
             "proximity_filter_distance_percentage": "0.05",
             "max_safety_cars": "999",
-            "min_time_between": "0",
+            "min_time_between_safety_cars_minutes": "0.0",
         }
     })
-    return mock_master
 
 
 @pytest.fixture
@@ -62,27 +60,28 @@ def mock_drivers():
 
 
 @pytest.fixture
-def generator_with_mocks(mock_arguments, mock_master):
+def generator_with_mocks(mock_arguments, mock_settings):
     """Generator instance with mocked dependencies."""
-    generator = Generator(mock_arguments, mock_master)
+    generator = Generator(mock_arguments)
+    generator.settings = GeneratorSettings.from_settings(mock_settings)
     generator.start_time = time.time() - 10  # Simulate 10 seconds since start
     return generator
 
 
 class TestGeneratorDetectorInitialization:
-    """Tests for detector initialization in Generator.run()."""
+    """Tests for detector initialization when the generator thread starts."""
 
-    def test_detector_initialization_in_run(self, generator_with_mocks, mock_drivers):
-        """Test that detector is properly initialized during Generator.run()."""
+    def test_detector_initialization_in_run(self, generator_with_mocks, mock_settings, mock_drivers):
+        """Test that detector is properly initialized when the generator thread runs."""
         generator = generator_with_mocks
         
-        with patch.object(generator.ir, 'startup', return_value=True), \
-             patch.object(generator.command_sender, 'connect'), \
+        with patch.object(generator, '_connect', return_value=True), \
              patch('core.drivers.Drivers', return_value=mock_drivers), \
              patch.object(generator, '_loop'):
             
-            # Run the generator
-            result = generator.run()
+            # Run the generator thread and wait for it to finish
+            result = generator.run(mock_settings)
+            generator.thread.join(timeout=5)
             
             # Verify detector was initialized
             assert result is True
@@ -91,32 +90,32 @@ class TestGeneratorDetectorInitialization:
             assert hasattr(generator, 'threshold_checker')
             assert isinstance(generator.threshold_checker, ThresholdChecker)
 
-    def test_detector_settings_from_master_settings(self, generator_with_mocks, mock_drivers):
-        """Test that DetectorSettings are correctly created from master settings."""
+    def test_detector_settings_from_settings(self, generator_with_mocks, mock_settings, mock_drivers):
+        """Test that DetectorSettings are correctly created from the settings."""
         generator = generator_with_mocks
         
-        with patch.object(generator.ir, 'startup', return_value=True), \
-             patch.object(generator.command_sender, 'connect'), \
+        with patch.object(generator, '_connect', return_value=True), \
              patch('core.drivers.Drivers', return_value=mock_drivers), \
              patch.object(generator, '_loop'):
             
-            generator.run()
+            generator.run(mock_settings)
+            generator.thread.join(timeout=5)
             
             # Verify detector has the correct settings-based configuration
             # We can't directly access settings, but we can verify the detector exists
             assert generator.detector is not None
             
-    def test_detector_build_called_with_correct_parameters(self, generator_with_mocks, mock_drivers):
+    def test_detector_build_called_with_correct_parameters(self, generator_with_mocks, mock_settings, mock_drivers):
         """Test that Detector.build_detector is called with correct parameters."""
         generator = generator_with_mocks
         
-        with patch.object(generator.ir, 'startup', return_value=True), \
-             patch.object(generator.command_sender, 'connect'), \
+        with patch.object(generator, '_connect', return_value=True), \
              patch('core.drivers.Drivers', return_value=mock_drivers), \
              patch.object(generator, '_loop'), \
              patch.object(Detector, 'build_detector', return_value=Mock()) as mock_build:
             
-            generator.run()
+            generator.run(mock_settings)
+            generator.thread.join(timeout=5)
             
             # Verify build_detector was called once
             mock_build.assert_called_once()
@@ -135,11 +134,11 @@ class TestGeneratorDetectorInitialization:
 class TestGeneratorLoopDetectorIntegration:
     """Tests for detector usage in Generator._loop()."""
 
-    def setup_generator_for_loop_test(self, generator, mock_drivers):
+    def setup_generator_for_loop_test(self, generator, mock_settings, mock_drivers):
         """Setup generator with necessary mocks for _loop testing."""
         generator.drivers = mock_drivers
         generator.threshold_checker = ThresholdChecker(
-            ThresholdCheckerSettings.from_settings(generator.master.settings)
+            ThresholdCheckerSettings.from_settings(mock_settings)
         )
         generator.detector = Mock(spec=Detector)
         
@@ -150,10 +149,10 @@ class TestGeneratorLoopDetectorIntegration:
         
         return mock_results
 
-    def test_detector_detect_called_in_loop(self, generator_with_mocks, mock_drivers, mocker):
+    def test_detector_detect_called_in_loop(self, generator_with_mocks, mock_settings, mock_drivers, mocker):
         """Test that detector.detect() is called during _loop execution."""
         generator = generator_with_mocks
-        mock_results = self.setup_generator_for_loop_test(generator, mock_drivers)
+        mock_results = self.setup_generator_for_loop_test(generator, mock_settings, mock_drivers)
         
         # Mock other dependencies
         mocker.patch.object(generator, '_wait_for_green_flag')
@@ -170,10 +169,10 @@ class TestGeneratorLoopDetectorIntegration:
         # Verify detector.detect was called
         generator.detector.detect.assert_called_once()
 
-    def test_threshold_checker_register_detection_result_called(self, generator_with_mocks, mock_drivers, mocker):
+    def test_threshold_checker_register_detection_result_called(self, generator_with_mocks, mock_settings, mock_drivers, mocker):
         """Test that threshold_checker.register_detection_result is called with detector results."""
         generator = generator_with_mocks
-        mock_results = self.setup_generator_for_loop_test(generator, mock_drivers)
+        mock_results = self.setup_generator_for_loop_test(generator, mock_settings, mock_drivers)
         
         # Mock other dependencies
         mocker.patch.object(generator, '_wait_for_green_flag')
@@ -212,10 +211,10 @@ class TestGeneratorLoopDetectorIntegration:
         register_spy.assert_any_call(mock_stopped_result)
         register_spy.assert_any_call(mock_off_track_result)
 
-    def test_threshold_checker_clean_up_events_called(self, generator_with_mocks, mock_drivers, mocker):
+    def test_threshold_checker_clean_up_events_called(self, generator_with_mocks, mock_settings, mock_drivers, mocker):
         """Test that threshold_checker.clean_up_events is called before registering new events."""
         generator = generator_with_mocks
-        mock_results = self.setup_generator_for_loop_test(generator, mock_drivers)
+        mock_results = self.setup_generator_for_loop_test(generator, mock_settings, mock_drivers)
         
         # Mock other dependencies
         mocker.patch.object(generator, '_wait_for_green_flag')
@@ -307,7 +306,7 @@ class TestGeneratorThresholdCheckerIntegration:
 class TestGeneratorDetectorEndToEndIntegration:
     """End-to-end integration tests with real detector components."""
 
-    def test_real_detector_integration_with_stopped_cars(self, generator_with_mocks, mocker):
+    def test_real_detector_integration_with_stopped_cars(self, generator_with_mocks, mock_settings, mocker):
         """Test real detector integration with stopped cars scenario."""
         generator = generator_with_mocks
         
@@ -329,9 +328,9 @@ class TestGeneratorDetectorEndToEndIntegration:
         generator.drivers = drivers_mock
         
         # Initialize real detector and threshold checker
-        detector_settings = DetectorSettings.from_settings(generator.master.settings)
+        detector_settings = DetectorSettings.from_settings(mock_settings)
         generator.detector = Detector.build_detector(detector_settings, drivers_mock)
-        threshold_checker_settings = ThresholdCheckerSettings.from_settings(generator.master.settings)
+        threshold_checker_settings = ThresholdCheckerSettings.from_settings(mock_settings)
         generator.threshold_checker = ThresholdChecker(threshold_checker_settings)
         
         # Mock other dependencies
@@ -349,18 +348,18 @@ class TestGeneratorDetectorEndToEndIntegration:
         # With 2 stopped cars and threshold of 2, threshold should be met
         assert threshold_spy.call_count > 0
 
-    def test_detector_settings_disabled_detectors_not_called(self, generator_with_mocks, mock_drivers, mocker):
+    def test_detector_settings_disabled_detectors_not_called(self, generator_with_mocks, mock_settings, mock_drivers, mocker):
         """Test that disabled detectors are not included in the detector."""
         generator = generator_with_mocks
 
         # Disable some detectors in settings
-        generator.master.settings.random_detector_enabled = False
-        generator.master.settings.off_track_detector_enabled = False
+        mock_settings.random_detector_enabled = False
+        mock_settings.off_track_detector_enabled = False
         
         generator.drivers = mock_drivers
         
         # Initialize detector with disabled settings
-        detector_settings = DetectorSettings.from_settings(generator.master.settings)
+        detector_settings = DetectorSettings.from_settings(mock_settings)
         generator.detector = Detector.build_detector(detector_settings, mock_drivers)
         
         # Check that only stopped detector is enabled
@@ -369,7 +368,7 @@ class TestGeneratorDetectorEndToEndIntegration:
         assert DetectorEventTypes.OFF_TRACK not in generator.detector.detectors
 
 
-def test_generator_calls_race_started_when_green_flag_detected(generator_with_mocks, mock_drivers, mocker):
+def test_generator_calls_race_started_when_green_flag_detected(generator_with_mocks, mock_settings, mock_drivers, mocker):
     """Test that Generator calls race_started() on detector when green flag is detected."""
     import irsdk
     
@@ -377,12 +376,12 @@ def test_generator_calls_race_started_when_green_flag_detected(generator_with_mo
     generator.drivers = mock_drivers
     
     # Initialize detector and spy on race_started method
-    detector_settings = DetectorSettings.from_settings(generator.master.settings)
+    detector_settings = DetectorSettings.from_settings(mock_settings)
     generator.detector = Detector.build_detector(detector_settings, mock_drivers)
     detector_race_started_spy = mocker.spy(generator.detector, 'race_started')
     
     # Initialize threshold checker
-    threshold_checker_settings = ThresholdCheckerSettings.from_settings(generator.master.settings)
+    threshold_checker_settings = ThresholdCheckerSettings.from_settings(mock_settings)
     generator.threshold_checker = ThresholdChecker(threshold_checker_settings)
     threshold_checker_race_started_spy = mocker.spy(generator.threshold_checker, 'race_started')
     
@@ -407,18 +406,18 @@ def test_generator_calls_race_started_when_green_flag_detected(generator_with_mo
     assert generator.start_time is not None
 
 
-def test_generator_calls_race_started_when_skipping_green_flag_wait(generator_with_mocks, mock_drivers, mocker):
+def test_generator_calls_race_started_when_skipping_green_flag_wait(generator_with_mocks, mock_settings, mock_drivers, mocker):
     """Test that Generator calls race_started() on detector when skipping green flag wait."""
     generator = generator_with_mocks
     generator.drivers = mock_drivers
     
     # Initialize detector and spy on race_started method
-    detector_settings = DetectorSettings.from_settings(generator.master.settings)
+    detector_settings = DetectorSettings.from_settings(mock_settings)
     generator.detector = Detector.build_detector(detector_settings, mock_drivers)
     detector_race_started_spy = mocker.spy(generator.detector, 'race_started')
     
     # Initialize threshold checker
-    threshold_checker_settings = ThresholdCheckerSettings.from_settings(generator.master.settings)
+    threshold_checker_settings = ThresholdCheckerSettings.from_settings(mock_settings)
     generator.threshold_checker = ThresholdChecker(threshold_checker_settings)
     threshold_checker_race_started_spy = mocker.spy(generator.threshold_checker, 'race_started')
     

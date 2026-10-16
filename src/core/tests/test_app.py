@@ -1,15 +1,27 @@
 import argparse
 import configparser
+import logging
 import os
 import shutil
 import sys
+import time
+import tkinter as tk
 from pathlib import Path
 
 import pytest
 
+from core import generator
 from core.app import App
+from core.generator import GeneratorState
+from core.tests.test_utils import FakeIRSDK, load_dump_frame
+from util.state_utils import generator_state_messages
 
 SRC_DIR = Path(__file__).resolve().parents[2]
+
+# A recorded race in progress: the generator goes straight to monitoring for incidents
+RACING_FRAME = load_dump_frame("local_session_start_race_plus_two_laps.ndjson")
+
+real_sleep = time.sleep
 
 # Non-default values for every setting shown in the UI, so a field that is not loaded
 # from or saved back to settings.ini shows up as a changed value
@@ -90,7 +102,14 @@ def make_app(tmp_path, monkeypatch, capsys, showerror):
     yield _make_app
 
     for app in apps:
-        app.destroy()
+        # Don't leave a generator thread behind if a test failed: it would keep the test process alive
+        app.generator.stop()
+        if app.generator.thread is not None:
+            app.generator.thread.join(timeout=5)
+        try:
+            app.destroy()
+        except tk.TclError:
+            pass  # The test already closed the window
 
 
 @pytest.fixture
@@ -204,3 +223,120 @@ def test_exception_in_button_callback_is_logged_and_shown(make_app, showerror, m
     assert "RuntimeError: boom" in caplog.text
     showerror.assert_called_once()
     assert "boom" in showerror.call_args.args[1]
+
+
+def pump_until(app, condition, timeout=5.0):
+    """Process Tk events until condition() is true."""
+    deadline = time.monotonic() + timeout
+    while not condition():
+        assert time.monotonic() < deadline, "Timed out waiting for the condition"
+        app.update()
+        real_sleep(0.01)
+
+
+def test_generator_state_changes_update_the_ui(make_app):
+    app = make_app(UI_SETTINGS)
+    app.generator.ui_events.put(generator.StateChanged(GeneratorState.CONNECTING_TO_IRACING))
+    app.generator.ui_events.put(generator.StateChanged(GeneratorState.MONITORING_FOR_INCIDENTS))
+
+    app._process_generator_events()
+
+    expected = generator_state_messages(None, None)[GeneratorState.MONITORING_FOR_INCIDENTS]
+    assert app.generator_state == GeneratorState.MONITORING_FOR_INCIDENTS
+    assert app.btn_run["text"] == expected["btn_run_text"]
+    assert app.lbl_status["text"] == expected["message"]
+
+
+def test_class_split_request_is_answered_through_a_dialog(make_app, mocker):
+    app = make_app(UI_SETTINGS)
+    askokcancel = mocker.patch("core.app.messagebox.askokcancel", return_value=True)
+    confirm = mocker.patch.object(app.generator, "confirm_class_split")
+    app.generator.ui_events.put(generator.ClassSplitConfirmationRequested(["!eol 12", "!eol 34"]))
+
+    app._process_generator_events()
+
+    assert "!eol 12" in askokcancel.call_args.args[1]
+    confirm.assert_called_once_with(True)
+
+
+def test_generator_events_are_still_processed_after_an_error(make_app, mocker):
+    app = make_app(UI_SETTINGS)
+    mocker.patch.object(app, "on_generator_state_change", side_effect=[RuntimeError("boom"), None])
+    app.generator.ui_events.put(generator.StateChanged(GeneratorState.CONNECTING_TO_IRACING))
+
+    with pytest.raises(RuntimeError):
+        app._process_generator_events()
+
+    # The next poll is still scheduled, so later events reach the UI
+    app.generator.ui_events.put(generator.StateChanged(GeneratorState.CONNECTED))
+    pump_until(app, lambda: app.generator_state == GeneratorState.CONNECTED)
+
+
+@pytest.mark.parametrize("state, expected_calls", [
+    (GeneratorState.MONITORING_FOR_INCIDENTS, 1),
+    (GeneratorState.WAITING_FOR_GREEN, 0),
+    (GeneratorState.SAFETY_CAR_DEPLOYED, 0),
+    (GeneratorState.STOPPED, 0),
+])
+def test_manual_safety_car_is_only_requested_while_monitoring(make_app, mocker, state, expected_calls):
+    app = make_app(UI_SETTINGS)
+    throw_manual_safety_car = mocker.patch.object(app.generator, "throw_manual_safety_car")
+    app.generator._set_state(state)
+
+    app._start_safety_car()
+
+    assert throw_manual_safety_car.call_count == expected_calls
+
+
+def test_class_split_request_from_a_stopping_generator_is_ignored(make_app, mocker):
+    app = make_app(UI_SETTINGS)
+    askokcancel = mocker.patch("core.app.messagebox.askokcancel")
+    app.generator.stop()
+    app.generator.ui_events.put(generator.ClassSplitConfirmationRequested(["!eol 12"]))
+
+    app._process_generator_events()
+
+    askokcancel.assert_not_called()
+
+
+def test_quick_second_click_stops_the_generator(make_app, mocker, caplog):
+    """The second click must act on the generator's state, not on the UI's copy that lags behind."""
+    mocker.patch("core.generator.irsdk.IRSDK", side_effect=lambda: FakeIRSDK(RACING_FRAME))
+    mocker.patch("core.generator.time.sleep", side_effect=lambda seconds: real_sleep(0.01))
+    app = make_app(UI_SETTINGS)
+    run = mocker.spy(app.generator, "run")
+
+    with caplog.at_level(logging.INFO, logger="core.app"):
+        app.btn_run.invoke()
+        app.btn_run.invoke()
+        pump_until(app, lambda: not app.generator.is_running()
+                   and app.generator_state == GeneratorState.STOPPED)
+
+    run.assert_called_once()
+    assert "Shutting down generator due to manual stop" in caplog.text
+
+
+def test_closing_the_window_waits_for_the_generator_thread(make_app, mocker, caplog):
+    """Regression: closing the window while the generator ran destroyed Tk right away, after which the
+    generator thread still updated the UI and failed with "main thread is not in main loop"."""
+    mocker.patch("core.generator.irsdk.IRSDK", side_effect=lambda: FakeIRSDK(RACING_FRAME))
+    mocker.patch("core.generator.time.sleep", side_effect=lambda seconds: real_sleep(0.01))
+    app = make_app(UI_SETTINGS)
+
+    # Make the generator thread take a while to clean up after being stopped
+    disconnect = app.generator._disconnect
+    mocker.patch.object(app.generator, "_disconnect", side_effect=lambda: (real_sleep(0.3), disconnect()))
+
+    app.btn_run.invoke()
+    pump_until(app, lambda: app.generator_state == GeneratorState.MONITORING_FOR_INCIDENTS)
+
+    generator_running_at_destroy = []
+    destroy = app.destroy
+    mocker.patch.object(app, "destroy", side_effect=lambda: (
+        generator_running_at_destroy.append(app.generator.is_running()), destroy()))
+
+    app.handle_delete_window()
+    pump_until(app, lambda: generator_running_at_destroy)
+
+    assert generator_running_at_destroy == [False]
+    assert [record.getMessage() for record in caplog.records if record.levelno >= logging.ERROR] == []
