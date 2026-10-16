@@ -29,6 +29,7 @@ from core.detection.detector import Detector, DetectorSettings
 from core.detection.detector_common_types import DetectionResult, DetectorEventTypes
 from core.detection.threshold_checker import ThresholdChecker, ThresholdCheckerSettings
 from core.drivers import Driver
+from core.generator import GeneratorSettings
 from core.procedures.wave_arounds import wave_around_type_from_selection, wave_arounds_factory
 from core.settings import Settings
 
@@ -250,10 +251,10 @@ class DumpReplayer:
         racing = state == irsdk.SessionState.racing
         return bool(green_flag or racing)
 
-    def _get_wave_commands(self, drivers: ReplayDrivers) -> list[str]:
+    def _get_wave_commands(self, drivers: ReplayDrivers, generator_settings: GeneratorSettings) -> list[str]:
         """Compute wave around commands using current driver state."""
         wave_around_type = wave_around_type_from_selection(
-            self.settings.wave_around_rules_index
+            generator_settings.wave_around_rules_index
         )
         wave_func = wave_arounds_factory(wave_around_type)
         return wave_func(
@@ -277,7 +278,8 @@ class DumpReplayer:
         frames = self._load_frames()
         result = ReplayResult(frame_count=len(frames))
 
-        # Build components from settings (same as Generator.run)
+        # Build components from settings snapshots (same as Generator.run)
+        generator_settings = GeneratorSettings.from_settings(self.settings)
         drivers = ReplayDrivers()
         detector_settings = DetectorSettings.from_settings(self.settings)
         detector = Detector.build_detector(detector_settings, drivers)
@@ -312,9 +314,9 @@ class DumpReplayer:
 
                 # Check eligibility window
                 elapsed_minutes = (frame_time - start_time) / 60.0
-                if elapsed_minutes < self.settings.detection_start_minute:
+                if elapsed_minutes < generator_settings.detection_start_minute:
                     continue
-                if elapsed_minutes > self.settings.detection_end_minute:
+                if elapsed_minutes > generator_settings.detection_end_minute:
                     break
 
                 # Run detection cycle
@@ -361,7 +363,7 @@ class DumpReplayer:
                             pending_waves.append((sc_event, wave_target))
                         else:
                             # Compute waves immediately at the SC frame
-                            sc_event.wave_commands = self._get_wave_commands(drivers)
+                            sc_event.wave_commands = self._get_wave_commands(drivers, generator_settings)
 
                     result.safety_car_events.append(sc_event)
 
@@ -377,7 +379,7 @@ class DumpReplayer:
                     still_pending = []
                     for sc_event, wave_target in pending_waves:
                         if current_lap >= wave_target:
-                            sc_event.wave_commands = self._get_wave_commands(drivers)
+                            sc_event.wave_commands = self._get_wave_commands(drivers, generator_settings)
                             sc_event.wave_frame_index = i
                         else:
                             still_pending.append((sc_event, wave_target))
