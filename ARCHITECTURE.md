@@ -38,8 +38,8 @@
 │  │                                      └──────────────┘    │   │
 │  └──────────────────────────────────────────────────────────┘   │
 │                                                                  │
-│  Coordination via threading.Event:                              │
-│  - shutdown_event, throw_manual_sc_event, skip_wait_event       │
+│  Generator → UI: ui_events queue (StateChanged, ...)            │
+│  UI → Generator: threading.Events (stop, manual SC, ...)        │
 └─────────────────────────────────────────────────────────────────┘
                      │
                      ▼
@@ -222,24 +222,29 @@ class GeneratorState(Enum):
 │ SAFETY_CAR_DEPLOYED  │──────────┘
 └──────────────────────┘
 
+CONNECTING_TO_IRACING → ERROR_CONNECTING (SDK or iRacing window not available)
 Any state → UNCAUGHT_EXCEPTION (on unhandled error)
-Any state → STOPPED (user clicks "Stop")
+Any state → STOPPED (user clicks "Stop", eligibility window over, or max safety cars reached)
+
+The final state (STOPPED / ERROR_CONNECTING / UNCAUGHT_EXCEPTION) is published as the
+last action of the generator thread, after the iRacing SDK connection is shut down.
 ```
 
-#### Property-Based State Transitions
+#### Publishing State Changes
 
-State changes trigger automatic GUI updates:
+The generator thread never touches the GUI. Every transition goes through `Generator._set_state()`, which records the state and posts a `StateChanged` event; the App applies it on the main thread:
 
 ```python
-# src/core/app.py:161-165
-@property
-def generator_state(self) -> GeneratorState:
-    return self._generator_state
+# src/core/generator.py
+def _set_state(self, state: GeneratorState):
+    self._state = state
+    self.ui_events.put(StateChanged(state))
 
-@generator_state.setter
-def generator_state(self, value: GeneratorState):
-    self._generator_state = value
-    self.on_generator_state_change()  # Updates GUI labels, button states
+# src/core/app.py — runs on the main thread every GENERATOR_POLL_INTERVAL_MS (100 ms)
+def _process_generator_events(self):
+    ...
+    if isinstance(event, generator.StateChanged):
+        self.generator_state = event.state  # setter updates the button and status label
 ```
 
 ### 3. Threading Model
@@ -247,37 +252,41 @@ def generator_state(self, value: GeneratorState):
 #### Thread Architecture
 
 **Main Thread (Tkinter GUI):**
-- Runs `App` class with Tkinter mainloop
+- Runs `App` class with Tkinter mainloop; the only thread that touches Tkinter
 - Handles user interactions (button clicks, settings changes)
-- Polls `generator.state` property for status updates
-- Does NOT directly modify Generator state
+- Drains `generator.ui_events` every 100 ms (`App._process_generator_events()`) to update the status and show the class-split confirmation dialog
+- Starts the generator with `Generator.run(settings)`, which only snapshots the settings, clears all signals, publishes `CONNECTING_TO_IRACING` and starts the thread — it never blocks the UI
+- Decides what the Start/Stop and manual safety car buttons do from `generator.state`, not from its own copy of the state, which lags up to 100 ms behind
 
-**Generator Thread:**
-- Started via `Generator.start()` → creates `threading.Thread(target=self.run)`
-- Runs detection loop at ~1 Hz
-- Manages iRacing SDK connection
-- Executes safety car procedures
-- Updates own state via property setter
+**Generator Thread (`Generator._run`, named `GeneratorThread`):**
+- Connects to iRacing: creates its own `irsdk.IRSDK()` for every run, starts it, and connects the command sender to the iRacing window
+- Builds `Drivers`, `Detector` and `ThresholdChecker`, then runs the detection loop at ~1 Hz and the safety car procedures
+- Uses only its settings snapshot (`GeneratorSettings` and the detector/threshold checker settings), never the App's live `Settings`
+- On exit, shuts the SDK down and then publishes its final state
 
 #### Thread Coordination
 
 ```python
-# src/core/generator.py:37-40
-self.shutdown_event = threading.Event()          # Signals generator to stop
-self.throw_manual_sc_event = threading.Event()   # Manual SC button pressed
-self.skip_wait_for_green_event = threading.Event()  # Developer mode skip
+# Generator → UI (src/core/generator.py)
+self.ui_events = queue.Queue()  # StateChanged, ClassSplitConfirmationRequested
+
+# UI → Generator: methods that only set threading.Events
+generator.stop()                     # shutdown_event
+generator.throw_manual_safety_car()  # throw_manual_sc_event
+generator.skip_wait_for_green()      # skip_wait_for_green_event (developer mode)
+generator.confirm_class_split(ok)    # confirm_class_split_event
 ```
 
-**Communication Pattern:**
-- Main thread → Generator: Sets Event flags
-- Generator → Main thread: Updates `self.state` property
-- No shared mutable state (thread-safe)
+- `run()` clears all signals, so a Stop pressed while nothing was running can't stop the next run.
+- The manual safety car and skip-wait signals are also cleared whenever monitoring (re)starts, so presses made while waiting (e.g. during a safety car) don't carry over.
+- Class-split confirmation: the generator posts `ClassSplitConfirmationRequested(commands)` and waits on `confirm_class_split_event` (checking for shutdown every 0.5 s); the App shows the dialog and calls `confirm_class_split(result)`.
 
 #### Thread Safety
 
-- **iRacing SDK:** Thread-safe, can be read from Generator thread
-- **Generator.state:** Read by main thread, written by Generator thread (atomic property)
-- **No locks needed:** Clean separation prevents race conditions
+- **Tkinter:** Main thread only. Tkinter calls from another thread only work while `mainloop()` runs; after the window closes they fail with `RuntimeError: main thread is not in main loop`.
+- **iRacing SDK:** Each run's `IRSDK` instance is created, used and shut down by that run's generator thread only. A new run waits for the previous thread to finish, so a shutdown can never close a connection that another thread is using.
+- **Shared values:** `Generator.state` (written by the generator, read by the UI) and the threading events are the only state shared between threads; settings are passed as immutable snapshots.
+- **Closing the window:** `App.handle_delete_window()` stops the generator, hides the window and destroys it once the generator thread has finished (or after `GENERATOR_SHUTDOWN_TIMEOUT_S`, 5 s). The generator thread is a regular (non-daemon) thread, so the process exits once it has finished its current step.
 
 ### 4. Data Models
 
@@ -481,44 +490,40 @@ main.py
 ```
 User clicks "Start SC Generator" button
 │
-├─► App._start_generator()
-│   ├─ App._save_and_run()
-│   │   ├─ Validate and save settings from GUI to settings.ini
-│   │   │   (invalid values → error dialog, generator is not started)
-│   │   └─ Generator.start()
-│   │
-│   └─► Generator.start()
-│       ├─ Create thread: threading.Thread(target=self.run)
-│       └─ thread.start()
+├─► App._save_and_run() [Main thread]
+│   ├─ Validate and save settings from GUI to settings.ini
+│   │   (invalid values → error dialog, generator is not started)
+│   └─► Generator.run(settings)
+│       ├─ Previous thread still running? → wait up to 1 s, else refuse (returns False)
+│       ├─ Clear all signals (shutdown, manual SC, skip wait, class-split confirmation)
+│       ├─ Snapshot GeneratorSettings, DetectorSettings, ThresholdCheckerSettings
+│       ├─ State: STOPPED → CONNECTING_TO_IRACING (published right away, so a quick
+│       │  second click on the button already acts as Stop)
+│       └─ Start threading.Thread(target=self._run, name="GeneratorThread"), return True
 │
-└─► Generator.run() [In separate thread]
-    ├─ State: STOPPED → CONNECTING_TO_IRACING
+└─► Generator._run() [Generator thread]
+    ├─► _connect()
+    │   ├─ self.ir = irsdk.IRSDK(); ir.startup()  → failure: ERROR_CONNECTING
+    │   └─ CommandSenderFactory creates sender (real or mock) and connects
+    │      to the iRacing window              → failure: ERROR_CONNECTING
     │
-    ├─► _connect_to_iracing()
-    │   ├─ ir.startup() → Connect to SDK
-    │   ├─ Wait for connection (retry loop)
-    │   └─ State: CONNECTING_TO_IRACING → CONNECTED
-    │
-    ├─► _connect_command_sender()
-    │   └─ CommandSenderFactory creates sender (real or mock)
-    │
+    ├─ State: CONNECTING_TO_IRACING → CONNECTED
     ├─ Create Drivers object
-    ├─ Build Detector from settings
-    ├─ Create ThresholdChecker from settings
+    ├─ Build Detector, create ThresholdChecker (from the snapshots)
     │
-    ├─ State: CONNECTED → WAITING_FOR_RACE_SESSION
+    ├─► _loop()
+    │   ├─► _wait_for_green_flag()
+    │   │   ├─ State: WAITING_FOR_RACE_SESSION — skip PRACTICE, QUALIFY, WARMUP sessions
+    │   │   ├─ State: WAITING_FOR_GREEN — wait for SessionFlags & Flags.green
+    │   │   │   (or SessionState racing when joining a race in progress)
+    │   │   └─► _start_monitoring()
+    │   │       ├─ Notify components: detector.race_started(), threshold_checker.race_started()
+    │   │       ├─ Clear manual SC / skip-wait signals
+    │   │       └─ State: MONITORING_FOR_INCIDENTS
+    │   └─ Main detection loop (see below)
     │
-    ├─► _wait_for_race_session()
-    │   ├─ Skip PRACTICE, QUALIFY, WARMUP sessions
-    │   ├─ Wait for RACE session
-    │   └─ State: WAITING_FOR_RACE_SESSION → WAITING_FOR_GREEN
-    │
-    ├─► _wait_for_green_flag()
-    │   ├─ Wait for SessionFlags & Flags.green
-    │   ├─ State: WAITING_FOR_GREEN → MONITORING_FOR_INCIDENTS
-    │   └─ Notify components: detector.race_started(), threshold_checker.race_started()
-    │
-    └─► _loop() → Main detection loop
+    ├─ Any exception → logged, final state UNCAUGHT_EXCEPTION
+    └─ Finally: _disconnect() (ir.shutdown()), then publish the final state
 ```
 
 ### 3. Detection Loop (~1 Hz)
@@ -530,13 +535,14 @@ while not shutdown_event.is_set() and total_sc_events < max_events:
     │   ├─ previous_drivers ← current_drivers
     │   └─ current_drivers ← _build_drivers(ir)
     │
+    ├─► _check_manual_event()
+    │   └─ If manual SC button pressed → throw yellow immediately,
+    │      regardless of the eligibility window, then start the next iteration
+    │
     ├─► Check eligibility window
     │   ├─ Time >= detection_start_minute?
     │   ├─ Time <= detection_end_minute?
     │   └─ Time since last SC >= min_time_between?
-    │
-    ├─► _check_manual_event()
-    │   └─ If manual SC button pressed → throw yellow immediately
     │
     ├─► detector.detect()
     │   ├─ detector_state ← DetectorState(time, lap, counts)
@@ -1210,10 +1216,10 @@ if driver["is_pace_car"]:
 
 ### Threading Limitations
 
-**No mid-procedure interruption:**
-- Once safety car procedure starts, runs to completion
-- Cannot stop during wave around / pace lap sending
-- Shutdown event only checked at top of loop
+**Limited mid-procedure interruption:**
+- Stop is noticed between steps: each loop iteration, between pace lap / wave around checks, and while waiting for a class-split confirmation
+- A batch of chat commands (e.g. many wave arounds) is always sent completely
+- Closing the window waits up to 5 s for the generator thread; after that the window closes anyway and the process exits once the thread finishes its current step
 
 ### Race Format Limitations
 

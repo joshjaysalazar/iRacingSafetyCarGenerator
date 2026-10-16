@@ -123,7 +123,7 @@ When enabled, sends end-of-line (EOL) commands to sort the grid when classes are
 
 The **Advanced Features** checkbox in the controls panel reveals additional options:
 
-- **Throw Double Yellows** - Manually trigger a safety car event while the generator is running.
+- **Throw Double Yellows** - Manually trigger a safety car event. This works while the generator is monitoring for incidents (after the green flag, when no safety car is out) and throws the safety car right away, even outside the eligibility window. Presses at other times are ignored.
 
 ## Troubleshooting
 
