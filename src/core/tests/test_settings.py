@@ -114,3 +114,11 @@ class TestSettings:
         assert new_settings.laps_before_wave_arounds == 4
         assert new_settings.proximity_filter_enabled is True
         assert new_settings.proximity_filter_distance_percentage == 0.8
+
+    def test_percent_sign_in_message_round_trips(self, temp_settings_file):
+        """A '%' in a message is stored literally instead of raising an interpolation error."""
+        settings = Settings(temp_settings_file)
+        settings.random_message = "50% of the field is off track"
+        settings.save()
+
+        assert Settings(temp_settings_file).random_message == "50% of the field is off track"

@@ -9,7 +9,9 @@ class Settings:
         Args:
             config_file: Path to the INI configuration file
         """
-        self._config = configparser.ConfigParser()
+        # Interpolation is disabled so a '%' in a message is stored as-is instead of
+        # raising an interpolation error when saving or loading.
+        self._config = configparser.ConfigParser(interpolation=None)
         self._config_file = config_file
         self._config.read(config_file)
         
