@@ -38,8 +38,8 @@
 │  │                                      └──────────────┘    │   │
 │  └──────────────────────────────────────────────────────────┘   │
 │                                                                  │
-│  Coordination via threading.Event:                              │
-│  - shutdown_event, throw_manual_sc_event, skip_wait_event       │
+│  Generator → UI: ui_events queue (StateChanged, ...)            │
+│  UI → Generator: threading.Events (stop, manual SC, ...)        │
 └─────────────────────────────────────────────────────────────────┘
                      │
                      ▼
@@ -130,22 +130,25 @@ Detector (Composite)
 
 **Builder Pattern:**
 ```python
-# src/core/detection/detector.py:35-50
+# src/core/detection/detector.py
 @staticmethod
-def build_detector(settings: DetectorSettings, drivers: Drivers) -> "Detector":
-    detectors: list[SupportsDetect] = []
-
+def build_detector(settings: DetectorSettings, drivers: Drivers):
+    detectors = {}  # keyed by DetectorEventTypes
     if settings.random_detector_enabled:
-        detectors.append(RandomDetector(settings.random_detector_settings))
-
+        detectors[DetectorEventTypes.RANDOM] = RandomDetector(
+            chance=settings.random_probability,
+            start_minute=settings.random_start_minute,
+            end_minute=settings.random_end_minute,
+            max_occurrences=settings.random_max_safety_cars
+        )
     if settings.stopped_detector_enabled:
-        detectors.append(StoppedDetector(drivers, settings.stopped_detector_settings))
+        detectors[DetectorEventTypes.STOPPED] = StoppedDetector(drivers)
 
     if settings.off_track_detector_enabled:
-        detectors.append(OffTrackDetector(drivers, settings.off_track_detector_settings))
+        detectors[DetectorEventTypes.OFF_TRACK] = OffTrackDetector(drivers)
 
     if settings.meatball_detector_enabled:
-        detectors.append(MeatballDetector(drivers))
+        detectors[DetectorEventTypes.MEATBALL] = MeatballDetector(drivers)
 
     return Detector(detectors)
 ```
@@ -222,24 +225,29 @@ class GeneratorState(Enum):
 │ SAFETY_CAR_DEPLOYED  │──────────┘
 └──────────────────────┘
 
+CONNECTING_TO_IRACING → ERROR_CONNECTING (SDK or iRacing window not available)
 Any state → UNCAUGHT_EXCEPTION (on unhandled error)
-Any state → STOPPED (user clicks "Stop")
+Any state → STOPPED (user clicks "Stop", eligibility window over, or max safety cars reached)
+
+The final state (STOPPED / ERROR_CONNECTING / UNCAUGHT_EXCEPTION) is published as the
+last action of the generator thread, after the iRacing SDK connection is shut down.
 ```
 
-#### Property-Based State Transitions
+#### Publishing State Changes
 
-State changes trigger automatic GUI updates:
+The generator thread never touches the GUI. Every transition goes through `Generator._set_state()`, which records the state and posts a `StateChanged` event; the App applies it on the main thread:
 
 ```python
-# src/core/app.py:161-165
-@property
-def generator_state(self) -> GeneratorState:
-    return self._generator_state
+# src/core/generator.py
+def _set_state(self, state: GeneratorState):
+    self._state = state
+    self.ui_events.put(StateChanged(state))
 
-@generator_state.setter
-def generator_state(self, value: GeneratorState):
-    self._generator_state = value
-    self.on_generator_state_change()  # Updates GUI labels, button states
+# src/core/app.py — runs on the main thread every GENERATOR_POLL_INTERVAL_MS (100 ms)
+def _process_generator_events(self):
+    ...
+    if isinstance(event, generator.StateChanged):
+        self.generator_state = event.state  # setter updates the button and status label
 ```
 
 ### 3. Threading Model
@@ -247,37 +255,41 @@ def generator_state(self, value: GeneratorState):
 #### Thread Architecture
 
 **Main Thread (Tkinter GUI):**
-- Runs `App` class with Tkinter mainloop
+- Runs `App` class with Tkinter mainloop; the only thread that touches Tkinter
 - Handles user interactions (button clicks, settings changes)
-- Polls `generator.state` property for status updates
-- Does NOT directly modify Generator state
+- Drains `generator.ui_events` every 100 ms (`App._process_generator_events()`) to update the status and show the class-split confirmation dialog
+- Starts the generator with `Generator.run(settings)`, which only snapshots the settings, clears all signals, publishes `CONNECTING_TO_IRACING` and starts the thread — it never blocks the UI
+- Decides what the Start/Stop and manual safety car buttons do from `generator.state`, not from its own copy of the state, which lags up to 100 ms behind
 
-**Generator Thread:**
-- Started via `Generator.start()` → creates `threading.Thread(target=self.run)`
-- Runs detection loop at ~1 Hz
-- Manages iRacing SDK connection
-- Executes safety car procedures
-- Updates own state via property setter
+**Generator Thread (`Generator._run`, named `GeneratorThread`):**
+- Connects to iRacing: creates its own `irsdk.IRSDK()` for every run, starts it, and connects the command sender to the iRacing window
+- Builds `Drivers`, `Detector` and `ThresholdChecker`, then runs the detection loop at ~1 Hz and the safety car procedures
+- Uses only its settings snapshot (`GeneratorSettings` and the detector/threshold checker settings), never the App's live `Settings`
+- On exit, shuts the SDK down and then publishes its final state
 
 #### Thread Coordination
 
 ```python
-# src/core/generator.py:37-40
-self.shutdown_event = threading.Event()          # Signals generator to stop
-self.throw_manual_sc_event = threading.Event()   # Manual SC button pressed
-self.skip_wait_for_green_event = threading.Event()  # Developer mode skip
+# Generator → UI (src/core/generator.py)
+self.ui_events = queue.Queue()  # StateChanged, ClassSplitConfirmationRequested
+
+# UI → Generator: methods that only set threading.Events
+generator.stop()                     # shutdown_event
+generator.throw_manual_safety_car()  # throw_manual_sc_event
+generator.skip_wait_for_green()      # skip_wait_for_green_event (developer mode)
+generator.confirm_class_split(ok)    # confirm_class_split_event
 ```
 
-**Communication Pattern:**
-- Main thread → Generator: Sets Event flags
-- Generator → Main thread: Updates `self.state` property
-- No shared mutable state (thread-safe)
+- `run()` clears all signals, so a Stop pressed while nothing was running can't stop the next run.
+- The manual safety car and skip-wait signals are also cleared whenever monitoring (re)starts, so presses made while waiting (e.g. during a safety car) don't carry over.
+- Class-split confirmation: the generator posts `ClassSplitConfirmationRequested(commands)` and waits on `confirm_class_split_event` (checking for shutdown every 0.5 s); the App shows the dialog and calls `confirm_class_split(result)`.
 
 #### Thread Safety
 
-- **iRacing SDK:** Thread-safe, can be read from Generator thread
-- **Generator.state:** Read by main thread, written by Generator thread (atomic property)
-- **No locks needed:** Clean separation prevents race conditions
+- **Tkinter:** Main thread only. Tkinter calls from another thread only work while `mainloop()` runs; after the window closes they fail with `RuntimeError: main thread is not in main loop`.
+- **iRacing SDK:** Each run's `IRSDK` instance is created, used and shut down by that run's generator thread only. A new run waits for the previous thread to finish, so a shutdown can never close a connection that another thread is using.
+- **Shared values:** `Generator.state` (written by the generator, read by the UI) and the threading events are the only state shared between threads; settings are passed as immutable snapshots.
+- **Closing the window:** `App.handle_delete_window()` stops the generator, hides the window and destroys it once the generator thread has finished (or after `GENERATOR_SHUTDOWN_TIMEOUT_S`, 5 s). The generator thread is a regular (non-daemon) thread, so the process exits once it has finished its current step.
 
 ### 4. Data Models
 
@@ -373,32 +385,51 @@ The packaged build is created with `--noconsole`, so `sys.stderr` is `None` and 
 - `App.report_callback_exception()` logs exceptions raised in Tkinter callbacks (button handlers, `after()` callbacks) and shows an error dialog. Tkinter's default handler would print to the missing stderr.
 - `main.show_fatal_error()` shows a dialog when the app fails to start; the exception is logged via the root logger.
 
-#### Settings Dataclasses
+#### Settings Dataclasses (Snapshots)
 
-Configuration objects built from Settings:
+Components never read the live `Settings` at runtime. Each one gets a frozen snapshot, defined in the same module as the class that uses it:
+
+| Snapshot | Defined in | Used by |
+| --- | --- | --- |
+| `DetectorSettings` | `src/core/detection/detector.py` | `Detector.build_detector()` — which detectors to enable, random detector parameters |
+| `ThresholdCheckerSettings` | `src/core/detection/threshold_checker.py` | `ThresholdChecker` — time window, per-event-type thresholds and weights, proximity, race-start multiplier |
+| `GeneratorSettings` | `src/core/generator.py` | `Generator` — eligibility window, max safety cars, pace laps, wave arounds, class split |
+
+All three follow the same shape:
 
 ```python
-# src/core/detection/detector_common_types.py:53-60
+# src/core/detection/detector.py
 @dataclass(frozen=True)
 class DetectorSettings:
     random_detector_enabled: bool = False
-    random_detector_settings: RandomDetectorSettings = field(default_factory=RandomDetectorSettings)
-    stopped_detector_enabled: bool = False
-    stopped_detector_settings: StoppedDetectorSettings = field(default_factory=StoppedDetectorSettings)
-    off_track_detector_enabled: bool = False
-    off_track_detector_settings: OffTrackDetectorSettings = field(default_factory=OffTrackDetectorSettings)
-    meatball_detector_enabled: bool = True
+    random_probability: float = 0.1
+    random_start_minute: float = 3
+    # ... one flag per detector, e.g. meatball_detector_enabled: bool = True
 
-    @classmethod
-    def from_settings(cls, settings: Settings) -> "DetectorSettings":
-        """Build from Settings object."""
-        ...
+    @staticmethod
+    def from_settings(settings):
+        return DetectorSettings(
+            random_detector_enabled=settings.random_detector_enabled,
+            random_probability=settings.random_probability,
+            random_start_minute=settings.detection_start_minute,  # names may differ from Settings
+            # ...
+        )
 ```
 
+`Generator.run()` builds all three once per run, on the UI thread, and hands them to the generator thread:
+
+```python
+self.settings = GeneratorSettings.from_settings(settings)
+detector_settings = DetectorSettings.from_settings(settings)
+threshold_checker_settings = ThresholdCheckerSettings.from_settings(settings)
+```
+
+The e2e `DumpReplayer` (`src/core/tests/e2e_utils.py`) builds the same three to mirror the generator.
+
 **Benefits:**
-- Immutable (frozen=True) prevents accidental modification
+- Immutable (frozen=True): settings saved in the UI during a race can't half-apply to a running procedure
 - Type hints enable IDE autocomplete and type checking
-- Factory method pattern for construction from Settings
+- Each component only sees the settings it needs, under names that fit it
 
 ### 6. Windows Automation
 
@@ -481,44 +512,40 @@ main.py
 ```
 User clicks "Start SC Generator" button
 │
-├─► App._start_generator()
-│   ├─ App._save_and_run()
-│   │   ├─ Validate and save settings from GUI to settings.ini
-│   │   │   (invalid values → error dialog, generator is not started)
-│   │   └─ Generator.start()
-│   │
-│   └─► Generator.start()
-│       ├─ Create thread: threading.Thread(target=self.run)
-│       └─ thread.start()
+├─► App._save_and_run() [Main thread]
+│   ├─ Validate and save settings from GUI to settings.ini
+│   │   (invalid values → error dialog, generator is not started)
+│   └─► Generator.run(settings)
+│       ├─ Previous thread still running? → wait up to 1 s, else refuse (returns False)
+│       ├─ Clear all signals (shutdown, manual SC, skip wait, class-split confirmation)
+│       ├─ Snapshot GeneratorSettings, DetectorSettings, ThresholdCheckerSettings
+│       ├─ State: STOPPED → CONNECTING_TO_IRACING (published right away, so a quick
+│       │  second click on the button already acts as Stop)
+│       └─ Start threading.Thread(target=self._run, name="GeneratorThread"), return True
 │
-└─► Generator.run() [In separate thread]
-    ├─ State: STOPPED → CONNECTING_TO_IRACING
+└─► Generator._run() [Generator thread]
+    ├─► _connect()
+    │   ├─ self.ir = irsdk.IRSDK(); ir.startup()  → failure: ERROR_CONNECTING
+    │   └─ CommandSenderFactory creates sender (real or mock) and connects
+    │      to the iRacing window              → failure: ERROR_CONNECTING
     │
-    ├─► _connect_to_iracing()
-    │   ├─ ir.startup() → Connect to SDK
-    │   ├─ Wait for connection (retry loop)
-    │   └─ State: CONNECTING_TO_IRACING → CONNECTED
-    │
-    ├─► _connect_command_sender()
-    │   └─ CommandSenderFactory creates sender (real or mock)
-    │
+    ├─ State: CONNECTING_TO_IRACING → CONNECTED
     ├─ Create Drivers object
-    ├─ Build Detector from settings
-    ├─ Create ThresholdChecker from settings
+    ├─ Build Detector, create ThresholdChecker (from the snapshots)
     │
-    ├─ State: CONNECTED → WAITING_FOR_RACE_SESSION
+    ├─► _loop()
+    │   ├─► _wait_for_green_flag()
+    │   │   ├─ State: WAITING_FOR_RACE_SESSION — skip PRACTICE, QUALIFY, WARMUP sessions
+    │   │   ├─ State: WAITING_FOR_GREEN — wait for SessionFlags & Flags.green
+    │   │   │   (or SessionState racing when joining a race in progress)
+    │   │   └─► _start_monitoring()
+    │   │       ├─ Notify components: detector.race_started(), threshold_checker.race_started()
+    │   │       ├─ Clear manual SC / skip-wait signals
+    │   │       └─ State: MONITORING_FOR_INCIDENTS
+    │   └─ Main detection loop (see below)
     │
-    ├─► _wait_for_race_session()
-    │   ├─ Skip PRACTICE, QUALIFY, WARMUP sessions
-    │   ├─ Wait for RACE session
-    │   └─ State: WAITING_FOR_RACE_SESSION → WAITING_FOR_GREEN
-    │
-    ├─► _wait_for_green_flag()
-    │   ├─ Wait for SessionFlags & Flags.green
-    │   ├─ State: WAITING_FOR_GREEN → MONITORING_FOR_INCIDENTS
-    │   └─ Notify components: detector.race_started(), threshold_checker.race_started()
-    │
-    └─► _loop() → Main detection loop
+    ├─ Any exception → logged, final state UNCAUGHT_EXCEPTION
+    └─ Finally: _disconnect() (ir.shutdown()), then publish the final state
 ```
 
 ### 3. Detection Loop (~1 Hz)
@@ -530,13 +557,14 @@ while not shutdown_event.is_set() and total_sc_events < max_events:
     │   ├─ previous_drivers ← current_drivers
     │   └─ current_drivers ← _build_drivers(ir)
     │
+    ├─► _check_manual_event()
+    │   └─ If manual SC button pressed → throw yellow immediately,
+    │      regardless of the eligibility window, then start the next iteration
+    │
     ├─► Check eligibility window
     │   ├─ Time >= detection_start_minute?
     │   ├─ Time <= detection_end_minute?
     │   └─ Time since last SC >= min_time_between?
-    │
-    ├─► _check_manual_event()
-    │   └─ If manual SC button pressed → throw yellow immediately
     │
     ├─► detector.detect()
     │   ├─ detector_state ← DetectorState(time, lap, counts)
@@ -746,21 +774,20 @@ Test individual components in isolation:
 
 ```python
 # src/core/detection/tests/test_stopped_detector.py
-def test_stopped_detector_detects_stopped_car(mocker):
-    """Test that StoppedDetector identifies a car that hasn't moved."""
-    drivers = Drivers()
-
-    # Setup: Car at same position in current and previous
-    stopped_driver = make_driver(driver_idx=1, laps_completed=5, lap_distance=0.5)
-    drivers.current_drivers = [stopped_driver]
-    drivers.previous_drivers = [stopped_driver]  # Same position
-
-    detector = StoppedDetector(drivers, StoppedDetectorSettings())
+def test_detect_stopped_driver():
+    current = [
+        make_driver(TrkLoc.on_track, 5, 0.0),  # stopped (same pos)
+        make_driver(TrkLoc.on_track, 5, 0.5),  # moving
+    ]
+    previous = [
+        make_driver(TrkLoc.on_track, 5, 0.0),
+        make_driver(TrkLoc.on_track, 5, 0.4),
+    ]
+    drivers = MockDrivers(current, previous)
+    detector = StoppedDetector(drivers)
     result = detector.detect()
-
     assert result.has_drivers()
-    assert len(result.drivers) == 1
-    assert result.drivers[0]["driver_idx"] == 1
+    assert result.drivers == [current[0]]
 ```
 
 #### Integration Tests
@@ -768,62 +795,52 @@ def test_stopped_detector_detects_stopped_car(mocker):
 Test interactions between components:
 
 ```python
-# src/core/tests/test_generator_detector_integration.py
-def test_generator_calls_race_started_when_green_flag_detected(mocker):
-    """Test that Generator notifies detector when race starts."""
-    # Setup mocks
-    mock_ir = mocker.Mock()
-    mock_ir["SessionInfo"]["Sessions"] = [{"SessionType": "Race"}]
-    mock_ir["SessionFlags"] = Flags.green
+# src/core/tests/test_generator_detector_integration.py (condensed)
+def test_generator_calls_race_started_when_green_flag_detected(generator_with_mocks, mock_settings, mock_drivers, mocker):
+    generator = generator_with_mocks  # Generator(arguments) with a GeneratorSettings snapshot
+    generator.detector = Detector.build_detector(DetectorSettings.from_settings(mock_settings), mock_drivers)
+    generator.threshold_checker = ThresholdChecker(ThresholdCheckerSettings.from_settings(mock_settings))
+    detector_race_started_spy = mocker.spy(generator.detector, 'race_started')
 
-    # Create generator
-    generator = Generator(...)
+    # Mock iRacing SDK to simulate green flag
+    generator.ir = {"SessionFlags": irsdk.Flags.green}
+    generator.start_time = None
 
-    # Spy on detector.race_started()
-    spy = mocker.spy(generator.detector, "race_started")
+    generator._wait_for_green_flag(require_race_session=False)
 
-    # Run generator
-    generator._wait_for_green_flag()
-
-    # Verify detector was notified
-    spy.assert_called_once()
+    detector_race_started_spy.assert_called_once()
+    assert generator.state == GeneratorState.MONITORING_FOR_INCIDENTS
 ```
+
+To run the real generator thread instead, patch `core.generator.irsdk.IRSDK` with `FakeIRSDK` (see `TestGeneratorThread` in `src/core/tests/test_generator.py`).
 
 #### End-to-End Tests
 
 Test complete workflows:
 
 ```python
-# src/core/detection/tests/test_end_to_end_integration.py
-def test_single_detector_end_to_end_workflow(mocker):
-    """Test complete flow from detection to threshold met."""
-    # Setup
-    drivers = Drivers()
-    settings = DetectorSettings(
-        stopped_detector_enabled=True,
-        stopped_detector_settings=StoppedDetectorSettings()
-    )
-    detector = Detector.build_detector(settings, drivers)
-    threshold_checker = ThresholdChecker(
-        ThresholdCheckerSettings(stopped_car_threshold=2)
-    )
+# src/core/detection/tests/test_end_to_end_integration.py (condensed)
+def test_single_detector_end_to_end_workflow(self, full_detection_system, mocker):
+    # The fixture builds both from one dict_to_config(...) settings mock:
+    #   detector = Detector.build_detector(DetectorSettings.from_settings(settings), racing_drivers)
+    #   threshold_checker = ThresholdChecker(ThresholdCheckerSettings.from_settings(settings))
+    detector, threshold_checker, drivers = full_detection_system
+    mocker.patch("time.time", return_value=1000.0)
 
-    # Create 2 stopped cars
-    stopped1 = make_driver(driver_idx=1, total_distance=10.0)
-    stopped2 = make_driver(driver_idx=2, total_distance=15.0)
+    # 3 off-track cars in proximity
+    for i in range(3):
+        drivers.current_drivers[i]["track_loc"] = TrkLoc.off_track
 
-    drivers.current_drivers = [stopped1, stopped2]
-    drivers.previous_drivers = [stopped1, stopped2]  # Same positions
+    detector.race_started(1000.0)
+    detector_results = detector.detect()
 
-    # Run detection
-    results = detector.detect()
+    threshold_checker.clean_up_events()
+    for event_type in DetectorEventTypes:
+        detection_result = detector_results.get_events(event_type)
+        if detection_result:
+            threshold_checker.register_detection_result(detection_result)
 
-    # Register with threshold checker
-    for result in results.results:
-        threshold_checker.register_detection_result(result, 100.0)
-
-    # Verify threshold met
-    assert threshold_checker.threshold_met(100.0, {})
+    assert threshold_checker.threshold_met() == True
 ```
 
 ### Mocking the iRacing SDK
@@ -865,40 +882,34 @@ def test_something(mocker):
 
 ### Adding a New Detector
 
+`MeatballDetector` (`src/core/detection/meatball_detector.py`) is a complete, recent example of every step below — follow it end to end.
+
 **Step-by-step guide:**
 
 1. **Create detector file:** `src/core/detection/your_detector.py`
 
+Detectors take the `Drivers` object (and plain constructor arguments if they need configuration, like `RandomDetector`). There are no per-detector settings classes.
+
 ```python
-from core.detection.detector_common_types import (
-    DetectionResult, DetectorEventTypes, DetectorState, SupportsDetect
-)
-from dataclasses import dataclass
+from core.detection.detector_common_types import DetectionResult, DetectorEventTypes, DetectorState
+from core.drivers import Drivers
 
-@dataclass(frozen=True)
-class YourDetectorSettings:
-    some_threshold: int = 5
-
-class YourDetector(SupportsDetect):
-    def __init__(self, drivers: Drivers, settings: YourDetectorSettings):
+class YourDetector:
+    def __init__(self, drivers: Drivers):
         self.drivers = drivers
-        self.settings = settings
-
-    def detect(self) -> DetectionResult:
-        """Implement detection logic."""
-        detected_drivers = []
-
-        for driver in self.drivers.current_drivers:
-            if self._should_detect(driver):
-                detected_drivers.append(driver)
-
-        return DetectionResult(DetectorEventTypes.YOUR_EVENT, drivers=detected_drivers)
 
     def should_run(self, state: DetectorState) -> bool:
-        """Check if detector should run (time window, lap range, etc.)."""
-        return True  # Or add conditional logic
+        """Check if detector should run (time window, counts, etc.)."""
+        return True
 
-    def _should_detect(self, driver: Driver) -> bool:
+    def detect(self) -> DetectionResult:
+        detected_drivers = [
+            driver for driver in self.drivers.current_drivers
+            if not driver["is_pace_car"] and self._should_detect(driver)
+        ]
+        return DetectionResult(DetectorEventTypes.YOUR_EVENT, drivers=detected_drivers)
+
+    def _should_detect(self, driver) -> bool:
         """Your detection logic here."""
         return False
 ```
@@ -907,102 +918,113 @@ class YourDetector(SupportsDetect):
 
 ```python
 class DetectorEventTypes(Enum):
-    RANDOM = 1
-    STOPPED = 2
-    OFF_TRACK = 3
-    YOUR_EVENT = 4  # Add new type
+    OFF_TRACK = "off_track"
+    MEATBALL = "meatball"
+    RANDOM = "random"
+    STOPPED = "stopped"
+    YOUR_EVENT = "your_event"  # Add new type
 ```
 
-3. **Update DetectorSettings:** `src/core/detection/detector_common_types.py`
+3. **Add settings properties:** `src/core/settings.py` (all settings live in the single `[settings]` section)
+
+```python
+@property
+def your_detector_enabled(self) -> bool:
+    """Enable your detector."""
+    return self._config["settings"].getboolean("your_detector_enabled", fallback=False)
+
+@your_detector_enabled.setter
+def your_detector_enabled(self, value: bool) -> None:
+    self._config.set("settings", "your_detector_enabled", str(int(value)))
+
+# ... the same for your_cars_threshold (getint), your_weight (getfloat), your_message (get)
+```
+
+4. **Update the `DetectorSettings` snapshot:** `src/core/detection/detector.py`
 
 ```python
 @dataclass(frozen=True)
 class DetectorSettings:
     # ... existing fields ...
     your_detector_enabled: bool = False
-    your_detector_settings: YourDetectorSettings = field(default_factory=YourDetectorSettings)
 
-    @classmethod
-    def from_settings(cls, settings: Settings) -> "DetectorSettings":
-        return cls(
+    @staticmethod
+    def from_settings(settings):
+        return DetectorSettings(
             # ... existing fields ...
             your_detector_enabled=settings.your_detector_enabled,
-            your_detector_settings=YourDetectorSettings(
-                some_threshold=settings.your_detector_threshold
-            )
         )
 ```
 
-4. **Update builder:** `src/core/detection/detector.py`
+5. **Update the builder:** `src/core/detection/detector.py`
 
 ```python
+# In Detector.build_detector()
+if settings.your_detector_enabled:
+    detectors[DetectorEventTypes.YOUR_EVENT] = YourDetector(drivers)
+```
+
+6. **Add threshold and weight to the `ThresholdCheckerSettings` snapshot:** `src/core/detection/threshold_checker.py`
+
+Thresholds and weights are per-event-type dicts. Add your event type to the defaults, to `__post_init__` (so it is always present), and to `from_settings()`:
+
+```python
+accumulative_weights: dict = field(default_factory=lambda: {
+    # ... existing event types ...
+    DetectorEventTypes.YOUR_EVENT: 0.0,
+})
+event_type_threshold: dict = field(default_factory=lambda: {
+    # ... existing event types ...
+    DetectorEventTypes.YOUR_EVENT: 99999,
+})
+
+def __post_init__(self):
+    # ...
+    self.accumulative_weights.setdefault(DetectorEventTypes.YOUR_EVENT, 0.0)
+    self.event_type_threshold.setdefault(DetectorEventTypes.YOUR_EVENT, 99999)
+
 @staticmethod
-def build_detector(settings: DetectorSettings, drivers: Drivers) -> "Detector":
-    detectors: list[SupportsDetect] = []
-
-    # ... existing detectors ...
-
-    if settings.your_detector_enabled:
-        detectors.append(YourDetector(drivers, settings.your_detector_settings))
-
-    return Detector(detectors)
+def from_settings(settings):
+    return ThresholdCheckerSettings(
+        accumulative_weights={
+            # ...
+            DetectorEventTypes.YOUR_EVENT: settings.your_weight,
+        },
+        event_type_threshold={
+            # ...
+            DetectorEventTypes.YOUR_EVENT: settings.your_cars_threshold,
+        },
+        # ...
+    )
 ```
 
-5. **Add threshold settings:** `src/core/detection/detector_common_types.py`
+7. **Add test defaults:** add the new setting keys to `_SETTINGS_DEFAULTS` in `src/core/tests/test_utils.py`, so tests using `dict_to_config()` keep working.
+
+8. **Add GUI controls (if users can configure it):** `src/core/app.py`
+
+- Create the widgets in `App._create_widgets()` (follow the existing detector checkboxes and spinboxes) and fill them from `self.settings` at the end of that method.
+- Add a `(setting, UI label, widget value, parser)` row per setting to the `fields` table in `App._save_settings()`, so invalid input is reported instead of raising.
+
+9. **Create tests:** `src/core/detection/tests/test_your_detector.py`
 
 ```python
-@dataclass(frozen=True)
-class ThresholdCheckerSettings:
-    # ... existing fields ...
-    your_event_threshold: int = 2
-    your_event_weight: int = 2  # For accumulative threshold
-
-    event_type_thresholds: dict[DetectorEventTypes, int] = field(default_factory=dict)
-    event_type_weights: dict[DetectorEventTypes, int] = field(default_factory=dict)
-
-    def __post_init__(self):
-        # ... existing mappings ...
-        self.event_type_thresholds[DetectorEventTypes.YOUR_EVENT] = self.your_event_threshold
-        self.event_type_weights[DetectorEventTypes.YOUR_EVENT] = self.your_event_weight
-```
-
-6. **Add GUI controls:** `src/core/app.py`
-
-```python
-# In App.__init__(), add widgets for your detector
-# Follow pattern of existing detector checkboxes and settings
-```
-
-7. **Add settings properties:** `src/core/settings.py`
-
-```python
-@property
-def your_detector_enabled(self) -> bool:
-    return self.config.getboolean("YourDetector", "enabled", fallback=False)
-
-@your_detector_enabled.setter
-def your_detector_enabled(self, value: bool):
-    self.config.set("YourDetector", "enabled", str(int(value)))
-```
-
-8. **Create tests:** `src/core/detection/tests/test_your_detector.py`
-
-```python
-import pytest
-from core.detection.your_detector import YourDetector, YourDetectorSettings
-from core.tests.test_utils import make_driver
+from irsdk import TrkLoc
+from core.detection.detector_common_types import DetectorEventTypes
+from core.detection.your_detector import YourDetector
+from core.tests.test_utils import MockDrivers, make_driver
 
 def test_your_detector_detects_condition():
-    """Test that your detector identifies the condition."""
-    drivers = Drivers()
-    # ... setup test scenario ...
+    current = [make_driver(TrkLoc.on_track, 5, 0.5)]
+    previous = [make_driver(TrkLoc.on_track, 5, 0.4)]
+    detector = YourDetector(MockDrivers(current, previous))
 
-    detector = YourDetector(drivers, YourDetectorSettings())
     result = detector.detect()
 
     assert result.event_type == DetectorEventTypes.YOUR_EVENT
     # ... additional assertions ...
 ```
+
+For detection behavior against real sessions, add a scenario to `src/core/tests/test_e2e_detection_and_procedures.py` using a recording from `docs/dumps/`.
 
 ### Adding a New Wave Around Strategy
 
@@ -1210,10 +1232,10 @@ if driver["is_pace_car"]:
 
 ### Threading Limitations
 
-**No mid-procedure interruption:**
-- Once safety car procedure starts, runs to completion
-- Cannot stop during wave around / pace lap sending
-- Shutdown event only checked at top of loop
+**Limited mid-procedure interruption:**
+- Stop is noticed between steps: each loop iteration, between pace lap / wave around checks, and while waiting for a class-split confirmation
+- A batch of chat commands (e.g. many wave arounds) is always sent completely
+- Closing the window waits up to 5 s for the generator thread; after that the window closes anyway and the process exits once the thread finishes its current step
 
 ### Race Format Limitations
 

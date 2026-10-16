@@ -1,6 +1,8 @@
 import irsdk
 import json
 import logging
+import queue
+import time
 import tkinter as tk
 from tkinter import ttk, filedialog, messagebox
 
@@ -12,6 +14,12 @@ from util.state_utils import generator_state_messages, is_stopped_state
 from util.dev_utils import copy_sdk_data_to_clipboard, send_test_commands
 
 logger = logging.getLogger(__name__)
+
+# How often the UI processes events posted by the generator thread
+GENERATOR_POLL_INTERVAL_MS = 100
+
+# How long closing the window waits for the generator thread to finish
+GENERATOR_SHUTDOWN_TIMEOUT_S = 5.0
 
 def _parse_int(value: str) -> int:
     """Parse a whole number typed into a widget, ignoring surrounding whitespace."""
@@ -53,15 +61,17 @@ class App(tk.Tk):
         self._generator_state = GeneratorState.STOPPED
 
         # Create generator object
-        self.generator = generator.Generator(arguments, self)
-        self.shutdown_event = self.generator.shutdown_event
-        self.skip_wait_for_green_event = self.generator.skip_wait_for_green_event
+        self.generator = generator.Generator(arguments)
 
         # Set handler for closing main window event
         self.protocol('WM_DELETE_WINDOW', self.handle_delete_window)
 
         # Create widgets
         self._create_widgets()
+
+        # Process events posted by the generator thread. It must never call Tkinter
+        # itself, so all UI updates for it happen here on the main thread.
+        self._generator_events_job = self.after(GENERATOR_POLL_INTERVAL_MS, self._process_generator_events)
 
     # Advanced features toggle
     def _toggle_advanced_features(self):
@@ -85,14 +95,59 @@ class App(tk.Tk):
             self.tooltips_text = {}
 
     def handle_delete_window(self):
-        """ Event handler to trigger shutdown_event and destroy the main window
-        
+        """ Event handler to stop the generator and close the main window
+
+        The window is hidden right away, but only destroyed once the generator thread has
+        finished (or GENERATOR_SHUTDOWN_TIMEOUT_S has passed), so Tkinter is never torn
+        down while the generator is still running.
+
         Args:
             None
         """
         logger.info("Closing main application window")
-        self.shutdown_event.set()
+        self.generator.stop()
+        self.withdraw()
+        self._destroy_when_generator_stopped(time.monotonic() + GENERATOR_SHUTDOWN_TIMEOUT_S)
+
+    def _destroy_when_generator_stopped(self, deadline):
+        """Destroy the main window once the generator thread has finished.
+
+        Args:
+            deadline: time.monotonic() value after which we stop waiting
+        """
+        if self.generator.is_running() and time.monotonic() < deadline:
+            self.after(GENERATOR_POLL_INTERVAL_MS, self._destroy_when_generator_stopped, deadline)
+            return
+
+        if self.generator.is_running():
+            # The thread no longer touches Tkinter, so it can safely finish on its own
+            logger.warning("Generator thread did not stop in time, closing the window anyway")
+
+        self.after_cancel(self._generator_events_job)
         self.destroy()
+
+    def _process_generator_events(self):
+        """Apply the events posted by the generator thread. Runs on the main thread.
+
+        Args:
+            None
+        """
+        try:
+            while True:
+                event = self.generator.ui_events.get_nowait()
+                if isinstance(event, generator.StateChanged):
+                    self.generator_state = event.state
+                elif isinstance(event, generator.ClassSplitConfirmationRequested):
+                    # A stopping generator no longer waits for the answer
+                    if not self.generator.is_stopping():
+                        self.show_class_split_confirmation(event.commands)
+                else:
+                    logger.error(f"Unexpected generator event: {event}")
+        except queue.Empty:
+            pass
+        finally:
+            # Always reschedule, so one failing event doesn't stop all later UI updates
+            self._generator_events_job = self.after(GENERATOR_POLL_INTERVAL_MS, self._process_generator_events)
 
     def report_callback_exception(self, exc, val, tb):
         """Log exceptions raised in Tkinter callbacks and tell the user about them.
@@ -1334,12 +1389,13 @@ class App(tk.Tk):
         Args:
             None
         """
-        if is_stopped_state(self.generator_state):
+        # Use the generator's own state: the UI's copy is updated up to 100 ms later
+        if is_stopped_state(self.generator.state):
             logger.info('Saving settings and starting the generator')
             if not self._save_settings():
                 logger.info('Not starting generator because the settings are invalid')
                 return
-            started = self.generator.run()
+            started = self.generator.run(self.settings)
             if not started:
                 logger.info('Could not start generator')
         else:
@@ -1349,14 +1405,17 @@ class App(tk.Tk):
     def _start_safety_car(self):
         """Starts a safety car procedure controlled by the software.
 
+        Only possible while monitoring for incidents; the generator throws it right away,
+        regardless of the eligibility window.
+
         Args:
             None
         """
-        if not is_stopped_state(self.generator_state):
+        if self.generator.state == GeneratorState.MONITORING_FOR_INCIDENTS:
             logger.info('Starting a manual safety car')
             self.generator.throw_manual_safety_car()
         else:
-            logger.info('Tried to throw a manual SC, but generator not running')
+            logger.info(f'Ignoring manual SC request, generator is not monitoring for incidents (state: {self.generator.state})')
 
     def _save_settings(self):
         """Validate the values in the widgets and save them to the config file.
@@ -1479,21 +1538,22 @@ class App(tk.Tk):
             self.ent_laps_before_wave_arounds.config(state="disabled")
             self.cmb_wave_around_rules.config(state="disabled")
 
-    def show_class_split_confirmation(self):
+    def show_class_split_confirmation(self, commands):
         """Show a confirmation dialog for class-split EOL commands.
 
-        Called via after() from the generator thread. Runs on the main thread.
-        """
-        commands = self.generator._class_split_commands
+        Called for a ClassSplitConfirmationRequested event from the generator thread.
+        Runs on the main thread.
 
+        Args:
+            commands: The EOL commands the generator wants to send
+        """
         # Build a readable message listing the EOL commands
         command_list = "\n".join(f"  {i+1}. {cmd}" for i, cmd in enumerate(commands))
         message = f"The following EOL commands will be sent:\n\n{command_list}\n\nProceed?"
 
         result = messagebox.askokcancel("Confirm Class Split", message)
 
-        self.generator._class_split_confirmed = result
-        self.generator.confirm_class_split_event.set()
+        self.generator.confirm_class_split(result)
 
     def _skip_wait_for_green(self):
         """Move from waiting for green to monitoring session state.
@@ -1501,7 +1561,7 @@ class App(tk.Tk):
         Args:
             None
         """
-        self.skip_wait_for_green_event.set()
+        self.generator.skip_wait_for_green()
 
     def _copy_sdk_data(self):
         """Copy current SDK data to clipboard
