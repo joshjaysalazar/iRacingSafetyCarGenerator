@@ -80,13 +80,19 @@ def _check_sessions(ir) -> list[str]:
     if not sessions:
         return ["Session info has no SessionInfo:Sessions list"]
 
-    warnings = [f"Session {i} has no SessionName" for i, session in enumerate(sessions) if "SessionName" not in session]
+    warnings = [f"Session {i} has no {key}" for i, session in enumerate(sessions)
+                for key in ("SessionName", "SessionType") if key not in session]
 
     session_num = ir["SessionNum"]
     if session_num is not None and not 0 <= session_num < len(sessions):
         warnings.append(f"SessionNum {session_num} is not one of the {len(sessions)} sessions in SessionInfo")
 
     return warnings
+
+def _event_has_race_session(ir) -> bool:
+    """Whether any session of the current event is a race session, per its SessionType."""
+    sessions = (ir["SessionInfo"] or {}).get("Sessions") or []
+    return any(session.get("SessionType") == "Race" for session in sessions)
 
 def _check_drivers(ir) -> list[str]:
     """Check the driver entries, their CarIdx values and the pace car."""
@@ -116,11 +122,15 @@ def _check_drivers(ir) -> list[str]:
         if outside:
             warnings.append(f"CarIdx {outside} fall outside the {len(lap_distance)}-entry telemetry arrays")
 
-    # The safety car procedures assume exactly one pace car, found through PaceCarIdx
+    # The safety car procedures assume exactly one pace car, found through PaceCarIdx. An event
+    # with a race session lists the pace car from its first session on, but an event without one
+    # (e.g. a standalone pre-race practice) has no pace car entry at all (both seen live).
     pace_car_idx = driver_info.get("PaceCarIdx")
     pace_cars = [driver["CarIdx"] for driver in drivers if driver["CarIsPaceCar"] == 1]
     if pace_car_idx is None:
         warnings.append("DriverInfo has no PaceCarIdx")
+    elif not _event_has_race_session(ir):
+        logger.info("Preflight: this event has no race session, skipping the pace car checks")
     elif len(pace_cars) != 1:
         warnings.append(f"Expected one pace car, found {len(pace_cars)} (CarIdx {pace_cars}); "
                         f"wave arounds and class splits assume a single pace car")

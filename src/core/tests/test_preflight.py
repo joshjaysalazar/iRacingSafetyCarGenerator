@@ -134,6 +134,48 @@ def test_no_pace_car(frame):
     assert run_preflight_checks(connected_sdk(frame))[0].startswith("Expected one pace car, found 0")
 
 
+def practice_session(number):
+    return {"SessionNum": number, "SessionName": "PRACTICE", "SessionType": "Practice"}
+
+
+def remove_pace_car(frame, pace_car_idx):
+    frame["session_info"]["DriverInfo"]["Drivers"] = [d for d in drivers_of(frame) if d["CarIsPaceCar"] != 1]
+    frame["session_info"]["DriverInfo"]["PaceCarIdx"] = pace_car_idx
+
+
+@pytest.mark.parametrize("pace_car_idx", [62, -1])
+def test_practice_only_event_without_pace_car_passes(frame, pace_car_idx):
+    """An event without a race session has no pace car entry, while PaceCarIdx is 62, or -1 with
+    irsdkLogAllCars=1 (both seen live)."""
+    frame["session_info"]["SessionInfo"]["Sessions"] = [practice_session(0)]
+    remove_pace_car(frame, pace_car_idx)
+
+    assert run_preflight_checks(connected_sdk(frame)) == []
+
+
+def test_practice_session_of_a_race_event_passes(frame):
+    """A race event lists the pace car from its practice session on (seen live)."""
+    frame["session_info"]["SessionInfo"]["Sessions"].insert(0, practice_session(0))
+    frame["telemetry"]["SessionNum"] = 0
+
+    assert run_preflight_checks(connected_sdk(frame)) == []
+
+
+def test_practice_session_of_a_race_event_without_pace_car(frame):
+    """The pace car checks also run before the race session, where people usually press Start."""
+    frame["session_info"]["SessionInfo"]["Sessions"].insert(0, practice_session(0))
+    frame["telemetry"]["SessionNum"] = 0
+    remove_pace_car(frame, -1)
+
+    assert run_preflight_checks(connected_sdk(frame))[0].startswith("Expected one pace car, found 0")
+
+
+def test_session_without_type(frame):
+    del frame["session_info"]["SessionInfo"]["Sessions"][0]["SessionType"]
+
+    assert run_preflight_checks(connected_sdk(frame)) == ["Session 0 has no SessionType"]
+
+
 def test_pace_car_idx_not_pointing_at_the_pace_car(frame):
     frame["session_info"]["DriverInfo"]["PaceCarIdx"] = 0
 
