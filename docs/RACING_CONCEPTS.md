@@ -402,6 +402,7 @@ iRacing has different session types:
 - **Definition:** Array index for a car (0-63)
 - **Fixed:** Same car keeps same CarIdx throughout session
 - **NOT position:** CarIdx=0 is not necessarily the leader
+- **Not contiguous:** Only cars in the session appear in `DriverInfo.Drivers`, so CarIdx values can have gaps and the pace car can sit at a high index (e.g. CarIdx 62 with 16 cars at 0-15)
 
 #### Array Access Pattern
 ```python

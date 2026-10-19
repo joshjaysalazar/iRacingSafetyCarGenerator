@@ -632,7 +632,7 @@ _start_safety_car(message)
     │
     ├─► _split_classes() (if class_split_enabled):
     │   │
-    │   └─► get_split_class_commands(drivers, car_positions, on_pit_road, pace_car_idx)
+    │   └─► get_split_class_commands(drivers, pace_car_idx)
     │       ├─ Calculate positions relative to SC
     │       ├─ Group drivers by CarClassID, sort classes by CarClassEstLapTime
     │       ├─ Walk grid to find classes out of order
@@ -1049,7 +1049,7 @@ def get_your_strategy_wave_around_commands(drivers: Drivers, pace_car_idx: int) 
 
     Args:
         drivers: Drivers object with current driver data
-        pace_car_idx: Index of pace car
+        pace_car_idx: CarIdx of the pace car (DriverInfo->PaceCarIdx), not a list position
 
     Returns:
         List of "!w CAR_NUMBER" commands sorted by position relative to SC
@@ -1205,6 +1205,7 @@ if driver["is_pace_car"]:
 **4. Array indices don't match positions:**
 - CarIdx (array index) is fixed assignment, not running position
 - Must calculate positions from lap_distance and laps_completed
+- A driver's place in `Drivers.current_drivers` is not its CarIdx either: the list only holds the cars in DriverInfo, so CarIdx values can have gaps (e.g. the pace car at CarIdx 62 in a 17-car list). Look drivers up by `driver_idx` and use `driver_positions_from_safety_car()` for positions behind the SC
 
 ### Application Limitations
 
