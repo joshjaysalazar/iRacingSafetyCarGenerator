@@ -1,7 +1,7 @@
 import pytest
 
 from pytest import approx
-from util.generator_utils import positions_from_safety_car
+from util.generator_utils import positions_from_safety_car, driver_positions_from_safety_car
 
 
 @pytest.mark.parametrize("car_positions,expected", [
@@ -15,3 +15,17 @@ def test_positions_from_safety_car(car_positions, expected):
     positions = positions_from_safety_car(car_positions, 4) # 4 = the position of the pace car in our test data
 
     assert approx(positions) == expected
+
+
+def test_driver_positions_from_safety_car_keys_by_car_idx():
+    # DriverInfo only lists connected cars, so CarIdx has gaps and the pace car sits at 62
+    drivers = [
+        {"driver_idx": 0, "lap_distance": 0.9},
+        {"driver_idx": 1, "lap_distance": 0.8},
+        {"driver_idx": 5, "lap_distance": 0.7},
+        {"driver_idx": 62, "lap_distance": 0.0},
+    ]
+
+    positions = driver_positions_from_safety_car(drivers, 62)
+
+    assert positions == approx({0: 0.1, 1: 0.2, 5: 0.3, 62: 0.0})

@@ -259,6 +259,20 @@ def test_class_split_request_is_answered_through_a_dialog(make_app, mocker):
     confirm.assert_called_once_with(True)
 
 
+def test_preflight_warnings_are_shown_without_stopping_the_generator(make_app, mocker):
+    app = make_app(UI_SETTINGS)
+    showwarning = mocker.patch("core.app.messagebox.showwarning")
+    stop = mocker.patch.object(app.generator, "stop")
+    app.generator.ui_events.put(generator.PreflightWarnings(["Unknown SessionState value 42", "DriverInfo has no PaceCarIdx"]))
+
+    app._process_generator_events()
+
+    message = showwarning.call_args.args[1]
+    assert "  - Unknown SessionState value 42" in message
+    assert "  - DriverInfo has no PaceCarIdx" in message
+    stop.assert_not_called()
+
+
 def test_generator_events_are_still_processed_after_an_error(make_app, showerror, mocker):
     """An error while applying an event must not end the polling, or the UI would freeze on that state."""
     app = make_app(UI_SETTINGS)

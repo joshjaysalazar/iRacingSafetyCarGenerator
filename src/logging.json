@@ -23,6 +23,12 @@
 		"__main__": {
 			"level": "INFO"
 		},
+		"core": {
+			"level": "INFO"
+		},
+		"util": {
+			"level": "INFO"
+		},
 		"core.app": {
 			"level": "INFO"
 		},
@@ -61,6 +67,9 @@
 		},
 		"core.interactions.mock_window": {
 			"level": "DEBUG"
+		},
+		"core.preflight": {
+			"level": "INFO"
 		},
 		"core.procedures.wave_arounds": {
 			"level": "DEBUG"

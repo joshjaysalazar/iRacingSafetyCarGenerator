@@ -18,7 +18,8 @@ def drivers_from_dump_frame(dump_path: Path, frame_index: int) -> tuple[list[dic
         A tuple of (drivers_list, pace_car_idx) where:
         - drivers_list is a list of driver dicts with keys matching the format
           expected by get_split_class_commands
-        - pace_car_idx is the index of the pace car in drivers_list
+        - pace_car_idx is the pace car's CarIdx (DriverInfo->PaceCarIdx), as the
+          generator passes it
     """
     with open(dump_path, "r") as f:
         for i, line in enumerate(f):
@@ -32,7 +33,7 @@ def drivers_from_dump_frame(dump_path: Path, frame_index: int) -> tuple[list[dic
     telemetry = data["telemetry"]
 
     drivers = []
-    pace_car_idx = None
+    pace_car_idx = data["session_info"]["DriverInfo"]["PaceCarIdx"]
 
     for d in drivers_info:
         idx = d["CarIdx"]
@@ -48,8 +49,6 @@ def drivers_from_dump_frame(dump_path: Path, frame_index: int) -> tuple[list[dic
             "session_flags": telemetry["CarIdxSessionFlags"][idx],
         }
         drivers.append(driver)
-        if driver["is_pace_car"]:
-            pace_car_idx = len(drivers) - 1
 
     return drivers, pace_car_idx
 

@@ -257,12 +257,13 @@ def _process_generator_events(self):
 **Main Thread (Tkinter GUI):**
 - Runs `App` class with Tkinter mainloop; the only thread that touches Tkinter
 - Handles user interactions (button clicks, settings changes)
-- Drains `generator.ui_events` every 100 ms (`App._process_generator_events()`) to update the status and show the class-split confirmation dialog
+- Drains `generator.ui_events` every 100 ms (`App._process_generator_events()`) to update the status and show the preflight warning and class-split confirmation dialogs
 - Starts the generator with `Generator.run(settings)`, which only snapshots the settings, clears all signals, publishes `CONNECTING_TO_IRACING` and starts the thread — it never blocks the UI
 - Decides what the Start/Stop and manual safety car buttons do from `generator.state`, not from its own copy of the state, which lags up to 100 ms behind
 
 **Generator Thread (`Generator._run`, named `GeneratorThread`):**
 - Connects to iRacing: creates its own `irsdk.IRSDK()` for every run, starts it, and connects the command sender to the iRacing window
+- Runs the preflight check of the SDK data (`run_preflight_checks()`), posting `PreflightWarnings` if it finds problems, and carries on either way
 - Builds `Drivers`, `Detector` and `ThresholdChecker`, then runs the detection loop at ~1 Hz and the safety car procedures
 - Uses only its settings snapshot (`GeneratorSettings` and the detector/threshold checker settings), never the App's live `Settings`
 - On exit, shuts the SDK down and then publishes its final state
@@ -271,7 +272,7 @@ def _process_generator_events(self):
 
 ```python
 # Generator → UI (src/core/generator.py)
-self.ui_events = queue.Queue()  # StateChanged, ClassSplitConfirmationRequested
+self.ui_events = queue.Queue()  # StateChanged, PreflightWarnings, ClassSplitConfirmationRequested
 
 # UI → Generator: methods that only set threading.Events
 generator.stop()                     # shutdown_event
@@ -381,7 +382,7 @@ class Settings:
 
 The packaged build is created with `--noconsole`, so `sys.stderr` is `None` and anything printed to it is lost. Errors therefore always go to the log file and, where the user needs to act, to a dialog:
 
-- `src/logging.json` attaches the file handler to the **root** logger (level `WARNING`). Per-module loggers only set their level and propagate to root, so every record is written exactly once and unconfigured loggers (new modules, third-party libraries) still log warnings and errors.
+- `src/logging.json` attaches the file handler to the **root** logger (level `WARNING`). Per-module loggers only set their level and propagate to root, so every record is written exactly once. The `core` and `util` package entries set `INFO`, so new modules log `INFO` and above without an entry of their own, while third-party libraries only log warnings and errors.
 - `App.report_callback_exception()` logs exceptions raised in Tkinter callbacks (button handlers, `after()` callbacks) and shows an error dialog. Tkinter's default handler would print to the missing stderr.
 - `main.show_fatal_error()` shows a dialog when the app fails to start; the exception is logged via the root logger.
 
@@ -530,6 +531,10 @@ User clicks "Start SC Generator" button
     │      to the iRacing window              → failure: ERROR_CONNECTING
     │
     ├─ State: CONNECTING_TO_IRACING → CONNECTED
+    ├─ run_preflight_checks(ir) (core/preflight.py): telemetry values, session list,
+    │  driver entries, CarIdx bounds, single pace car (events with a race session),
+    │  known TrkLoc/SessionState values
+    │  → problems: post PreflightWarnings; the App shows a warning dialog, the run continues
     ├─ Create Drivers object
     ├─ Build Detector, create ThresholdChecker (from the snapshots)
     │
@@ -632,7 +637,7 @@ _start_safety_car(message)
     │
     ├─► _split_classes() (if class_split_enabled):
     │   │
-    │   └─► get_split_class_commands(drivers, car_positions, on_pit_road, pace_car_idx)
+    │   └─► get_split_class_commands(drivers, pace_car_idx)
     │       ├─ Calculate positions relative to SC
     │       ├─ Group drivers by CarClassID, sort classes by CarClassEstLapTime
     │       ├─ Walk grid to find classes out of order
@@ -1049,7 +1054,7 @@ def get_your_strategy_wave_around_commands(drivers: Drivers, pace_car_idx: int) 
 
     Args:
         drivers: Drivers object with current driver data
-        pace_car_idx: Index of pace car
+        pace_car_idx: CarIdx of the pace car (DriverInfo->PaceCarIdx), not a list position
 
     Returns:
         List of "!w CAR_NUMBER" commands sorted by position relative to SC
@@ -1205,6 +1210,11 @@ if driver["is_pace_car"]:
 **4. Array indices don't match positions:**
 - CarIdx (array index) is fixed assignment, not running position
 - Must calculate positions from lap_distance and laps_completed
+- A driver's place in `Drivers.current_drivers` is not its CarIdx either: the list only holds the cars in DriverInfo, so CarIdx values can have gaps (e.g. the pace car at CarIdx 62 in a 17-car list). Look drivers up by `driver_idx` and use `driver_positions_from_safety_car()` for positions behind the SC
+- The per-car arrays have 64 entries by default, but more with `[Misc] irsdkLogAllCars=1` in iRacing's `app.ini` (72 seen, with the pace car at CarIdx 64), so never assume 64
+- An event with a race session lists the pace car from its first (practice) session on; an event without one (e.g. a standalone pre-race practice) has no pace car entry, although `PaceCarIdx` is still set (62, or -1 with `irsdkLogAllCars=1`)
+- Moving from a standalone practice event into the race event does not disconnect the SDK: the session list and `DriverInfo` just change
+- The preflight check (`src/core/preflight.py`) warns the user at the start of every run when the SDK data no longer matches these assumptions
 
 ### Application Limitations
 
