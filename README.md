@@ -128,6 +128,7 @@ The **Advanced Features** checkbox in the controls panel reveals additional opti
 ## Troubleshooting
 
 - **A dialog says settings were not saved:** one or more fields contain a value that is not a valid number. The dialog lists the fields to correct; the generator only starts once all values are valid.
+- **A dialog says some iRacing data does not look the way the generator expects:** every time you press Start, the generator checks the data iRacing provides right after connecting. This warning usually means an iRacing update changed how that data is reported. The generator keeps running, but wave arounds, pace laps or class splits may not work as intended. Please report it with the log file (see below).
 - **Something else went wrong:** the app shows an error dialog. Every session writes a log file to the `logs` folder next to the executable. Please attach it when [reporting an issue](https://github.com/joshjaysalazar/iRacingSafetyCarGenerator/issues).
 
 ## Documentation

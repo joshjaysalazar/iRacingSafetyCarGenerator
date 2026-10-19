@@ -257,12 +257,13 @@ def _process_generator_events(self):
 **Main Thread (Tkinter GUI):**
 - Runs `App` class with Tkinter mainloop; the only thread that touches Tkinter
 - Handles user interactions (button clicks, settings changes)
-- Drains `generator.ui_events` every 100 ms (`App._process_generator_events()`) to update the status and show the class-split confirmation dialog
+- Drains `generator.ui_events` every 100 ms (`App._process_generator_events()`) to update the status and show the preflight warning and class-split confirmation dialogs
 - Starts the generator with `Generator.run(settings)`, which only snapshots the settings, clears all signals, publishes `CONNECTING_TO_IRACING` and starts the thread — it never blocks the UI
 - Decides what the Start/Stop and manual safety car buttons do from `generator.state`, not from its own copy of the state, which lags up to 100 ms behind
 
 **Generator Thread (`Generator._run`, named `GeneratorThread`):**
 - Connects to iRacing: creates its own `irsdk.IRSDK()` for every run, starts it, and connects the command sender to the iRacing window
+- Runs the preflight check of the SDK data (`run_preflight_checks()`), posting `PreflightWarnings` if it finds problems, and carries on either way
 - Builds `Drivers`, `Detector` and `ThresholdChecker`, then runs the detection loop at ~1 Hz and the safety car procedures
 - Uses only its settings snapshot (`GeneratorSettings` and the detector/threshold checker settings), never the App's live `Settings`
 - On exit, shuts the SDK down and then publishes its final state
@@ -271,7 +272,7 @@ def _process_generator_events(self):
 
 ```python
 # Generator → UI (src/core/generator.py)
-self.ui_events = queue.Queue()  # StateChanged, ClassSplitConfirmationRequested
+self.ui_events = queue.Queue()  # StateChanged, PreflightWarnings, ClassSplitConfirmationRequested
 
 # UI → Generator: methods that only set threading.Events
 generator.stop()                     # shutdown_event
@@ -530,6 +531,9 @@ User clicks "Start SC Generator" button
     │      to the iRacing window              → failure: ERROR_CONNECTING
     │
     ├─ State: CONNECTING_TO_IRACING → CONNECTED
+    ├─ run_preflight_checks(ir) (core/preflight.py): telemetry values, session list,
+    │  driver entries, CarIdx bounds, single pace car, known TrkLoc/SessionState values
+    │  → problems: post PreflightWarnings; the App shows a warning dialog, the run continues
     ├─ Create Drivers object
     ├─ Build Detector, create ThresholdChecker (from the snapshots)
     │
@@ -1206,6 +1210,7 @@ if driver["is_pace_car"]:
 - CarIdx (array index) is fixed assignment, not running position
 - Must calculate positions from lap_distance and laps_completed
 - A driver's place in `Drivers.current_drivers` is not its CarIdx either: the list only holds the cars in DriverInfo, so CarIdx values can have gaps (e.g. the pace car at CarIdx 62 in a 17-car list). Look drivers up by `driver_idx` and use `driver_positions_from_safety_car()` for positions behind the SC
+- The preflight check (`src/core/preflight.py`) warns the user at the start of every run when the SDK data no longer matches these assumptions
 
 ### Application Limitations
 
