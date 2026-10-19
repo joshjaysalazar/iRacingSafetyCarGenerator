@@ -4,7 +4,7 @@ from heapq import heappush, heappop
 from irsdk import TrkLoc
 
 from core.drivers import Driver
-from util.generator_utils import positions_from_safety_car
+from util.generator_utils import driver_positions_from_safety_car
 
 logger = logging.getLogger(__name__)
 
@@ -13,22 +13,23 @@ def get_split_class_commands(drivers: list[Driver], pace_car_idx: int) -> list[s
 
         Args:
             drivers: The list of Driver objects from the Drivers data model.
-            pace_car_idx: The index of the pacecar in the drivers list.
+            pace_car_idx: The CarIdx of the pacecar (DriverInfo->PaceCarIdx).
 
         Returns:
             List[str]: The commands to send, in order, to split the classes.
     """
     logger.info(f"Getting split class commands for {len(drivers)} drivers, pace car idx {pace_car_idx}")
 
-    # Get the car positions as seen from the SC
-    car_positions = [driver["lap_distance"] for driver in drivers]
-    pos_from_sc = positions_from_safety_car(car_positions, pace_car_idx)
+    # Get the car positions as seen from the SC, keyed by driver_idx
+    pos_from_sc = driver_positions_from_safety_car(drivers, pace_car_idx)
+    drivers_by_idx = {driver["driver_idx"]: driver for driver in drivers}
 
     # Figure out what classes are driving, their est_lap_time to determine the
     # ordering and what drivers belong to each class
     classes = {}
     drivers_to_class = {}
-    for idx, driver in enumerate(drivers):
+    for driver in drivers:
+        idx = driver["driver_idx"]
         if driver["is_pace_car"]:
             logger.debug(f"Skipping driver idx {idx} (pace car)")
             continue
@@ -65,7 +66,7 @@ def get_split_class_commands(drivers: list[Driver], pace_car_idx: int) -> list[s
     logger.debug(f"Classes sorted by lap time: {[c[0] for c in classes_sorted]}")
 
     # Check if we need to split the classes by checking for anyone out of order
-    pos_and_idx = zip(pos_from_sc, list(range(len(pos_from_sc))))
+    pos_and_idx = [(pos, idx) for idx, pos in pos_from_sc.items()]
     pos_and_idx_filtered = [entry for entry in pos_and_idx if entry[0] != -1]
     idx_all_sorted = [entry[1] for entry in sorted(pos_and_idx_filtered, key=lambda item: item[0])]
 
@@ -86,18 +87,18 @@ def get_split_class_commands(drivers: list[Driver], pace_car_idx: int) -> list[s
             current_car = idx_all_sorted[pos_pointer]
 
             # Skip the SC, anyone on pit road, and disconnected drivers
-            if current_car == pace_car_idx or drivers[current_car]["on_pit_road"] or drivers[current_car]["track_loc"] == TrkLoc.not_in_world:
-                logger.debug(f"Skipping driver idx {current_car} #{drivers[current_car]['car_number']} in order check (pace car, on pit road, or disconnected)")
+            if current_car == pace_car_idx or drivers_by_idx[current_car]["on_pit_road"] or drivers_by_idx[current_car]["track_loc"] == TrkLoc.not_in_world:
+                logger.debug(f"Skipping driver idx {current_car} #{drivers_by_idx[current_car]['car_number']} in order check (pace car, on pit road, or disconnected)")
                 pos_pointer += 1
                 continue
 
             # if a car is not in the current class, they are out of order
             if current_car not in current_class_drivers:
-                logger.debug(f"Driver idx {current_car} #{drivers[current_car]['car_number']} (class {drivers_to_class[current_car]}) is out of order in class {current_class}")
+                logger.debug(f"Driver idx {current_car} #{drivers_by_idx[current_car]['car_number']} (class {drivers_to_class[current_car]}) is out of order in class {current_class}")
                 classes_out_of_order.add(drivers_to_class[current_car])
                 drivers_out_of_order.add(current_car)
             else:
-                logger.debug(f"Driver idx {current_car} #{drivers[current_car]['car_number']} is in correct class order")
+                logger.debug(f"Driver idx {current_car} #{drivers_by_idx[current_car]['car_number']} is in correct class order")
                 current_class_drivers.remove(current_car)
 
             pos_pointer += 1
@@ -120,7 +121,7 @@ def get_split_class_commands(drivers: list[Driver], pace_car_idx: int) -> list[s
             drivers_ordered = c[1]["drivers_ordered"]
             while len(drivers_ordered) > 0:
                 _, idx = heappop(drivers_ordered)
-                car_number = drivers[idx]["car_number"]
+                car_number = drivers_by_idx[idx]["car_number"]
                 logger.debug(f"Adding EOL command for #{car_number} (class {current_class})")
                 commands.append(f"!eol {car_number} Splitting classes")
 

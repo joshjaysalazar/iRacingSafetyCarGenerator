@@ -5,6 +5,7 @@ import pytest
 from . import resources
 
 from core.drivers import Driver
+from core.tests.test_utils import make_driver
 from core.procedures.wave_arounds import (
     WaveAroundType,
     wave_arounds_factory,
@@ -670,4 +671,79 @@ def test_wave_combined_skips_ineligible_track_locations(setup_data_ineligible_tr
     # Only A(1.7) car #3 is eligible across both methods
     expected = ['!w 3']
     result = wave_combined(drivers, pace_car_idx)
+    assert result == expected
+
+
+"""
+## Non-contiguous CarIdx ##
+
+DriverInfo only lists the cars in the session, so CarIdx can have gaps and the pace car
+can sit well past the end of the drivers list (e.g. CarIdx 62). Same scenario as
+"Two leaders lap ahead", with the cars moved to non-contiguous CarIdx values.
+"""
+@pytest.fixture
+def setup_data_non_contiguous_car_idx(setup_data_two_lap_ahead):
+    drivers, _ = setup_data_two_lap_ahead
+    car_indices = [62, 0, 1, 2, 5, 6, 7, 9, 12]
+    for driver, car_idx in zip(drivers, car_indices):
+        driver["driver_idx"] = car_idx
+    return (drivers, 62)
+
+@pytest.mark.parametrize("wave_func,expected", [
+    (wave_lapped_cars, ['!w 5', '!w 6']),
+    (wave_ahead_of_class_lead, ['!w 2', '!w 3']),
+    (wave_combined, ['!w 2', '!w 3', '!w 5', '!w 6']),
+])
+def test_wave_arounds_non_contiguous_car_idx(setup_data_non_contiguous_car_idx, wave_func, expected):
+    drivers, pace_car_idx = setup_data_non_contiguous_car_idx
+    result = wave_func(drivers, pace_car_idx)
+    assert result == expected
+
+
+"""
+## Real-world: pace car at CarIdx 62 ##
+
+Field from a 0.5.3-alpha session where the wave arounds crashed with an IndexError:
+16 cars at CarIdx 0-15 and the pace car at CarIdx 62. #15 is two laps down on its
+class leader #6; #08 is between the SC and the overall leader, so it is not waved.
+"""
+@pytest.fixture
+def setup_data_pace_car_at_car_idx_62():
+    # (car_idx, car_number, car_class_id, laps_completed, lap_distance)
+    field = [
+        (0, "15", 4016, 4, 0.2515),
+        (1, "1", 4016, 5, 0.9367),
+        (2, "2", 4016, 5, 0.8979),
+        (3, "3", 4016, 5, 0.8551),
+        (4, "47", 4016, 5, 0.8726),
+        (5, "5", 4016, 5, 0.8168),
+        (6, "6", 4016, 6, 0.0092),
+        (7, "7", 4016, 5, 0.8366),
+        (8, "8", 4016, 5, 0.8015),
+        (9, "4", 3002, 5, 0.3323),
+        (10, "9", 3002, 5, 0.3983),
+        (11, "10", 3002, 5, 0.3610),
+        (12, "11", 3002, 5, 0.4284),
+        (13, "12", 3002, 5, 0.3160),
+        (14, "08", 3002, 5, 0.0688),
+        (15, "00", 3002, 5, 0.2666),
+    ]
+    drivers = [
+        make_driver(driver_idx=car_idx, car_number=car_number, car_class_id=car_class_id,
+                    laps_completed=laps_completed, laps_started=laps_completed + 1,
+                    lap_distance=lap_distance, total_distance=laps_completed + lap_distance)
+        for car_idx, car_number, car_class_id, laps_completed, lap_distance in field
+    ]
+    drivers.append(make_driver(driver_idx=62, car_number="0", car_class_id=11, is_pace_car=True,
+                               laps_completed=-1, laps_started=0, lap_distance=0.2283, total_distance=-0.7717))
+    return (drivers, 62)
+
+@pytest.mark.parametrize("wave_func,expected", [
+    (wave_lapped_cars, ['!w 15']),
+    (wave_ahead_of_class_lead, []),
+    (wave_combined, ['!w 15']),
+])
+def test_wave_arounds_pace_car_at_car_idx_62(setup_data_pace_car_at_car_idx_62, wave_func, expected):
+    drivers, pace_car_idx = setup_data_pace_car_at_car_idx_62
+    result = wave_func(drivers, pace_car_idx)
     assert result == expected

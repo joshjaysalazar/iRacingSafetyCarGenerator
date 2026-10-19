@@ -82,6 +82,17 @@ def test_get_split_class_commands(test_data):
 
     assert commands == test_data["expected"]
 
+# DriverInfo only lists the cars in the session, so CarIdx can have gaps and the pace car
+# can sit well past the end of the drivers list. The result must not depend on that.
+NON_CONTIGUOUS_CAR_IDX = [0, 3, 7, 8, 62]
+
+@pytest.mark.parametrize("test_data", split_class_test_data)
+def test_get_split_class_commands_non_contiguous_car_idx(test_data):
+    test_drivers = [d | {"driver_idx": car_idx} for d, car_idx in zip(test_data["drivers"], NON_CONTIGUOUS_CAR_IDX)]
+    commands = get_split_class_commands(test_drivers, 62)
+
+    assert commands == test_data["expected"]
+
 
 # Single-class test: only one racing class + pace car → early return []
 single_class_drivers = [

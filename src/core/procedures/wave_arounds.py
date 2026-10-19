@@ -5,7 +5,7 @@ from typing import List
 from irsdk import TrkLoc
 
 from core.drivers import Driver
-from util.generator_utils import positions_from_safety_car
+from util.generator_utils import driver_positions_from_safety_car
 
 logger = logging.getLogger(__name__)
 class WaveAroundType(Enum):
@@ -65,13 +65,13 @@ def drivers_to_wave_commands(drivers: List[Driver], pace_car_idx: int, eligible_
         return []
 
     # Calculate relative positions to safety car
-    car_positions = [driver["lap_distance"] for driver in drivers]
-    relative_to_sc = positions_from_safety_car(car_positions, pace_car_idx)
+    relative_to_sc = driver_positions_from_safety_car(drivers, pace_car_idx)
+    drivers_by_idx = {driver["driver_idx"]: driver for driver in drivers}
 
     # Collect eligible cars with their positions
     eligible_cars = []
     for idx in eligible_driver_indices:
-        driver = drivers[idx]
+        driver = drivers_by_idx[idx]
         eligible_cars.append((relative_to_sc[idx], driver["car_number"]))
 
     # Sort by position (smallest = closest behind SC) and create commands
@@ -194,9 +194,9 @@ def _get_ahead_of_class_lead_indices(drivers: List[Driver], pace_car_idx: int) -
     """
     class_leads = {}
 
-    # Extract lap distances for positions_from_safety_car
-    car_positions = [driver["lap_distance"] for driver in drivers]
-    relative_to_sc = positions_from_safety_car(car_positions, pace_car_idx)
+    # Get positions relative to the safety car, keyed by driver_idx
+    relative_to_sc = driver_positions_from_safety_car(drivers, pace_car_idx)
+    drivers_by_idx = {driver["driver_idx"]: driver for driver in drivers}
     logger.debug(f"Relative positions to SC: {relative_to_sc}")
 
     # Identify the class leader for each class
@@ -206,14 +206,14 @@ def _get_ahead_of_class_lead_indices(drivers: List[Driver], pace_car_idx: int) -
             logger.debug(f"Skipping driver idx {idx} (pace car) for class lead identification")
             continue
         car_class = driver["car_class_id"]
-        if car_class not in class_leads or driver["total_distance"] > drivers[class_leads[car_class][0]]["total_distance"]:
+        if car_class not in class_leads or driver["total_distance"] > drivers_by_idx[class_leads[car_class][0]]["total_distance"]:
             logger.debug(f"Driver idx {idx} #{driver['car_number']} is new class lead for class {car_class} (total_distance {driver['total_distance']:.3f})")
             class_leads[car_class] = (idx, relative_to_sc[idx])
 
     logger.debug(f"Class leads: {class_leads}")
 
     # Get positions relative to overall lead
-    lead_idx = 0
+    lead_idx = drivers[0]["driver_idx"]
     lead_position = 0.0
     for driver in drivers:
         if driver["total_distance"] > lead_position:
