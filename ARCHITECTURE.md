@@ -382,7 +382,7 @@ class Settings:
 
 The packaged build is created with `--noconsole`, so `sys.stderr` is `None` and anything printed to it is lost. Errors therefore always go to the log file and, where the user needs to act, to a dialog:
 
-- `src/logging.json` attaches the file handler to the **root** logger (level `WARNING`). Per-module loggers only set their level and propagate to root, so every record is written exactly once and unconfigured loggers (new modules, third-party libraries) still log warnings and errors.
+- `src/logging.json` attaches the file handler to the **root** logger (level `WARNING`). Per-module loggers only set their level and propagate to root, so every record is written exactly once. The `core` and `util` package entries set `INFO`, so new modules log `INFO` and above without an entry of their own, while third-party libraries only log warnings and errors.
 - `App.report_callback_exception()` logs exceptions raised in Tkinter callbacks (button handlers, `after()` callbacks) and shows an error dialog. Tkinter's default handler would print to the missing stderr.
 - `main.show_fatal_error()` shows a dialog when the app fails to start; the exception is logged via the root logger.
 
