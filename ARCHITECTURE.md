@@ -532,7 +532,8 @@ User clicks "Start SC Generator" button
     │
     ├─ State: CONNECTING_TO_IRACING → CONNECTED
     ├─ run_preflight_checks(ir) (core/preflight.py): telemetry values, session list,
-    │  driver entries, CarIdx bounds, single pace car, known TrkLoc/SessionState values
+    │  driver entries, CarIdx bounds, single pace car (events with a race session),
+    │  known TrkLoc/SessionState values
     │  → problems: post PreflightWarnings; the App shows a warning dialog, the run continues
     ├─ Create Drivers object
     ├─ Build Detector, create ThresholdChecker (from the snapshots)
@@ -1210,6 +1211,9 @@ if driver["is_pace_car"]:
 - CarIdx (array index) is fixed assignment, not running position
 - Must calculate positions from lap_distance and laps_completed
 - A driver's place in `Drivers.current_drivers` is not its CarIdx either: the list only holds the cars in DriverInfo, so CarIdx values can have gaps (e.g. the pace car at CarIdx 62 in a 17-car list). Look drivers up by `driver_idx` and use `driver_positions_from_safety_car()` for positions behind the SC
+- The per-car arrays have 64 entries by default, but more with `[Misc] irsdkLogAllCars=1` in iRacing's `app.ini` (72 seen, with the pace car at CarIdx 64), so never assume 64
+- An event with a race session lists the pace car from its first (practice) session on; an event without one (e.g. a standalone pre-race practice) has no pace car entry, although `PaceCarIdx` is still set (62, or -1 with `irsdkLogAllCars=1`)
+- Moving from a standalone practice event into the race event does not disconnect the SDK: the session list and `DriverInfo` just change
 - The preflight check (`src/core/preflight.py`) warns the user at the start of every run when the SDK data no longer matches these assumptions
 
 ### Application Limitations

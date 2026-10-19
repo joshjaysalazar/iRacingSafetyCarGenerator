@@ -399,10 +399,12 @@ iRacing has different session types:
 ### SDK Data Structure
 
 #### CarIdx (Car Index)
-- **Definition:** Array index for a car (0-63)
+- **Definition:** Array index for a car (0-63 by default; the arrays grow beyond 64 entries with `[Misc] irsdkLogAllCars=1` in iRacing's `app.ini`)
 - **Fixed:** Same car keeps same CarIdx throughout session
 - **NOT position:** CarIdx=0 is not necessarily the leader
-- **Not contiguous:** Only cars in the session appear in `DriverInfo.Drivers`, so CarIdx values can have gaps and the pace car can sit at a high index (e.g. CarIdx 62 with 16 cars at 0-15)
+- **Not contiguous:** Only cars in the session appear in `DriverInfo.Drivers`, so CarIdx values can have gaps and the pace car can sit at a high index (e.g. CarIdx 62 with 16 cars at 0-15, or CarIdx 64 with `irsdkLogAllCars=1`)
+- **Pace car only in race events:** A race event (practice, qualifying, race) lists the pace car from its first session on; a standalone practice event has no pace car entry in `DriverInfo.Drivers`
+- **An entry is not a car on track:** In a live practice the list stayed at 49 entries while the cars in the world dropped from 13 to 1; check `CarIdxTrackSurface` rather than the entry count
 
 #### Array Access Pattern
 ```python
