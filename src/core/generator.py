@@ -9,6 +9,7 @@ from core import drivers
 from core.detection.threshold_checker import ThresholdChecker, ThresholdCheckerSettings, DetectorEventTypes
 from core.detection.detector import Detector, DetectorSettings
 from core.interactions.interaction_factories import CommandSenderFactory
+from core.preflight import run_preflight_checks
 from core.procedures.wave_arounds import wave_around_type_from_selection, wave_arounds_factory
 from core.procedures.class_split import get_split_class_commands
 
@@ -70,6 +71,11 @@ class ClassSplitConfirmationRequested:
     """UI event: the user has to confirm these class-split commands, answered via confirm_class_split()."""
     commands: list[str]
 
+@dataclass(frozen=True)
+class PreflightWarnings:
+    """UI event: the iRacing SDK data broke some of our assumptions. Only a warning, the run continues."""
+    warnings: list[str]
+
 class Generator:
     """Generates safety car events in iRacing.
 
@@ -77,7 +83,7 @@ class Generator:
     thread. Connecting to iRacing, monitoring and the safety car procedures all happen on
     that thread, which is the only one using the iRacing SDK connection.
 
-    The generator thread never calls Tkinter. It posts StateChanged and
+    The generator thread never calls Tkinter. It posts StateChanged, PreflightWarnings and
     ClassSplitConfirmationRequested events to `ui_events`, which the App processes on the
     main thread. The UI talks to the generator through stop(), throw_manual_safety_car(),
     skip_wait_for_green() and confirm_class_split(), which only set threading events.
@@ -248,6 +254,11 @@ class Generator:
                 final_state = GeneratorState.ERROR_CONNECTING
                 return
             self._set_state(GeneratorState.CONNECTED)
+
+            # Warn the user, without stopping, if iRacing changed how it reports data we rely on
+            preflight_warnings = run_preflight_checks(self.ir)
+            if preflight_warnings:
+                self.ui_events.put(PreflightWarnings(preflight_warnings))
 
             # Create the Drivers object
             self.drivers = drivers.Drivers(self)

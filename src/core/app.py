@@ -137,6 +137,8 @@ class App(tk.Tk):
                 event = self.generator.ui_events.get_nowait()
                 if isinstance(event, generator.StateChanged):
                     self.generator_state = event.state
+                elif isinstance(event, generator.PreflightWarnings):
+                    self.show_preflight_warnings(event.warnings)
                 elif isinstance(event, generator.ClassSplitConfirmationRequested):
                     # A stopping generator no longer waits for the answer
                     if not self.generator.is_stopping():
@@ -1554,6 +1556,25 @@ class App(tk.Tk):
         result = messagebox.askokcancel("Confirm Class Split", message)
 
         self.generator.confirm_class_split(result)
+
+    def show_preflight_warnings(self, warnings):
+        """Warn that the iRacing data does not look the way the generator expects.
+
+        Called for a PreflightWarnings event from the generator thread. Runs on the main
+        thread. The generator keeps running, so this only informs the user.
+
+        Args:
+            warnings: The broken assumptions found by the preflight check
+        """
+        warning_list = "\n".join(f"  - {warning}" for warning in warnings)
+        message = (
+            "Some iRacing data does not look the way the Safety Car Generator expects. "
+            "This can happen after an iRacing update.\n\n"
+            f"{warning_list}\n\n"
+            "The generator keeps running, but the safety car procedures may not work as intended. "
+            "More details can be found in the log file."
+        )
+        messagebox.showwarning("iRacing data check", message)
 
     def _skip_wait_for_green(self):
         """Move from waiting for green to monitoring session state.

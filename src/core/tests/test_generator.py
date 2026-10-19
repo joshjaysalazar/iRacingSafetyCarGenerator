@@ -17,6 +17,7 @@ from core.generator import (
     Generator,
     GeneratorSettings,
     GeneratorState,
+    PreflightWarnings,
     StateChanged,
 )
 from core.interactions.command_sender import CommandSender
@@ -685,15 +686,17 @@ class TestGeneratorThread:
         assert not generator.thread.is_alive()
 
     @staticmethod
-    def published_states(generator):
-        states = []
+    def published_events(generator):
+        events = []
         while True:
             try:
-                event = generator.ui_events.get_nowait()
+                events.append(generator.ui_events.get_nowait())
             except queue.Empty:
-                return states
-            if isinstance(event, StateChanged):
-                states.append(event.state)
+                return events
+
+    @classmethod
+    def published_states(cls, generator):
+        return [event.state for event in cls.published_events(generator) if isinstance(event, StateChanged)]
 
     def test_run_returns_immediately_and_connects_on_the_generator_thread(self, generator, settings, mocker):
         """Connecting can block (HTTP request, window lookup), so it must not happen on the UI thread."""
@@ -731,6 +734,28 @@ class TestGeneratorThread:
             GeneratorState.STOPPED,
         ]
         assert sdks[0].shutdown_calls == 1
+
+    def test_recorded_race_raises_no_preflight_warnings(self, generator, settings, sdks):
+        generator.run(settings)
+        self.wait_for_state(generator, GeneratorState.MONITORING_FOR_INCIDENTS)
+        self.stop_and_join(generator)
+
+        assert not any(isinstance(event, PreflightWarnings) for event in self.published_events(generator))
+
+    def test_preflight_warnings_are_published_and_the_run_continues(self, generator, settings, mocker):
+        frame = copy.deepcopy(RACING_FRAME)
+        frame["session_info"]["DriverInfo"]["PaceCarIdx"] = 0
+        mocker.patch("core.generator.irsdk.IRSDK", side_effect=lambda: FakeIRSDK(frame))
+
+        generator.run(settings)
+        self.wait_for_state(generator, GeneratorState.MONITORING_FOR_INCIDENTS)
+        self.stop_and_join(generator)
+
+        events = self.published_events(generator)
+        warning = PreflightWarnings(["PaceCarIdx 0 does not point at the pace car entry (CarIdx 16)"])
+        assert warning in events
+        # Checked right after connecting, before the run builds anything on top of the data
+        assert events.index(warning) == events.index(StateChanged(GeneratorState.CONNECTED)) + 1
 
     def test_sdk_connection_failure_reports_error_connecting(self, generator, settings, mocker):
         sdk = FakeIRSDK(RACING_FRAME, startup_result=False)
